@@ -105,7 +105,9 @@ export const handleGoogleLogin = async ({ set, headers }: any) => {
 	const existingSetCookie = set.headers['Set-Cookie'];
 	if (existingSetCookie) {
 		if (Array.isArray(existingSetCookie)) {
-			existingSetCookie.forEach((c) => responseHeaders.append('Set-Cookie', c));
+			existingSetCookie.forEach((c) => {
+				responseHeaders.append('Set-Cookie', c);
+			});
 		} else {
 			responseHeaders.append('Set-Cookie', existingSetCookie);
 		}
@@ -185,7 +187,9 @@ export const handleDiscordLogin = async ({ set, cookie }: any) => {
 	const existingSetCookie = set.headers['Set-Cookie'];
 	if (existingSetCookie) {
 		if (Array.isArray(existingSetCookie)) {
-			existingSetCookie.forEach((c) => headers.append('Set-Cookie', c));
+			existingSetCookie.forEach((c) => {
+				headers.append('Set-Cookie', c);
+			});
 		} else {
 			headers.append('Set-Cookie', existingSetCookie);
 		}
@@ -270,7 +274,9 @@ export const handleGithubLogin = async ({ set, cookie, navUrls }: { set: any; co
 	const existingSetCookie = set.headers['Set-Cookie'];
 	if (existingSetCookie) {
 		if (Array.isArray(existingSetCookie)) {
-			existingSetCookie.forEach((c) => headers.append('Set-Cookie', c));
+			existingSetCookie.forEach((c) => {
+				headers.append('Set-Cookie', c);
+			});
 		} else {
 			headers.append('Set-Cookie', existingSetCookie);
 		}
@@ -344,7 +350,7 @@ export const handleLogout = async ({ headers, set }: any) => {
 	// Set blank cookie header
 	set.headers['Set-Cookie'] = createBlankSessionCookie();
 	// Explicitly set Location header for redirect
-	set.headers['Location'] = '/';
+	set.headers.Location = '/';
 	// Set status code
 	set.status = 302;
 	// Return null response for redirect

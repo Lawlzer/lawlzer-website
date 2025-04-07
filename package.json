@@ -11,7 +11,8 @@
     "@elysiajs/html": "^1.2.0",
     "@lawlzer/utils": "^3.4.15",
     "elysia": "latest",
-    "fs-extra": "^11.3.0"
+    "fs-extra": "^11.3.0",
+    "lucia": "^3.2.2"
   },
   "devDependencies": {
     "@types/mongoose": "^5.11.97",

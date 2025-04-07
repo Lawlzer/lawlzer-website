@@ -1,8 +1,11 @@
-import { Elysia, type Context } from 'elysia';
+import type { Elysia } from 'elysia';
+import type { Context } from 'elysia';
 import { readSessionCookie, validateSession, createBlankSessionCookie, invalidateSession } from '../auth/session'; // Import custom session functions and invalidateSession
-import UserModel, { IUser } from '../db/models/User';
-import SessionModel, { ISession } from '../db/models/Session'; // Import Session model for type
-import { DEBUG_SESSION_STUFF } from '../config'; // Import
+import UserModel from '../db/models/User';
+import SessionModel from '../db/models/Session'; // Import Session model
+import type { IUser } from '../db/models/User'; // Use import type
+import type { ISession } from '../db/models/Session'; // Use import type
+import { DEBUG_SESSION_STUFF } from '../config';
 
 // Define the shape of the context properties added by this middleware
 // We are attaching the full Mongoose user document and session document
@@ -12,14 +15,15 @@ export interface CustomAuthContext {
 }
 
 export const customAuthMiddleware = () => (app: Elysia) => {
+	// Use import type for Context if only used as type
 	return app.derive(async (context: Context) => {
-		console.log('[AuthMiddleware] Running...');
+		console.info('[AuthMiddleware] Running...'); // Use console.info
 		const cookieHeader = context.request.headers.get('cookie');
 		const sessionId = readSessionCookie(cookieHeader);
 
 		if (DEBUG_SESSION_STUFF) {
-			console.log(`[AuthMiddleware] Cookie Header: ${cookieHeader}`);
-			console.log(`[AuthMiddleware] Session ID from cookie: ${sessionId}`);
+			console.debug(`[AuthMiddleware] Cookie Header: ${cookieHeader}`); // Use debug
+			console.debug(`[AuthMiddleware] Session ID from cookie: ${sessionId}`); // Use debug
 		}
 
 		if (!sessionId) {
@@ -28,24 +32,25 @@ export const customAuthMiddleware = () => (app: Elysia) => {
 
 		try {
 			if (DEBUG_SESSION_STUFF) {
-				console.log(`[AuthMiddleware] Validating session ID: ${sessionId}`);
+				console.debug(`[AuthMiddleware] Validating session ID: ${sessionId}`); // Use debug
 			}
 			const session = await validateSession(sessionId);
 
 			if (!session) {
-				console.log(`[AuthMiddleware] Session ID ${sessionId} invalid or expired.`);
+				console.info(`[AuthMiddleware] Session ID ${sessionId} invalid or expired.`); // Use info
 				return { user: null, session: null };
 			}
 
 			// Log successful validation only if debugging session stuff
 			if (DEBUG_SESSION_STUFF) {
-				console.log(`[AuthMiddleware] Session validated successfully:`, JSON.stringify(session));
+				console.debug(`[AuthMiddleware] Session validated successfully:`, JSON.stringify(session)); // Use debug
 			}
 
 			const user = await UserModel.findById(session.userId);
 
 			if (!user) {
-				console.warn(`[AuthMiddleware] User ${session.userId} for session ${sessionId} not found! Invalidating session.`);
+				// Explicitly convert ObjectId to string for logging
+				console.warn(`[AuthMiddleware] User ${String(session.userId)} for session ${sessionId} not found! Invalidating session.`);
 				await invalidateSession(sessionId);
 				return { user: null, session: null };
 			}

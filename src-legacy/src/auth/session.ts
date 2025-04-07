@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
-import SessionModel, { ISession } from '../db/models/Session';
+import type { ISession } from '../db/models/Session';
+import SessionModel from '../db/models/Session';
 import { serialize, parse } from 'cookie';
 import type { SerializeOptions } from 'cookie';
 import { DEBUG_SESSION_STUFF } from '../config'; // Import the debug flag
@@ -115,7 +116,7 @@ export const createBlankSessionCookie = (): string => {
  * @param cookieHeader The value of the 'Cookie' header.
  * @returns The session ID if found, otherwise null.
  */
-export const readSessionCookie = (cookieHeader: string | undefined | null): string | null => {
+export const readSessionCookie = (cookieHeader: string | null | undefined): string | null => {
 	if (!cookieHeader) return null;
 	const cookies = parse(cookieHeader);
 	return cookies[SESSION_COOKIE_NAME] || null;

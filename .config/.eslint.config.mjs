@@ -219,8 +219,8 @@ export default tseslint.config(
 			// Don't "await" a non-async function
 			'@typescript-eslint/await-thenable': ['error'],
 
-			// Require consistent return types in functions
-			'@typescript-eslint/consistent-return': ['error'],
+			// tsconfig's noImplicitReturns is recommended instead, plus this is annoying
+			'@typescript-eslint/consistent-return': ['off'],
 
 			// Disallow template expressions that don't need to be templates
 			'@typescript-eslint/no-unnecessary-template-expression': ['error'],

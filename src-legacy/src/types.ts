@@ -1,6 +1,9 @@
 import type { ISession } from './db/models/Session';
 import type { IUser } from './db/models/User';
 
+// --- Application Context Type ---
+import type { Context as ElysiaContext } from 'elysia';
+
 // Configuration for displaying URLs
 export interface UrlConfig {
 	home: string; // Full URL for nav
@@ -9,7 +12,7 @@ export interface UrlConfig {
 }
 
 // Define the possible subdomain values explicitly
-export type Subdomain = 'base' | 'valorant' | 'overwatch' | 'unknown';
+export type Subdomain = 'base' | 'overwatch' | 'unknown' | 'valorant';
 
 // Extend Elysia's Context type if needed, or define context structure if handlers need it
 // For now, the handlers only need navUrls, passed directly.
@@ -30,9 +33,6 @@ export interface UserSession {
 	user: IUser | null; // Use the full Mongoose IUser type
 	session: ISession | null;
 }
-
-// --- Application Context Type ---
-import { Context as ElysiaContext } from 'elysia';
 // import { Html } from '@elysiajs/html'; // Import removed temporarily
 
 // Combine all expected properties into a single AppContext type
