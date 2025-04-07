@@ -1,9 +1,12 @@
 ---
 description: 
-globs: *.ts,*.tsx
+globs: *.js
 alwaysApply: false
 ---
 
 Do not implement try/catch error handling; If there is an error, simply throw an error and the code will stop executing.
 Do not use .then or .catch syntax.
+
+Use console.log for temporary logs. Use console.info for long-term logs, and use console.debug for in-case-of-emergency logs.
+
 Use short-circuits, or short-returns whenever possible. if (!something) return; 

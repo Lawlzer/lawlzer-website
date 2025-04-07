@@ -364,7 +364,6 @@ export default tseslint.config(
 					allowAny: true,
 					allowString: true,
 					allowNumber: true,
-					allowBoolean: true,
 					allowNullableBoolean: true,
 					allowNullableString: true,
 					allowNullableNumber: true,

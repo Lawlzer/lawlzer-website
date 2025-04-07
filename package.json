@@ -1,27 +1,27 @@
 {
-	"name": "app",
-	"version": "1.0.50",
-	"module": "src/index.js",
-	"scripts": {
-		"dev": "bun run --watch src/index.ts",
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"prettier": "./.config/.prettierrc.mjs",
-	"dependencies": {
-		"@elysiajs/html": "^1.2.0",
-		"@lawlzer/utils": "^3.4.15",
-		"elysia": "latest",
-		"fs-extra": "^11.3.0"
-	},
-	"devDependencies": {
-		"@types/mongoose": "^5.11.97",
-		"@types/node": "^22.14.0",
-		"@typescript-eslint/parser": "^8.29.0",
-		"bun-types": "latest",
-		"eslint-plugin-import": "^2.31.0",
-		"prettier": "^3.5.3",
-		"prettier-plugin-packagejson": "^2.5.10",
-		"typescript": "^5.8.3",
-		"typescript-eslint": "^8.29.0"
-	}
+  "name": "app",
+  "version": "1.0.50",
+  "module": "src/index.js",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "prettier": "./.config/.prettierrc.mjs",
+  "dependencies": {
+    "@elysiajs/html": "^1.2.0",
+    "@lawlzer/utils": "^3.4.15",
+    "elysia": "latest",
+    "fs-extra": "^11.3.0"
+  },
+  "devDependencies": {
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^22.14.0",
+    "@typescript-eslint/parser": "^8.29.0",
+    "bun-types": "latest",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.5.3",
+    "prettier-plugin-packagejson": "^2.5.10",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.29.0"
+  }
 }
