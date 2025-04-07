@@ -11,7 +11,7 @@ const commit = false; // we don't care for this repo
 export default tseslint.config(
 	{
 		// Global ignores
-		ignores: ['dist', 'build', 'node_modules', 'logs', 'cache', 'caches', 'temp', 'tmp', 'debug', 'todo', 'serverOutput', 'public'],
+		ignores: ['.next', 'dist', 'build', 'node_modules', 'logs', 'cache', 'caches', 'temp', 'tmp', 'debug', 'todo', 'serverOutput', 'public'],
 	},
 	eslint.configs.recommended,
 	// Use a basic non-type-checked config for JS/MJS files
