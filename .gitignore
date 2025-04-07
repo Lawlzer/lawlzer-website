@@ -53,3 +53,4 @@ whisper-openai-exp/
 feature_cache
 
 # Specific to this project
+src-legacy
