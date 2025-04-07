@@ -3,11 +3,6 @@ import tseslint from 'typescript-eslint';
 import path from 'path';
 import process from 'process';
 import importPlugin from 'eslint-plugin-import';
-import { FlatCompat } from '@eslint/eslintrc';
-
-const compat = new FlatCompat({
-	baseDirectory: import.meta.dirname,
-});
 
 const commit = false; // we don't care for this repo
 
@@ -16,7 +11,7 @@ const commit = false; // we don't care for this repo
 export default tseslint.config(
 	{
 		// Global ignores
-		ignores: ['.next', 'dist', 'build', 'node_modules', 'logs', 'cache', 'caches', 'temp', 'tmp', 'debug', 'todo', 'serverOutput', 'public'],
+		ignores: ['dist', 'build', 'node_modules', 'logs', 'cache', 'caches', 'temp', 'tmp', 'debug', 'todo', 'serverOutput', 'public'],
 	},
 	eslint.configs.recommended,
 	// Use a basic non-type-checked config for JS/MJS files
@@ -27,14 +22,11 @@ export default tseslint.config(
 	// Use type-checked config for TS files
 	{
 		files: ['**/*.ts', '**/*.tsx'],
-		extends: [tseslint.configs.recommendedTypeChecked, ...compat.extends('next/core-web-vitals'), tseslint.configs.stylisticTypeChecked],
+		extends: [tseslint.configs.recommendedTypeChecked],
 		plugins: {
 			// '@typescript-eslint': tseslint, // todo
 			import: importPlugin,
-			// 'unused-imports': unusedImports, // Removed as per merge
-		},
-		linterOptions: {
-			reportUnusedDisableDirectives: true,
+			// 'unused-imports': unusedImports,
 		},
 		languageOptions: {
 			parserOptions: {
@@ -42,7 +34,6 @@ export default tseslint.config(
 				defaultProject: true,
 				tsconfigRootDir: process.cwd(),
 				project: [path.resolve(process.cwd(), 'tsconfig.json')],
-				projectService: true, // Added from new config
 				ecmaFeatures: {},
 				sourceType: 'module',
 				ecmaVersion: 'latest',
@@ -63,17 +54,15 @@ export default tseslint.config(
 			// EXPERIMENTAL - Overloads must be ordered from most -> least specific
 			'@typescript-eslint/adjacent-overload-signatures': 'error',
 
-			// Use T[], instead of Array<T> - Overridden by new config
-			'@typescript-eslint/array-type': 'off',
+			// Use T[], instead of Array<T>
+			'@typescript-eslint/array-type': ['error'],
 
-			// Disallow interfaces -> only use types, or always use interfaces when possible - Overridden by new config
+			// Disallow interfaces -> only use types, or always use interfaces when possible
 			// '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-			'@typescript-eslint/consistent-type-definitions': 'off',
 
 			// Require import type { ... } from '...' when possible
 			// This solves bugs with types that are removed post-build (as the file may no longer be imported)
-			// '@typescript-eslint/consistent-type-imports': ['error'], - Overridden by new config
-			'@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports', fixStyle: 'inline-type-imports' }],
+			'@typescript-eslint/consistent-type-imports': ['error'],
 
 			// Require functions to explicitly define the return types
 			// '@typescript-eslint/explicit-module-boundary-types': ['error', ],
@@ -142,7 +131,7 @@ export default tseslint.config(
 			'@typescript-eslint/ban-ts-comment': commit ? ['error'] : ['off'],
 
 			// Will complain if we use "let" and don't reassign the value. (Useful for dev).
-			// '@typescript-eslint/prefer-const': commit ? ['error'] : ['off'], // Handled by no-unused-vars below
+			'@typescript-eslint/prefer-const': commit ? ['error'] : ['off'],
 
 			// Empty functions - Useful for "future" functions, or for when dev testing.
 			'@typescript-eslint/no-empty': ['off'],
@@ -187,9 +176,8 @@ export default tseslint.config(
 			// in ECMA spec, .sort() converts the values to strings, and sorts them alphabetically (1, 2, )
 			'@typescript-eslint/require-array-sort-compare': ['error', { ignoreStringArrays: true }],
 
-			// Don't allow a function to be "async" unless it's necessary - Overridden by new config
-			// '@typescript-eslint/require-await': commit ? ['error'] : ['off'],
-			'@typescript-eslint/require-await': 'off',
+			// Don't allow a function to be "async" unless it's necessary
+			'@typescript-eslint/require-await': commit ? ['error'] : ['off'],
 
 			// Don't use + to concatenate different types
 			'@typescript-eslint/restrict-plus-operands': ['error'],
@@ -197,10 +185,9 @@ export default tseslint.config(
 			// If inputting a type union into a switch, make sure we check/handle every potential union type
 			'@typescript-eslint/switch-exhaustiveness-check': ['error'],
 
-			'@typescript-eslint/unbound-method': ['error'], // Was off before? Setting to error as per existing config
+			'@typescript-eslint/unbound-method': ['error'],
 
-			// '@typescript-eslint/no-misused-promises': ['error'], - Overridden by new config
-			'@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+			'@typescript-eslint/no-misused-promises': ['error'],
 
 			// Ensures Promise rejections are always with Error objects
 			'@typescript-eslint/prefer-promise-reject-errors': ['error'],
@@ -539,10 +526,10 @@ export default tseslint.config(
 			// no-unused-vars stuff
 			// no-unused-vars must be off, as these do that rule but better (with autofixing)
 			'no-unused-vars': 'off',
-			// '@typescript-eslint/no-unused-vars': ['off'], // Handled by new rule below
-			// 'unused-imports/no-unused-imports': commit ? 'error' : 'off', // Removed
-			// 'unused-imports/no-unused-vars': commit ? ['error', { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' }] : 'off', // Removed
-			'@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }], // Added from new config
+			'@typescript-eslint/no-unused-vars': ['off'], // I'm not sure if this rule has to be off as well, but we will leave it off to be safe.
+			// 'unused-imports/no-unused-imports': commit ? 'error' : 'off',
+			// 'unused-imports/no-unused-vars': commit ? ['error', { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' }] : 'off',
+			// '@typescript-eslint/no-unused-vars': ['error', { vars: 'all', args: 'none', ignoreRestSiblings: false }],
 
 			// Ensures all imports appear before other statements
 			'import/first': ['error'],
