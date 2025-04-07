@@ -1,4 +1,4 @@
-import { Elysia, Context } from 'elysia';
+import { Elysia, Context, t } from 'elysia';
 
 // Load and validate BASE_URL from environment variables
 const BASE_URL = process.env.BASE_URL;
@@ -21,40 +21,63 @@ const baseHost = basePort ? `${baseHostname}:${basePort}` : baseHostname; // hos
 
 // Optional: Read frontend port from environment
 const frontendPort = process.env.FRONTEND_PORT;
+const displayPort = frontendPort || basePort; // Use frontend port if specified, else backend port
+const displayPortString = displayPort ? `:${displayPort}` : '';
 
-// Define a specific type for the context needed by subdomain handlers
-interface RequestContext {
-	request: Request;
-	// Add other properties from Context if they become necessary
+// Remove HostConfig interface
+// interface HostConfig { ... }
+
+interface UrlConfig {
+	home: string; // Full URL for nav
+	valorant: string; // Full URL for nav
+	overwatch: string; // Full URL for nav
+}
+
+// Remove intermediate host variables and object
+// let hosts: HostConfig;
+// let dynamicBaseHost: string; ... etc.
+// const hosts = { ... } as const;
+
+// Calculate hostnames and nav URLs
+let dynamicBaseHost: string;
+let dynamicValorantHost: string;
+let dynamicOverwatchHost: string;
+let navUrls: UrlConfig;
+
+if (baseHostname.startsWith('local.')) {
+	const domainWithoutLocal = baseHostname.substring(6);
+	const valorantNavHostname = `local.valorant.${domainWithoutLocal}`;
+	const overwatchNavHostname = `local.overwatch.${domainWithoutLocal}`;
+	dynamicBaseHost = baseHost;
+	dynamicValorantHost = `${valorantNavHostname}${basePort ? ':' + basePort : ''}`;
+	dynamicOverwatchHost = `${overwatchNavHostname}${basePort ? ':' + basePort : ''}`;
+	navUrls = {
+		home: `${parsedBaseUrl.protocol}//${baseHostname}${displayPortString}`,
+		valorant: `${parsedBaseUrl.protocol}//${valorantNavHostname}${displayPortString}`,
+		overwatch: `${parsedBaseUrl.protocol}//${overwatchNavHostname}${displayPortString}`,
+	};
+} else {
+	const valorantNavHostname = `valorant.${baseHostname}`;
+	const overwatchNavHostname = `overwatch.${baseHostname}`;
+	dynamicBaseHost = baseHost;
+	dynamicValorantHost = `${valorantNavHostname}${basePort ? ':' + basePort : ''}`;
+	dynamicOverwatchHost = `${overwatchNavHostname}${basePort ? ':' + basePort : ''}`;
+	navUrls = {
+		home: `${parsedBaseUrl.protocol}//${baseHostname}${displayPortString}`,
+		valorant: `${parsedBaseUrl.protocol}//${valorantNavHostname}${displayPortString}`,
+		overwatch: `${parsedBaseUrl.protocol}//${overwatchNavHostname}${displayPortString}`,
+	};
 }
 
 // Helper function to generate HTML response with top-bar
+// This needs to be defined *before* it's used in the routes
 const createHtmlResponse = (title: string, content: string): Response => {
-	let valorantHost: string;
-	let overwatchHost: string;
-	const displayPort = frontendPort || basePort; // Use frontend port if specified, else backend port
-	const portString = displayPort ? `:${displayPort}` : '';
-
-	if (baseHostname.startsWith('local.')) {
-		// Construct local development subdomain URLs like local.valorant.lawlzer.com
-		const domainWithoutLocal = baseHostname.substring(6); // Remove "local."
-		valorantHost = `local.valorant.${domainWithoutLocal}`;
-		overwatchHost = `local.overwatch.${domainWithoutLocal}`;
-	} else {
-		// Construct production subdomain URLs like valorant.lawlzer.com
-		valorantHost = `valorant.${baseHostname}`;
-		overwatchHost = `overwatch.${baseHostname}`;
-	}
-
-	const homeUrl = `${parsedBaseUrl.protocol}//${baseHostname}${portString}`;
-	const valorantUrl = `${parsedBaseUrl.protocol}//${valorantHost}${portString}`;
-	const overwatchUrl = `${parsedBaseUrl.protocol}//${overwatchHost}${portString}`;
-
+	// Use pre-calculated navUrls
 	const topBar = `
 <nav style="background-color: #333; padding: 10px; text-align: center;">
-  <a href="${homeUrl}" style="color: white; margin: 0 15px; text-decoration: none;">Home</a>
-  <a href="${valorantUrl}" style="color: white; margin: 0 15px; text-decoration: none;">Valorant</a>
-  <a href="${overwatchUrl}" style="color: white; margin: 0 15px; text-decoration: none;">Overwatch</a>
+  <a href="${navUrls.home}" style="color: white; margin: 0 15px; text-decoration: none;">Home</a>
+  <a href="${navUrls.valorant}" style="color: white; margin: 0 15px; text-decoration: none;">Valorant</a>
+  <a href="${navUrls.overwatch}" style="color: white; margin: 0 15px; text-decoration: none;">Overwatch</a>
 </nav>
   `;
 	const html = `
@@ -80,89 +103,50 @@ const createHtmlResponse = (title: string, content: string): Response => {
 	return new Response(html, { headers: { 'Content-Type': 'text/html' } });
 };
 
-// Define handlers/routes for each subdomain potentially in separate files later
-const handleValorantRequest = (context: RequestContext) => {
-	const pathname = new URL(context.request.url).pathname;
-	const headers = { 'Content-Type': 'text/html' };
-
-	if (pathname === '/') {
-		// Return Response with correct headers
-		return createHtmlResponse('Valorant Home', '<p>This is the homepage for the Valorant section.</p>');
-	}
-	// Add more specific Valorant routes here...
-	// Return 404 Response with correct headers
-	const notFoundResponse = createHtmlResponse('Not Found', '<p>The requested page was not found on the Valorant subdomain.</p>');
-	notFoundResponse.headers.set('Status', '404'); // Setting status via headers, alternative to new Response options
-	return new Response(notFoundResponse.body, { status: 404, headers: notFoundResponse.headers }); // Proper 404 status
-};
-
-const handleOverwatchRequest = (context: RequestContext) => {
-	const pathname = new URL(context.request.url).pathname;
-	const headers = { 'Content-Type': 'text/html' };
-
-	if (pathname === '/') {
-		// Return Response with correct headers
-		return createHtmlResponse('Overwatch Home', '<p>This is the homepage for the Overwatch section.</p>');
-	}
-	// Add more specific Overwatch routes here...
-	// Return 404 Response with correct headers
-	const notFoundResponse = createHtmlResponse('Not Found', '<p>The requested page was not found on the Overwatch subdomain.</p>');
-	return new Response(notFoundResponse.body, { status: 404, headers: notFoundResponse.headers }); // Proper 404 status
-};
-
+// Define the Elysia app
 const app = new Elysia()
-	.onRequest((context) => {
-		// Get host, including port if present
-		const requestHost = context.request.headers.get('Host'); // e.g., "local.lawlzer.com:3000" or "valorant.local.lawlzer.com:3000"
-
-		let valorantFullHost: string;
-		let overwatchFullHost: string;
-
-		if (baseHostname.startsWith('local.')) {
-			const domainWithoutLocal = baseHostname.substring(6);
-			valorantFullHost = `local.valorant.${domainWithoutLocal}${basePort ? ':' + basePort : ''}`;
-			overwatchFullHost = `local.overwatch.${domainWithoutLocal}${basePort ? ':' + basePort : ''}`;
-		} else {
-			valorantFullHost = `valorant.${baseHost}`;
-			overwatchFullHost = `overwatch.${baseHost}`;
+	// Derive the subdomain from the host header
+	.derive((context): { subdomain: 'base' | 'valorant' | 'overwatch' | 'unknown' } => {
+		const host = context.request.headers.get('host');
+		if (host === dynamicBaseHost) {
+			return { subdomain: 'base' };
 		}
-
-		// Handle specific subdomains directly here
-		if (requestHost === valorantFullHost) {
-			// Returning directly sends the response and stops further handler matching
-			return handleValorantRequest(context);
-		} else if (requestHost === overwatchFullHost) {
-			// Returning directly sends the response and stops further handler matching
-			return handleOverwatchRequest(context);
+		if (host === dynamicValorantHost) {
+			return { subdomain: 'valorant' };
 		}
-
-		// If it's the base domain (including port), do nothing in this hook.
-		// The request will continue to the routes defined below.
-		if (requestHost === baseHost) {
-			// Allow request to proceed to Elysia routes
-			return;
+		if (host === dynamicOverwatchHost) {
+			return { subdomain: 'overwatch' };
 		}
-
-		// Optional: Handle unknown hosts explicitly if needed
-		// else if (host !== 'localhost' && host !== 'lawlzer.com') {
-		//     context.set.status = 404;
-		//     return 'Unknown Host';
-		// }
+		return { subdomain: 'unknown' };
 	})
-	// Routes defined here are now effectively only for lawlzer.com / localhost
-	.get('/', () => {
-		// Return Response with correct headers
-		return createHtmlResponse('Welcome to Lawlzer.com', '<p>This is the main homepage.</p>');
+	// Handle GET requests to the root path
+	.get('/', ({ subdomain, set }) => {
+		switch (subdomain) {
+			case 'base':
+				return createHtmlResponse('Welcome to Lawlzer.com', '<p>This is the main homepage.</p>');
+			case 'valorant':
+				return createHtmlResponse('Valorant Home', '<p>This is the homepage for the Valorant section.</p>');
+			case 'overwatch':
+				return createHtmlResponse('Overwatch Home', '<p>This is the homepage for the Overwatch section.</p>');
+			default:
+				set.status = 404; // Or perhaps a 400 Bad Request if the host is totally wrong
+				return createHtmlResponse('Unknown Host', '<p>The requested host is not recognized.</p>');
+		}
 	})
-	// Add other lawlzer.com routes here...
-	// .get('/about', () => 'About lawlzer.com')
-
-	// Fallback route if no other route matches (for lawlzer.com/localhost)
-	.all('*', () => {
-		// Return 404 Response with correct headers
-		const notFoundResponse = createHtmlResponse('Not Found', '<p>The requested page was not found on lawlzer.com.</p>');
-		return new Response(notFoundResponse.body, { status: 404, headers: notFoundResponse.headers }); // Proper 404 status
+	// Handle all other paths (404)
+	.all('*', ({ subdomain, set }) => {
+		set.status = 404;
+		switch (subdomain) {
+			case 'base':
+				return createHtmlResponse('Not Found', '<p>The requested page was not found on lawlzer.com.</p>');
+			case 'valorant':
+				return createHtmlResponse('Not Found', '<p>The requested page was not found on the Valorant subdomain.</p>');
+			case 'overwatch':
+				return createHtmlResponse('Not Found', '<p>The requested page was not found on the Overwatch subdomain.</p>');
+			default: // Unknown host already resulted in 404 from GET '/', but handle defensively
+				return createHtmlResponse('Unknown Host / Not Found', '<p>The requested host or path was not found.</p>');
+		}
 	})
-	.listen(3000);
+	.listen(basePort ? parseInt(basePort) : 3000);
 
 console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
