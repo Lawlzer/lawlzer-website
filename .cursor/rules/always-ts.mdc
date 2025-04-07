@@ -1,0 +1,8 @@
+---
+description: 
+globs: *.ts,*.js,*.tsx
+alwaysApply: false
+---
+
+Do not implement try/catch error handling; If there is an error, simply throw an error and the code will stop executing.
+Do not use .then or .catch syntax.

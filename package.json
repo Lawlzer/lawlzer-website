@@ -6,10 +6,20 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@lawlzer/utils": "^3.4.15",
+    "elysia": "latest",
+    "fs-extra": "^11.3.0"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "@types/node": "^22.14.0",
+    "@typescript-eslint/parser": "^8.29.0",
+    "bun-types": "latest",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.5.3",
+    "prettier-plugin-packagejson": "^2.5.10",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.29.0"
   },
-  "module": "src/index.js"
+  "module": "src/index.js",
+  "prettier": "./.config/.prettierrc.mjs"
 }

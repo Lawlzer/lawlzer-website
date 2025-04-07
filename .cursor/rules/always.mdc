@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Be concise. Do not add comments, the code should be self-documenting -- Write clean code. Do not explain yourself, unless explicitly asked. 
+Do not touch any unrelated code, unless explicitly asked.
+Do not remove any existing logs, unless explicitly asked, or it's necessary.
+If you are missing information to do something, let me know.
+

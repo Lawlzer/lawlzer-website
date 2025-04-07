@@ -1,42 +1,55 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+node_modules
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Logs and dev output
+logs
+routeTypes
 
-# testing
-/coverage
+# Temporary caches
+*.tsbuildinfo
+caches
+cache
+lerna-debug.log
+zig-cache
+Cargo.lock
+bun.lockb
 
-# next.js
-/.next/
-/out/
+# Environment variables/secrets
+.env
+.env.development
+.env.production
+.env.test
 
-# production
-/build
+# Build / Generated output
+build
+dist
+lib
+output
+zig-out
 
-# misc
-.DS_Store
-*.pem
+data
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Temporary/dev locations
+legacy
+temp
+tmp
+debug
 
-# local env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+todo
+todo.txt
 
-# vercel
-.vercel
+serverOutput
+volume
+volumes
 
-**/*.trace
-**/*.zip
-**/*.tar.gz
-**/*.tgz
-**/*.log
-package-lock.json
-**/*.bun
+# Python specific
+__pycache__
+.venv
+
+# Model caches
+model_cache/
+**/model_cache/**
+whisper-openai-exp/
+feature_cache
+
+# Specific to this project

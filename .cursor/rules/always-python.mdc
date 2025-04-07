@@ -1,0 +1,6 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+Do not implement error handling, or try to continue after an error. If there is an error or issue, simply throw, and allow the code to crash.
