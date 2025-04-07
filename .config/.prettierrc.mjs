@@ -10,5 +10,5 @@ export default {
 	arrowParens: 'always',
 	endOfLine: 'lf',
 	singleAttributePerLine: false,
-	plugins: ['prettier-plugin-packagejson', 'prettier-plugin-tailwindcss'],
+	plugins: ['prettier-plugin-packagejson'],
 };
