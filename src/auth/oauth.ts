@@ -183,8 +183,8 @@ export const handleGoogleCallback = async (code: string, state: string, storedSt
 		}
 
 		// 4. Create session
-		const session = await createSession(user.id); // Mongoose default _id is user.id
-		const sessionCookie = createSessionCookie(session._id); // Session model uses _id
+		const session = await createSession(user.id);
+		const sessionCookie = createSessionCookie(session.sessionId);
 
 		return { user, sessionCookie };
 	} catch (error) {
@@ -295,7 +295,7 @@ export const handleDiscordCallback = async (code: string, state: string, storedS
 
 		// 4. Create session
 		const session = await createSession(user.id);
-		const sessionCookie = createSessionCookie(session._id);
+		const sessionCookie = createSessionCookie(session.sessionId);
 
 		return { user, sessionCookie };
 	} catch (error) {
@@ -455,7 +455,7 @@ export const handleGithubCallback = async (code: string, state: string, storedSt
 
 		// 4. Create session
 		const session = await createSession(user.id);
-		const sessionCookie = createSessionCookie(session._id);
+		const sessionCookie = createSessionCookie(session.sessionId);
 
 		return { user, sessionCookie };
 	} catch (error) {

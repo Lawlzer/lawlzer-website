@@ -1,11 +1,13 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ISession extends Document {
+	sessionId: string; // The unique string identifier for the session
 	userId: mongoose.Schema.Types.ObjectId; // _id of the user this session belongs to
 	expiresAt: number; // Session expiry date (Unix timestamp)
 }
 
 const SessionSchema: Schema = new Schema({
+	sessionId: { type: String, required: true, unique: true, index: true }, // Added sessionId field
 	userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' }, // Link to the User model
 	expiresAt: { type: Number, required: true },
 });

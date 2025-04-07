@@ -30,3 +30,31 @@ export interface UserSession {
 	user: IUser | null; // Use the full Mongoose IUser type
 	session: ISession | null;
 }
+
+// --- Application Context Type ---
+import { Context as ElysiaContext } from 'elysia';
+// import { Html } from '@elysiajs/html'; // Import removed temporarily
+
+// Combine all expected properties into a single AppContext type
+export type AppContext = ElysiaContext & // Base Elysia context (req, set, path, query, params, body, cookie, etc.)
+	UserSession & {
+		// From customAuthMiddleware (user, session)
+		derive: {
+			// Properties added by .derive()
+			subdomain: Subdomain;
+			navUrls: UrlConfig;
+		};
+		decorator: {
+			// Properties added by plugins like .use(html())
+			html: Function; // Use generic Function type for now
+		};
+		store: {}; // Define if using store
+		// Ensure standard properties are explicitly available if needed beyond base Context
+		// set: ElysiaContext['set'];
+		// request: ElysiaContext['request'];
+		// path: ElysiaContext['path'];
+		// query: ElysiaContext['query'];
+		// params: ElysiaContext['params'];
+		// body: ElysiaContext['body'];
+		// cookie: ElysiaContext['cookie'];
+	};

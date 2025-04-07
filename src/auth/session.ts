@@ -19,7 +19,7 @@ export const createSession = async (userId: string): Promise<ISession> => {
 	const expiresAt = Date.now() + SESSION_DURATION_SECONDS * 1000;
 
 	const session = new SessionModel({
-		_id: sessionId,
+		sessionId,
 		userId,
 		expiresAt,
 	});
@@ -34,18 +34,43 @@ export const createSession = async (userId: string): Promise<ISession> => {
  * @returns The session object if valid and not expired, otherwise null.
  */
 export const validateSession = async (sessionId: string): Promise<ISession | null> => {
+	console.log(`[validateSession] Validating ID: ${sessionId}`);
 	if (!sessionId) {
+		console.log('[validateSession] No sessionId provided.');
 		return null;
 	}
-	const session = await SessionModel.findById(sessionId).exec();
-	// Compare expiration timestamp with current time
-	if (!session || session.expiresAt < Date.now()) {
-		// If session exists but expired, delete it
-		if (session) {
-			await SessionModel.findByIdAndDelete(sessionId).exec();
+	// Find by the custom sessionId field instead of _id
+	let session: ISession | null = null;
+	try {
+		session = await SessionModel.findOne({ sessionId }).exec();
+	} catch (dbError) {
+		console.error(`[validateSession] Database error looking up session ${sessionId}:`, dbError);
+		return null; // DB error, treat as invalid
+	}
+
+	if (!session) {
+		console.log(`[validateSession] Session not found in DB for ID: ${sessionId}`);
+		return null;
+	}
+
+	// Session found, check expiration
+	const now = Date.now();
+	const expiresAt = session.expiresAt;
+	console.log(`[validateSession] Session found. Now: ${now}, ExpiresAt: ${expiresAt}`);
+	if (expiresAt < now) {
+		console.log(`[validateSession] Session ${sessionId} expired. Deleting...`);
+		try {
+			// Delete using the sessionId field
+			await SessionModel.findOneAndDelete({ sessionId }).exec();
+			console.log(`[validateSession] Expired session ${sessionId} deleted.`);
+		} catch (deleteError) {
+			console.error(`[validateSession] Error deleting expired session ${sessionId}:`, deleteError);
 		}
 		return null;
 	}
+
+	// Session is valid and not expired
+	console.log(`[validateSession] Session ${sessionId} is valid.`);
 	return session;
 };
 
@@ -55,7 +80,7 @@ export const validateSession = async (sessionId: string): Promise<ISession | nul
  */
 export const invalidateSession = async (sessionId: string): Promise<void> => {
 	if (!sessionId) return;
-	await SessionModel.findByIdAndDelete(sessionId).exec();
+	await SessionModel.findOneAndDelete({ sessionId }).exec();
 };
 
 // --- Cookie Management ---

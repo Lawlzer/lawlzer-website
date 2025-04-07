@@ -1,6 +1,6 @@
-import { Elysia, t, type Context } from 'elysia';
+import { Elysia, t, type Context as ElysiaContext } from 'elysia';
 import { html } from '@elysiajs/html'; // Import html plugin
-import type { UrlConfig, UserSession, Subdomain } from './types'; // Import types and Subdomain
+import type { UrlConfig, UserSession, Subdomain, AppContext } from './types'; // Keep AppContext import for potential use
 import { createHtmlResponse } from './utils/html'; // Import utility
 import { isUserSetupComplete } from './utils/user'; // Import user utility
 import { handleValorantHome } from './valorant/handlers'; // Import Valorant handlers
@@ -10,7 +10,6 @@ import { customAuthMiddleware } from './middleware/luciaAuth'; // Corrected impo
 import { handleLoginGet, handleRegisterGet, handleGoogleLogin, handleGoogleCallback, handleDiscordLogin, handleDiscordCallback, handleGithubLogin, handleGithubCallback, handleLogout, handleSetupAccountGet, handleSetupAccountPost } from './auth/handlers'; // Import auth handlers
 import { throwError } from '@lawlzer/utils';
 import { navUrls, dynamicBaseHost, dynamicValorantHost, dynamicOverwatchHost } from './config';
-import type { CustomAuthContext } from './middleware/luciaAuth'; // Import the context type
 import type { IUser } from './db/models/User'; // Import IUser
 import type { ISession } from './db/models/Session'; // Import ISession
 
@@ -26,33 +25,26 @@ const ALLOWED_PATHS_FOR_UNFINISHED_USERS = [
 ];
 
 // Define authentication routes plugin
+// Let Elysia infer types within this plugin instance
 const authRoutes = new Elysia({ prefix: '/login', name: 'auth' }).use(html()).get('', handleLoginGet).get('/google', handleGoogleLogin).get('/google/callback', handleGoogleCallback).get('/discord', handleDiscordLogin).get('/discord/callback', handleDiscordCallback).get('/github', handleGithubLogin).get('/github/callback', handleGithubCallback);
 
-// Define base routes including authentication
+// Commenting out unused baseRoutes definition as routes are now in the main app
+/*
 const baseRoutes = new Elysia({ name: 'base' })
 	.use(html())
 	.derive(() => ({ navUrls })) // Derive navUrls
-	.get('/', ({ navUrls }) => {
+	.get('/', ({ derive: { navUrls } }) => { // Use correct access via derive
 		// This route returns the structured data, NOT raw HTML
 		return { title: 'Welcome to Lawlzer.com', body: '<p>This is the main homepage.</p>', navUrls };
 	})
 	.use(authRoutes) // Mount login routes under /login
-	.get('/register', handleRegisterGet) // Assuming this redirects or doesn't need html()
+	.get('/register', handleRegisterGet) // Needs html() from baseRoutes
 	.get('/logout', handleLogout)
-	.get('/setup-account', handleSetupAccountGet) // Needs html() from baseRoutes
-	.post('/setup-account', handleSetupAccountPost); // Handles POST, likely returns redirect
-
-/* Commenting out unused route definitions to address linter errors
-const valorantRoutes = new Elysia({ name: 'valorant' })
-	.derive(() => ({ navUrls }))
-	.get('/', ({ navUrls }) => handleValorantHome({ navUrls, user: null, session: null })) // Pass dummy user/session for type match
-	.get('/hero/:heroId', ({ params: { heroId }, navUrls }) => ({ title: `Valorant Hero: ${heroId}`, body: `<p>Details for hero ${heroId}</p>`, navUrls }));
-
-const overwatchRoutes = new Elysia({ name: 'overwatch' })
-	.derive(() => ({ navUrls }))
-	.get('/', ({ navUrls }) => handleOverwatchHome({ navUrls, user: null, session: null })) // Pass dummy user/session for type match
-	.get('/map/:mapName', ({ params: { mapName }, navUrls }) => ({ title: `Overwatch Map: ${mapName}`, body: `<p>Details for map ${mapName}</p>`, navUrls }));
+	.get('/setup-account', handleSetupAccountGet) // Now handled by main app instance
+	.post('/setup-account', handleSetupAccountPost); // Now handled by main app instance
 */
+
+/* Commented out unused routes */
 
 // Define the expected shape of the data returned by page handlers that NEED HTML wrapping
 interface PageHandlerResponse {
@@ -62,8 +54,7 @@ interface PageHandlerResponse {
 }
 
 // --- Helper Functions --- //
-// Moved deriveSubdomain definition here
-const deriveSubdomain = (context: Context): { subdomain: Subdomain } => {
+const deriveSubdomain = (context: ElysiaContext): { subdomain: Subdomain } => {
 	const host = context.request.headers.get('host');
 	if (host === dynamicBaseHost) return { subdomain: 'base' };
 	if (host === dynamicValorantHost) return { subdomain: 'valorant' };
@@ -71,58 +62,74 @@ const deriveSubdomain = (context: Context): { subdomain: Subdomain } => {
 	return { subdomain: 'unknown' };
 };
 
-// --- Type Definitions for Context within Guards/Handlers --- //
-// Define the expected context shape after all initial derives
-type AppContext = Context & CustomAuthContext & { subdomain: Subdomain; navUrls: UrlConfig };
+// Remove old AppContext definition - Already removed previously
 
 // --- Main Application --- //
 
 const app = new Elysia()
-	// Derive initial context properties
 	.derive(deriveSubdomain)
-	.use(customAuthMiddleware()) // Provides user, session
-	.derive(() => ({ navUrls })) // Provides navUrls
-	.use(html()) // Apply html globally
+	.use(customAuthMiddleware())
+	.derive(() => ({ navUrls }))
+	.use(html())
 
 	// --- Base Domain Setup/Auth Redirect Middleware --- //
-	// This middleware ONLY runs redirect logic for the base domain
-	.onBeforeHandle(
-		{ as: 'global' }, // Run this early
-		(context) => {
-			const { subdomain, user, set, request, path } = context as AppContext;
+	.onBeforeHandle({ as: 'global' }, (context) => {
+		// Access properties directly
+		const { subdomain, user, set, request, path } = context as any;
+		// Log incoming request
+		console.log(`--> ${request.method} ${request.url}`); // Log method and full URL
 
-			// Only apply this logic if we are on the base domain
-			if (subdomain !== 'base') {
-				return; // Do nothing for other subdomains
+		console.log('[Global onBeforeHandle] Context Keys:', Object.keys(context));
+		console.log('[Global onBeforeHandle] Subdomain value:', subdomain);
+
+		if (typeof subdomain !== 'string') {
+			console.error('[Global onBeforeHandle] Outcome: subdomain is invalid or missing! Halting.');
+			// Potentially set an error status if appropriate, but returning may be enough
+			return; // Exit early
+		}
+
+		// --- Logic only for base domain ---
+		if (subdomain === 'base') {
+			// Redirect to login if trying to access setup page while logged out
+			if (path === '/setup-account' && !user) {
+				console.log('[Global onBeforeHandle] Outcome: User null, redirecting /setup-account to /login');
+				set.headers['Location'] = '/login';
+				set.status = 302;
+				return new Response(null); // Halt with explicit redirect response
 			}
 
-			// Check if user setup is complete
-			const setupComplete = isUserSetupComplete(user);
+			const setupComplete = isUserSetupComplete(user as IUser | null);
 
-			// Force Setup Redirect Check (if setup NOT complete)
+			// Force Setup Redirect Check (if logged in but setup NOT complete)
 			if (user && !setupComplete) {
 				const isPathAllowed = ALLOWED_PATHS_FOR_UNFINISHED_USERS.some((p) => path === p);
 				const isLoginPath = path.startsWith('/login');
-
 				if (!isPathAllowed && !isLoginPath) {
+					console.log('[Global onBeforeHandle] Outcome: User needs setup, redirecting to /setup-account');
 					set.headers['Location'] = '/setup-account';
 					set.status = 302;
 					return new Response(null); // Halt
 				}
 			}
 
-			// Redirect away from /setup-account (if setup IS complete)
+			// Redirect away from /setup-account (if logged in and setup IS complete)
 			if (setupComplete && path === '/setup-account') {
+				console.log('[Global onBeforeHandle] Outcome: User already set up, redirecting /setup-account to /');
 				set.headers['Location'] = '/';
 				set.status = 302;
 				return new Response(null); // Halt
 			}
 		}
-	)
+		// --- End base domain logic ---
+
+		// If no redirect conditions met within this hook
+		console.log('[Global onBeforeHandle] Outcome: Proceeding.');
+	})
 
 	// --- Main Route Handler (Dispatches Based on Subdomain) --- //
 	.get('/', (context) => {
-		const { subdomain, navUrls, user, session } = context as AppContext;
+		// Access properties directly
+		const { subdomain, navUrls, user, session, set, request } = context as any;
 
 		switch (subdomain) {
 			case 'base':
@@ -131,87 +138,102 @@ const app = new Elysia()
 				return handleValorantHome({ navUrls, user, session });
 			case 'overwatch':
 				return handleOverwatchHome({ navUrls, user, session });
-			default: // 'unknown' or any other case
-				context.set.status = 400;
-				return createHtmlResponse('Unknown Host', `<p>The requested host (${context.request.headers.get('host') ?? 'unknown'}) is not recognized.</p>`, navUrls, { user, session });
+			default:
+				set.status = 400;
+				return createHtmlResponse('Unknown Host', `<p>The requested host (${request.headers.get('host') ?? 'unknown'}) is not recognized.</p>`, navUrls, { user, session });
 		}
 	})
 
 	// --- Subdomain-Specific Routes --- //
-
-	// Valorant Specific
 	.get('/hero/:heroId', (context) => {
-		const { subdomain, params, navUrls, user, session } = context as AppContext & { params: { heroId: string } };
+		// Access properties directly
+		const { subdomain, navUrls, params, user, session, set } = context as any;
 		if (subdomain !== 'valorant') {
-			context.set.status = 404;
+			set.status = 404;
 			return createHtmlResponse('Not Found', '<p>Page not found on this domain.</p>', navUrls, { user, session });
 		}
 		return createHtmlResponse(`Valorant Hero: ${params.heroId}`, `<p>Details for hero ${params.heroId}</p>`, navUrls, { user, session });
 	})
-
-	// Overwatch Specific
 	.get('/map/:mapName', (context) => {
-		const { subdomain, params, navUrls, user, session } = context as AppContext & { params: { mapName: string } };
+		// Access properties directly
+		const { subdomain, navUrls, params, user, session, set } = context as any;
 		if (subdomain !== 'overwatch') {
-			context.set.status = 404;
+			set.status = 404;
 			return createHtmlResponse('Not Found', '<p>Page not found on this domain.</p>', navUrls, { user, session });
 		}
 		return createHtmlResponse(`Overwatch Map: ${params.mapName}`, `<p>Details for map ${params.mapName}</p>`, navUrls, { user, session });
 	})
 
 	// --- Base Domain Only Routes --- //
-
-	// Authentication routes (already prefixed with /login)
 	.use(authRoutes)
 
-	// Other base-domain specific routes
-	// Add subdomain check here if needed, though middleware should handle most cases
 	.get('/register', (context) => {
-		const { subdomain, set } = context as AppContext;
+		// Access properties directly
+		const { subdomain, set } = context as any;
 		if (subdomain !== 'base') {
 			set.status = 404;
-			return 'Not Found'; // Simple text response for non-HTML route
+			return 'Not Found';
 		}
-		return handleRegisterGet(context as any); // Cast context if handler expects specific type
+		return handleRegisterGet(context);
 	})
 	.get('/logout', (context) => {
-		const { subdomain, set } = context as AppContext;
+		// Access properties directly
+		const { subdomain, set } = context as any;
 		if (subdomain !== 'base') {
 			set.status = 404;
 			return 'Not Found';
 		}
-		return handleLogout(context as any); // Cast context if needed
+		return handleLogout(context);
 	})
-	.get('/setup-account', (context) => {
-		const { subdomain, set } = context as AppContext;
-		if (subdomain !== 'base') {
-			set.status = 404;
-			return 'Not Found';
-		}
-		// The onBeforeHandle middleware should redirect away if setup is complete
-		// or redirect to login if no user. If it reaches here, user exists and needs setup.
-		return handleSetupAccountGet(context as any); // Cast context if needed
+	.get('/setup-account', handleSetupAccountGet, {
+		beforeHandle: (context) => {
+			// Access properties directly
+			const { subdomain, set } = context as any;
+			console.log('[/setup-account beforeHandle] Hook executing...'); // Changed log message
+
+			// Check subdomain directly
+			if (typeof subdomain !== 'string') {
+				console.error('[/setup-account beforeHandle] Outcome: Invalid subdomain found! Halting.'); // Changed log message
+				try {
+					set.status = 500;
+				} catch (e) {
+					console.error('Failed to set status', e);
+				}
+				return 'Internal Server Error: Invalid context (subdomain) in route beforeHandle.';
+			}
+
+			console.log('[/setup-account beforeHandle] Subdomain value:', subdomain);
+
+			if (subdomain !== 'base') {
+				console.log('[/setup-account beforeHandle] Outcome: Wrong subdomain, returning 404.'); // Changed log message
+				set.status = 404;
+				return 'Not Found';
+			}
+			console.log('[/setup-account beforeHandle] Outcome: Checks passed, proceeding to handler.'); // Changed log message
+		},
 	})
 	.post('/setup-account', (context) => {
-		const { subdomain, set } = context as AppContext;
+		// Access properties directly
+		const { subdomain, set } = context as any;
 		if (subdomain !== 'base') {
 			set.status = 404;
 			return 'Not Found';
 		}
-		// Middleware ensures user exists and setup isn't complete
-		return handleSetupAccountPost(context as any); // Cast context if needed
+		return handleSetupAccountPost(context as any);
 	})
 
 	// --- Global Fallback / 404 Handler --- //
-	// This catches any requests not handled by the specific routes above
 	.all('*', (context) => {
-		const { navUrls, user, session, request } = context as AppContext;
-		context.set.status = 404;
+		// Access properties directly
+		const { navUrls, user, session, set } = context as any;
+		set.status = 404;
 		return createHtmlResponse('Not Found', '<p>The page you requested could not be found.</p>', navUrls, { user, session });
 	})
 
 	// Simplified onError handler
 	.onError(({ code, error, set, request }) => {
+		const currentNavUrls = navUrls; // Access from outer scope
+
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.error(`Global Error Handler [${code}] on ${request.method} ${request.url}: ${errorMessage}`, error);
 
@@ -234,15 +256,28 @@ const app = new Elysia()
 		}
 		set.status = statusCode;
 
-		// Render error page - Use global navUrls as fallback
-		// User/Session context might not be available here, so pass null
-		return createHtmlResponse(
-			`Error ${statusCode}`,
-			`<p>Sorry, something went wrong.</p><p>Error Code: ${code ?? 'UNKNOWN'}</p>`,
-			navUrls, // Global navUrls should be accessible
-			{ user: null, session: null } // Assume user/session context might be lost
-		);
+		return createHtmlResponse(`Error ${statusCode}`, `<p>Sorry, something went wrong.</p><p>Error Code: ${code ?? 'UNKNOWN'}</p>`, currentNavUrls, { user: null, session: null });
 	})
-	.listen(process.env.PORT || 3000); // Use PORT from env or default
+
+	// --- Global Response Logging using onAfterHandle --- //
+	.onAfterHandle((context: any) => {
+		// Use any to avoid complex type errors for now
+		const { request, set, response } = context;
+		// Determine the final status code from the set object
+		const status = set?.status ?? 200; // Add optional chaining for set
+		const location = set?.headers?.['Location']; // Add optional chaining
+
+		if (location) {
+			console.log(`<-- ${request.method} ${request.url} Response Status: ${status} (Redirecting to: ${location})`);
+		} else {
+			console.log(`<-- ${request.method} ${request.url} Response Status: ${status}`);
+		}
+
+		// Important: onAfterHandle expects the response value to be returned
+		// Response might be undefined in some cases (e.g., error before response generation)
+		return response;
+	})
+
+	.listen(process.env.PORT || 3000);
 
 console.info(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
