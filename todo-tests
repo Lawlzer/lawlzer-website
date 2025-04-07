@@ -1,0 +1,1 @@
+when we go to /setup-account and are already logged in, we should receive an error

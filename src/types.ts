@@ -1,3 +1,7 @@
+import type { ISession } from './db/models/Session';
+import type { IUser } from './db/models/User';
+
+// Configuration for displaying URLs
 export interface UrlConfig {
 	home: string; // Full URL for nav
 	valorant: string; // Full URL for nav
@@ -20,3 +24,9 @@ export type Subdomain = 'base' | 'valorant' | 'overwatch' | 'unknown';
 //     // Add other properties like set, query, params, body as needed
 //     set: ElysiaContext['set'];
 // }
+
+// Define the structure of the user object provided by Lucia middleware
+export interface UserSession {
+	user: IUser | null; // Use the full Mongoose IUser type
+	session: ISession | null;
+}
