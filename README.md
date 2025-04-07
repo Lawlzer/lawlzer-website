@@ -28,6 +28,8 @@ You can check out the [create-t3-app GitHub repository](https://github.com/t3-os
 
 Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
 
+docker run --name some-mongo -p 27017:27017 -d mongo
+
 Needed "hosts" file in Windows:
 127.0.0.1 localhost
 127.0.0.1 local.lawlzer.com

@@ -54,3 +54,4 @@ feature_cache
 
 # Specific to this project
 src-legacy
+.next
