@@ -1,0 +1,12 @@
+---
+description: Used for fixing requests that are not working.
+globs: 
+alwaysApply: false
+---
+The code is supposed to perform a series of requests, which it does, but a request is missing, or incorrect, or something like that. None of the requests are returning an error, something just isn't working properly.
+If we are missing data to perform a request, let me know.
+
+Unless explicitly asked to combine requests into one, you should perform EVERY CURL I send, in the order I send them.
+
+Start the response with "FIX.MDC READ AND APPLIED"
+

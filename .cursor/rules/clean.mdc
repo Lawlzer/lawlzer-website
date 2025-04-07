@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Start the response with "CLEAN.MDC READ AND APPLIED".
+
+Modify any of the code necessary, to clean it up.
+Remove all unnecessary comments. 
+Do not touch any console.info's or console.debug's, but remove all console.logs.
+Do anything else necessary to clean the code. Use short-hand return's, e.g if (!something) return; 
