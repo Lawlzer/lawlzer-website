@@ -21,5 +21,4 @@ const UserSchema: Schema = new Schema(
 	}
 );
 
-// Explicitly tell Mongoose to use the collection name 'users'
 export default mongoose.model<IUser>('User', UserSchema, 'users');
