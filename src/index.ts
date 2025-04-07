@@ -38,36 +38,27 @@ interface UrlConfig {
 // let dynamicBaseHost: string; ... etc.
 // const hosts = { ... } as const;
 
-// Calculate hostnames and nav URLs
-let dynamicBaseHost: string;
-let dynamicValorantHost: string;
-let dynamicOverwatchHost: string;
-let navUrls: UrlConfig;
+// --- Refactored Hostname and Nav URL Calculation ---
 
-if (baseHostname.startsWith('local.')) {
-	const domainWithoutLocal = baseHostname.substring(6);
-	const valorantNavHostname = `local.valorant.${domainWithoutLocal}`;
-	const overwatchNavHostname = `local.overwatch.${domainWithoutLocal}`;
-	dynamicBaseHost = baseHost;
-	dynamicValorantHost = `${valorantNavHostname}${basePort ? ':' + basePort : ''}`;
-	dynamicOverwatchHost = `${overwatchNavHostname}${basePort ? ':' + basePort : ''}`;
-	navUrls = {
-		home: `${parsedBaseUrl.protocol}//${baseHostname}${displayPortString}`,
-		valorant: `${parsedBaseUrl.protocol}//${valorantNavHostname}${displayPortString}`,
-		overwatch: `${parsedBaseUrl.protocol}//${overwatchNavHostname}${displayPortString}`,
-	};
-} else {
-	const valorantNavHostname = `valorant.${baseHostname}`;
-	const overwatchNavHostname = `overwatch.${baseHostname}`;
-	dynamicBaseHost = baseHost;
-	dynamicValorantHost = `${valorantNavHostname}${basePort ? ':' + basePort : ''}`;
-	dynamicOverwatchHost = `${overwatchNavHostname}${basePort ? ':' + basePort : ''}`;
-	navUrls = {
-		home: `${parsedBaseUrl.protocol}//${baseHostname}${displayPortString}`,
-		valorant: `${parsedBaseUrl.protocol}//${valorantNavHostname}${displayPortString}`,
-		overwatch: `${parsedBaseUrl.protocol}//${overwatchNavHostname}${displayPortString}`,
-	};
-}
+const isLocal = baseHostname.startsWith('local.');
+const coreDomain = isLocal ? baseHostname.substring(6) : baseHostname;
+
+const valorantSubdomain = isLocal ? `local.valorant.${coreDomain}` : `valorant.${coreDomain}`;
+const overwatchSubdomain = isLocal ? `local.overwatch.${coreDomain}` : `overwatch.${coreDomain}`;
+
+const dynamicBaseHost = baseHost; // The host the server should actually listen on/match
+const dynamicValorantHost = `${valorantSubdomain}${basePort ? ':' + basePort : ''}`;
+const dynamicOverwatchHost = `${overwatchSubdomain}${basePort ? ':' + basePort : ''}`;
+
+// Navigation URLs use the baseHostname (which includes 'local.' if present)
+// and the appropriate display port (frontend or backend)
+const navUrls: UrlConfig = {
+	home: `${parsedBaseUrl.protocol}//${baseHostname}${displayPortString}`,
+	valorant: `${parsedBaseUrl.protocol}//${valorantSubdomain}${displayPortString}`,
+	overwatch: `${parsedBaseUrl.protocol}//${overwatchSubdomain}${displayPortString}`,
+};
+
+// --- End Refactored Section ---
 
 // Helper function to generate HTML response with top-bar
 // This needs to be defined *before* it's used in the routes
