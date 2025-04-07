@@ -12,15 +12,20 @@
 		"db:studio": "prisma studio",
 		"dev": "next dev --turbo",
 		"postinstall": "prisma generate",
-		"lint": "npm run lint:eslint && npm run lint:prettier",
-		"lint:eslint": "eslint . --config ./.config/.eslint.config.mjs",
-		"lint:eslint:fix": "eslint . --fix --config ./.config/.eslint.config.mjs",
-		"lint:fix": "npm run lint:eslint:fix && npm run lint:prettier:fix",
-		"lint:prettier": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache --config ./.config/.prettierrc.mjs",
-		"lint:prettier:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache --config ./.config/.prettierrc.mjs",
+		"lint": "lint-staged",
+		"lint:all": "npm run lint:eslint && npm run lint:prettier",
+		"lint:eslint": "eslint --fix --config ./.config/.eslint.config.mjs",
+		"lint:prettier": "prettier --write --cache --config ./.config/.prettierrc.mjs \"**/*.{ts,tsx,js,jsx,mdx}\"",
+		"prepare": "husky",
 		"preview": "next build && next start",
 		"start": "next start",
 		"typecheck": "tsc --noEmit"
+	},
+	"lint-staged": {
+		"*.{ts,tsx,js,jsx,mdx}": [
+			"eslint --config ./.config/.eslint.config.mjs --fix",
+			"prettier --config ./.config/.prettierrc.mjs --write"
+		]
 	},
 	"prettier": "./.config/.prettierrc.mjs",
 	"dependencies": {
@@ -28,6 +33,7 @@
 		"@lawlzer/utils": "^3.4.15",
 		"@prisma/client": "^6.5.0",
 		"@t3-oss/env-nextjs": "^0.12.0",
+		"@tanstack/query-core": "^5.72.0",
 		"@tanstack/react-query": "^5.69.0",
 		"@trpc/client": "^11.0.0",
 		"@trpc/react-query": "^11.0.0",
@@ -51,6 +57,8 @@
 		"eslint": "^9.23.0",
 		"eslint-config-next": "^15.2.3",
 		"eslint-plugin-import": "^2.31.0",
+		"husky": "^9.1.7",
+		"lint-staged": "^15.5.0",
 		"postcss": "^8.5.3",
 		"prettier": "^3.5.3",
 		"prettier-plugin-packagejson": "^2.5.10",
