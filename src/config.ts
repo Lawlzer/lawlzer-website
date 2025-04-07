@@ -65,3 +65,8 @@ export const navUrls: UrlConfig = {
 	valorant: `${parsedBaseUrl.protocol}//${valorantSubdomain}${displayPortString}`,
 	overwatch: `${parsedBaseUrl.protocol}//${overwatchSubdomain}${displayPortString}`,
 };
+
+// --- Debug Flags --- //
+export const DEBUG_CONTEXT_KEYS = process.env.DEBUG_CONTEXT_KEYS === 'true';
+export const DEBUG_SUBDOMAIN_VALUE = process.env.DEBUG_SUBDOMAIN_VALUE === 'true';
+export const DEBUG_SESSION_STUFF = process.env.DEBUG_SESSION_STUFF === 'true';

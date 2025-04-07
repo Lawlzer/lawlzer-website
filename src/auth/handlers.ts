@@ -32,7 +32,7 @@ export const handleLoginGet = async (context: any) => {
 	const { navUrls, user, session } = context;
 
 	if (!navUrls) {
-		console.error('[Handler handleLoginGet] Outcome: navUrls not found! Returning 500.');
+		console.error('[Handler handleLoginGet] navUrls not found!');
 		if (context.set) context.set.status = 500;
 		return 'Internal Server Error: Missing navigation configuration.';
 	}
@@ -78,7 +78,6 @@ export const handleLoginGet = async (context: any) => {
         </a>
     `;
 
-	console.log('[Handler handleLoginGet] Outcome: Rendering login page.');
 	return createHtmlResponse('Login / Register', loginContent, navUrls, { user, session });
 };
 export const handleRegisterGet = handleLoginGet;
@@ -146,7 +145,7 @@ export const handleGoogleCallback = async ({ query, set, headers }: any) => {
 			errorHeaders.append('Set-Cookie', clearVerifierCookie);
 			errorHeaders.append('Set-Cookie', clearRedirectUriCookie);
 			set.headers = errorHeaders;
-			console.error(`[Handler handleGoogleCallback] Outcome: Google Login Error - ${result.error}, Status: ${result.status}`);
+			console.error(`[Handler handleGoogleCallback] Google Login Error - ${result.error}, Status: ${result.status}`);
 			return `Google Login Error: ${result.error}`;
 		}
 
@@ -157,11 +156,10 @@ export const handleGoogleCallback = async ({ query, set, headers }: any) => {
 		responseHeaders.append('Set-Cookie', clearVerifierCookie);
 		responseHeaders.append('Set-Cookie', clearRedirectUriCookie);
 		responseHeaders.set('Location', targetRedirect);
-		console.log(`[Handler handleGoogleCallback] Outcome: Success, redirecting to ${targetRedirect}`);
-		set.redirect = null; // Explicitly clear Elysia's redirect property if returning a Response
+		set.redirect = null;
 		return new Response(null, { status: 302, headers: responseHeaders });
 	} catch (error) {
-		console.error('[Handler handleGoogleCallback] Outcome: Unexpected error', error);
+		console.error('[Handler handleGoogleCallback] Unexpected error', error);
 		const errorHeaders = new Headers();
 		errorHeaders.append('Set-Cookie', clearStateCookie);
 		errorHeaders.append('Set-Cookie', clearVerifierCookie);
@@ -330,55 +328,49 @@ export const handleGithubCallback = async ({ query, set, headers, cookie }: any)
 };
 
 // GET /logout
-export const handleLogout = async ({ headers, set }: Context & { headers: { cookie?: string } }) => {
+export const handleLogout = async ({ headers, set }: any) => {
 	console.log('[Handler handleLogout] Executing...');
-	const sessionId = readSessionCookie(headers.cookie);
+	const sessionId = readSessionCookie(headers?.cookie);
 	if (sessionId) {
 		try {
 			await invalidateSession(sessionId);
-			console.log('[Handler handleLogout] Session invalidated:', sessionId);
 		} catch (error) {
 			console.error('[Handler handleLogout] Error invalidating session:', error);
 		}
 	} else {
-		console.log('[Handler handleLogout] No session cookie found.');
+		// Log if no session was found to clear - useful for debugging
+		console.log('[Handler handleLogout] No session cookie found to invalidate.');
 	}
+	// Set blank cookie header
 	set.headers['Set-Cookie'] = createBlankSessionCookie();
-	set.redirect = '/';
+	// Explicitly set Location header for redirect
+	set.headers['Location'] = '/';
+	// Set status code
 	set.status = 302;
-	console.log('[Handler handleLogout] Outcome: Redirecting to /');
-	// No explicit return needed when using set.redirect
+	// Return null response for redirect
+	return new Response(null);
 };
 
 // GET /setup-account
 export const handleSetupAccountGet = async (context: any) => {
 	console.log('[Handler handleSetupAccountGet] Executing...');
-	// Check for html directly on context
 	if (!context || typeof context.set !== 'object' || typeof context.html !== 'function') {
-		console.error('[Handler handleSetupAccountGet] Outcome: Invalid context received (check set/html)! Returning 500.');
+		console.error('[Handler handleSetupAccountGet] Invalid context received (check set/html)!');
 		try {
-			if (context && typeof context.set === 'object') {
+			if (context?.set) {
 				context.set.status = 500;
-			} else {
-				console.error('handleSetupAccountGet: context.set is missing or invalid.');
 			}
 		} catch (e) {
 			console.error('handleSetupAccountGet: Error setting status code.', e);
 		}
 		return 'Internal Server Error: Invalid context.';
 	}
-
 	const { html, user, set } = context;
-
 	if (!user) {
-		// This should ideally not be reached due to global middleware, but log if it is
-		console.log('[Handler handleSetupAccountGet] Outcome: No user found (should have been redirected earlier). Redirecting to /login.');
 		set.redirect = '/login';
 		set.status = 302;
 		return '';
 	}
-
-	console.log('[Handler handleSetupAccountGet] Outcome: Rendering setup form for user:', user?._id ?? user?.id);
 	return html(`
         <h1>Setup Your Account</h1>
         <p>Choose a username (3-16 characters, letters, numbers, underscores):</p>
@@ -393,64 +385,46 @@ export const handleSetupAccountGet = async (context: any) => {
 export const handleSetupAccountPost = async (context: any) => {
 	console.log('[Handler handleSetupAccountPost] Executing...');
 	const { body, user, set } = context;
-
 	if (!user) {
-		console.log('[Handler handleSetupAccountPost] Outcome: No user. Returning 401.');
 		set.status = 401;
 		return 'You must be logged in to set a username.';
 	}
 	if (user.username) {
-		console.log('[Handler handleSetupAccountPost] Outcome: Username already set. Returning 400.');
 		set.status = 400;
 		return 'Username already set.';
 	}
-
 	const validation = z.object({ username: z.string().regex(USERNAME_REGEX) }).safeParse(body);
-
 	if (!validation.success) {
-		console.log('[Handler handleSetupAccountPost] Outcome: Invalid username format. Returning 400.');
 		set.status = 400;
 		return 'Invalid username format (3-16 characters, letters, numbers, underscores).';
 	}
-
 	const { username } = validation.data;
-
 	try {
 		const existingUser = await UserModel.findOne({ username: username });
 		if (existingUser) {
-			console.log('[Handler handleSetupAccountPost] Outcome: Username taken. Returning 409.');
 			set.status = 409;
 			return 'Username is already taken.';
 		}
-
 		const userId = user._id ?? user.id;
 		if (!userId) {
 			console.error('Authentication error: User ID not found in context user object.', user);
-			console.log('[Handler handleSetupAccountPost] Outcome: User ID missing. Returning 401.'); // Log outcome
 			set.status = 401;
 			return 'Authentication error: User ID not found.';
 		}
-
 		const updatedUser = await UserModel.findByIdAndUpdate(userId, { username: username }, { new: true });
-
 		if (!updatedUser) {
-			console.log('[Handler handleSetupAccountPost] Outcome: User not found during update. Returning 404.');
 			set.status = 404;
 			return 'User not found during update.';
 		}
-
-		console.log(`[Handler handleSetupAccountPost] Outcome: Username set successfully (${username}), redirecting to /.`);
 		set.redirect = '/';
 		set.status = 302;
-		return; // Return nothing on redirect
+		return;
 	} catch (error: any) {
-		console.error('[Handler handleSetupAccountPost] Outcome: Error setting username', error);
-		if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
-			console.log('[Handler handleSetupAccountPost] Outcome: Username conflict (DB). Returning 409.'); // Log outcome
+		console.error('[Handler handleSetupAccountPost] Error setting username', error);
+		if (error?.code === 11000) {
 			set.status = 409;
 			return 'Username is already taken.';
 		}
-		console.log('[Handler handleSetupAccountPost] Outcome: Unknown error setting username. Returning 500.'); // Log outcome
 		set.status = 500;
 		return 'Failed to set username.';
 	}

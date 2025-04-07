@@ -6,3 +6,6 @@ when we go to /setup-account and are NOT already logged in, we should be given a
 
 auth -> redirects us to previous page
 
+Session/auth expires
+
+/logout

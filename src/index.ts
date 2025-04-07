@@ -9,7 +9,14 @@ import { connectToDatabase } from './db/connect'; // Import DB connector
 import { customAuthMiddleware } from './middleware/luciaAuth'; // Corrected import name
 import { handleLoginGet, handleRegisterGet, handleGoogleLogin, handleGoogleCallback, handleDiscordLogin, handleDiscordCallback, handleGithubLogin, handleGithubCallback, handleLogout, handleSetupAccountGet, handleSetupAccountPost } from './auth/handlers'; // Import auth handlers
 import { throwError } from '@lawlzer/utils';
-import { navUrls, dynamicBaseHost, dynamicValorantHost, dynamicOverwatchHost } from './config';
+import {
+	navUrls,
+	dynamicBaseHost,
+	dynamicValorantHost,
+	dynamicOverwatchHost,
+	DEBUG_CONTEXT_KEYS, // Import
+	DEBUG_SUBDOMAIN_VALUE, // Import
+} from './config';
 import type { IUser } from './db/models/User'; // Import IUser
 import type { ISession } from './db/models/Session'; // Import ISession
 
@@ -74,56 +81,50 @@ const app = new Elysia()
 
 	// --- Base Domain Setup/Auth Redirect Middleware --- //
 	.onBeforeHandle({ as: 'global' }, (context) => {
-		// Access properties directly
 		const { subdomain, user, set, request, path } = context as any;
-		// Log incoming request
-		console.log(`--> ${request.method} ${request.url}`); // Log method and full URL
+		console.log(`--> ${request.method} ${request.url}`); // Keep incoming request log
 
-		console.log('[Global onBeforeHandle] Context Keys:', Object.keys(context));
-		console.log('[Global onBeforeHandle] Subdomain value:', subdomain);
+		if (DEBUG_CONTEXT_KEYS) {
+			console.log('[Global onBeforeHandle] Context Keys:', Object.keys(context));
+		}
+		if (DEBUG_SUBDOMAIN_VALUE) {
+			console.log('[Global onBeforeHandle] Subdomain value:', subdomain);
+		}
 
 		if (typeof subdomain !== 'string') {
-			console.error('[Global onBeforeHandle] Outcome: subdomain is invalid or missing! Halting.');
-			// Potentially set an error status if appropriate, but returning may be enough
-			return; // Exit early
+			console.error('[Global onBeforeHandle] subdomain is invalid or missing! Halting.');
+			return;
 		}
 
 		// --- Logic only for base domain ---
 		if (subdomain === 'base') {
-			// Redirect to login if trying to access setup page while logged out
 			if (path === '/setup-account' && !user) {
-				console.log('[Global onBeforeHandle] Outcome: User null, redirecting /setup-account to /login');
+				// console.log('[Global onBeforeHandle] Redirecting /setup-account to /login'); // Removed outcome log
 				set.headers['Location'] = '/login';
 				set.status = 302;
-				return new Response(null); // Halt with explicit redirect response
+				return new Response(null);
 			}
 
 			const setupComplete = isUserSetupComplete(user as IUser | null);
 
-			// Force Setup Redirect Check (if logged in but setup NOT complete)
 			if (user && !setupComplete) {
 				const isPathAllowed = ALLOWED_PATHS_FOR_UNFINISHED_USERS.some((p) => path === p);
 				const isLoginPath = path.startsWith('/login');
 				if (!isPathAllowed && !isLoginPath) {
-					console.log('[Global onBeforeHandle] Outcome: User needs setup, redirecting to /setup-account');
+					// console.log('[Global onBeforeHandle] Redirecting to /setup-account'); // Removed outcome log
 					set.headers['Location'] = '/setup-account';
 					set.status = 302;
-					return new Response(null); // Halt
+					return new Response(null);
 				}
 			}
-
-			// Redirect away from /setup-account (if logged in and setup IS complete)
 			if (setupComplete && path === '/setup-account') {
-				console.log('[Global onBeforeHandle] Outcome: User already set up, redirecting /setup-account to /');
+				// console.log('[Global onBeforeHandle] Redirecting /setup-account to /'); // Removed outcome log
 				set.headers['Location'] = '/';
 				set.status = 302;
-				return new Response(null); // Halt
+				return new Response(null);
 			}
 		}
-		// --- End base domain logic ---
-
-		// If no redirect conditions met within this hook
-		console.log('[Global onBeforeHandle] Outcome: Proceeding.');
+		// console.log('[Global onBeforeHandle] Proceeding.'); // Removed outcome log
 	})
 
 	// --- Main Route Handler (Dispatches Based on Subdomain) --- //
@@ -187,13 +188,18 @@ const app = new Elysia()
 	})
 	.get('/setup-account', handleSetupAccountGet, {
 		beforeHandle: (context) => {
-			// Access properties directly
 			const { subdomain, set } = context as any;
-			console.log('[/setup-account beforeHandle] Hook executing...'); // Changed log message
+			console.log('[/setup-account beforeHandle] Hook executing...'); // Keep entry log
 
-			// Check subdomain directly
+			if (DEBUG_CONTEXT_KEYS) {
+				console.log('[/setup-account beforeHandle] Context Keys:', Object.keys(context));
+			}
+			if (DEBUG_SUBDOMAIN_VALUE) {
+				console.log('[/setup-account beforeHandle] Subdomain value:', subdomain);
+			}
+
 			if (typeof subdomain !== 'string') {
-				console.error('[/setup-account beforeHandle] Outcome: Invalid subdomain found! Halting.'); // Changed log message
+				console.error('[/setup-account beforeHandle] Invalid subdomain found! Halting.');
 				try {
 					set.status = 500;
 				} catch (e) {
@@ -201,15 +207,12 @@ const app = new Elysia()
 				}
 				return 'Internal Server Error: Invalid context (subdomain) in route beforeHandle.';
 			}
-
-			console.log('[/setup-account beforeHandle] Subdomain value:', subdomain);
-
 			if (subdomain !== 'base') {
-				console.log('[/setup-account beforeHandle] Outcome: Wrong subdomain, returning 404.'); // Changed log message
+				// console.log('[/setup-account beforeHandle] Wrong subdomain, returning 404.'); // Removed outcome log
 				set.status = 404;
 				return 'Not Found';
 			}
-			console.log('[/setup-account beforeHandle] Outcome: Checks passed, proceeding to handler.'); // Changed log message
+			// console.log('[/setup-account beforeHandle] Checks passed, proceeding to handler.'); // Removed outcome log
 		},
 	})
 	.post('/setup-account', (context) => {
@@ -261,20 +264,17 @@ const app = new Elysia()
 
 	// --- Global Response Logging using onAfterHandle --- //
 	.onAfterHandle((context: any) => {
-		// Use any to avoid complex type errors for now
+		// Keep using any for now
 		const { request, set, response } = context;
-		// Determine the final status code from the set object
-		const status = set?.status ?? 200; // Add optional chaining for set
-		const location = set?.headers?.['Location']; // Add optional chaining
+		const status = set?.status ?? 200;
+		const location = set?.headers?.['Location'];
 
+		// Keep final response log
 		if (location) {
 			console.log(`<-- ${request.method} ${request.url} Response Status: ${status} (Redirecting to: ${location})`);
 		} else {
 			console.log(`<-- ${request.method} ${request.url} Response Status: ${status}`);
 		}
-
-		// Important: onAfterHandle expects the response value to be returned
-		// Response might be undefined in some cases (e.g., error before response generation)
 		return response;
 	})
 

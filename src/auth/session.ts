@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import SessionModel, { ISession } from '../db/models/Session';
 import { serialize, parse } from 'cookie';
 import type { SerializeOptions } from 'cookie';
+import { DEBUG_SESSION_STUFF } from '../config'; // Import the debug flag
 
 const SESSION_COOKIE_NAME = 'auth_session';
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -34,43 +35,39 @@ export const createSession = async (userId: string): Promise<ISession> => {
  * @returns The session object if valid and not expired, otherwise null.
  */
 export const validateSession = async (sessionId: string): Promise<ISession | null> => {
-	console.log(`[validateSession] Validating ID: ${sessionId}`);
+	if (DEBUG_SESSION_STUFF) console.log(`[validateSession] Validating ID: ${sessionId}`);
 	if (!sessionId) {
-		console.log('[validateSession] No sessionId provided.');
+		if (DEBUG_SESSION_STUFF) console.log('[validateSession] No sessionId provided.');
 		return null;
 	}
-	// Find by the custom sessionId field instead of _id
 	let session: ISession | null = null;
 	try {
 		session = await SessionModel.findOne({ sessionId }).exec();
 	} catch (dbError) {
-		console.error(`[validateSession] Database error looking up session ${sessionId}:`, dbError);
-		return null; // DB error, treat as invalid
-	}
-
-	if (!session) {
-		console.log(`[validateSession] Session not found in DB for ID: ${sessionId}`);
+		console.error(`[validateSession] Database error looking up session ${sessionId}:`, dbError); // Keep DB errors unconditional
 		return null;
 	}
 
-	// Session found, check expiration
+	if (!session) {
+		if (DEBUG_SESSION_STUFF) console.log(`[validateSession] Session not found in DB for ID: ${sessionId}`);
+		return null;
+	}
+
 	const now = Date.now();
 	const expiresAt = session.expiresAt;
-	console.log(`[validateSession] Session found. Now: ${now}, ExpiresAt: ${expiresAt}`);
+	if (DEBUG_SESSION_STUFF) console.log(`[validateSession] Session found. Now: ${now}, ExpiresAt: ${expiresAt}`);
 	if (expiresAt < now) {
-		console.log(`[validateSession] Session ${sessionId} expired. Deleting...`);
+		if (DEBUG_SESSION_STUFF) console.log(`[validateSession] Session ${sessionId} expired. Deleting...`);
 		try {
-			// Delete using the sessionId field
 			await SessionModel.findOneAndDelete({ sessionId }).exec();
-			console.log(`[validateSession] Expired session ${sessionId} deleted.`);
+			if (DEBUG_SESSION_STUFF) console.log(`[validateSession] Expired session ${sessionId} deleted.`);
 		} catch (deleteError) {
-			console.error(`[validateSession] Error deleting expired session ${sessionId}:`, deleteError);
+			console.error(`[validateSession] Error deleting expired session ${sessionId}:`, deleteError); // Keep delete errors unconditional
 		}
 		return null;
 	}
 
-	// Session is valid and not expired
-	console.log(`[validateSession] Session ${sessionId} is valid.`);
+	if (DEBUG_SESSION_STUFF) console.log(`[validateSession] Session ${sessionId} is valid.`);
 	return session;
 };
 
