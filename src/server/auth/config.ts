@@ -39,6 +39,14 @@ export const authConfig = {
 			clientId: env.AUTH_DISCORD_ID,
 			clientSecret: env.AUTH_DISCORD_SECRET,
 		}),
+		GoogleProvider({
+			clientId: env.AUTH_GOOGLE_ID,
+			clientSecret: env.AUTH_GOOGLE_SECRET,
+		}),
+		GithubProvider({
+			clientId: env.AUTH_GITHUB_ID,
+			clientSecret: env.AUTH_GITHUB_SECRET,
+		}),
 	],
 	adapter: PrismaAdapter(db),
 	callbacks: {
