@@ -2,7 +2,7 @@
 	"name": "lawlzer-site",
 	"version": "0.1.0",
 	"private": true,
-	"type": "module",
+	"type": "commonjs",
 	"scripts": {
 		"build": "next build",
 		"check": "next lint && tsc --noEmit",
