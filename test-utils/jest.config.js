@@ -1,4 +1,4 @@
-import nextJest from 'next/jest.js';
+const nextJest = require('next/jest.js');
 
 const createJestConfig = nextJest({
 	// Provide the path to your Next.js app to load next.config.js and .env files in your test environment
@@ -9,7 +9,7 @@ const createJestConfig = nextJest({
 /** @type {import('jest').Config} */
 const customJestConfig = {
 	// Add more setup options before each test is run
-	setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+	setupFilesAfterEnv: ['<rootDir>/test-utils/jest.setup.js'],
 	// Ensure jsdom is set here for component tests
 	testEnvironment: 'jest-environment-jsdom',
 	// Automatically clear mock calls, instances, contexts and results before every test
@@ -39,9 +39,7 @@ const customJestConfig = {
 	// ],
 };
 
-// Export an async function as required by next/jest
-// This ensures we can modify the config *after* next/jest applies its defaults.
-export default async () => {
+const modifyJestConfig = async () => {
 	// Create the base config object from next/jest
 	// Pass our custom config, including the transformIgnorePatterns attempt
 	const jestConfig = await createJestConfig(customJestConfig)();
@@ -59,3 +57,5 @@ export default async () => {
 	// Return the final, modified config
 	return jestConfig;
 };
+
+module.exports = modifyJestConfig();
