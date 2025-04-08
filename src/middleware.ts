@@ -5,15 +5,18 @@ export function middleware(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
 	const { pathname, hostname } = url;
 
-	const isValorantSubdomain = hostname.startsWith('valorant.') || (hostname === 'localhost' && pathname.startsWith('/valorant'));
-
-	if (hostname === 'localhost' && pathname.startsWith('/valorant')) {
-		url.pathname = pathname.replace('/valorant', '');
-		url.pathname = `/subdomains/valorant${url.pathname}`;
+	if (hostname === 'localhost' && pathname === '/valorant') {
+		url.pathname = '/subdomains/valorant';
 		return NextResponse.rewrite(url);
 	}
 
-	if (isValorantSubdomain) {
+	if (hostname === 'localhost' && pathname.startsWith('/valorant/')) {
+		const newPath = pathname.replace('/valorant', '/subdomains/valorant');
+		url.pathname = newPath;
+		return NextResponse.rewrite(url);
+	}
+
+	if (hostname.startsWith('valorant.')) {
 		url.pathname = `/subdomains/valorant${pathname}`;
 		return NextResponse.rewrite(url);
 	}
