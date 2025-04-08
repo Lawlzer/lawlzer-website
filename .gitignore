@@ -30,6 +30,7 @@ zig-out
 
 data
 .next
+coverage
 
 # Temporary/dev locations
 legacy
