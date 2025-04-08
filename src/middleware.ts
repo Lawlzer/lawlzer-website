@@ -5,25 +5,28 @@ export function middleware(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
 	const { pathname, hostname } = url;
 
+	if (pathname.startsWith('/valorant/') && !pathname.startsWith('/valorant/api/')) {
+		return NextResponse.next();
+	}
+
 	if (hostname === 'localhost' && pathname === '/valorant') {
-		url.pathname = '/subdomains/valorant';
-		return NextResponse.rewrite(url);
+		return NextResponse.rewrite(new URL('/valorant', request.url));
 	}
 
 	if (hostname === 'localhost' && pathname.startsWith('/valorant/')) {
-		const newPath = pathname.replace('/valorant', '/subdomains/valorant');
-		url.pathname = newPath;
-		return NextResponse.rewrite(url);
+		return NextResponse.next();
 	}
 
 	if (hostname.startsWith('valorant.')) {
-		url.pathname = `/subdomains/valorant${pathname}`;
-		return NextResponse.rewrite(url);
+		if (pathname === '/') {
+			return NextResponse.rewrite(new URL('/valorant', request.url));
+		}
+		return NextResponse.rewrite(new URL(`/valorant${pathname}`, request.url));
 	}
 
 	return NextResponse.next();
 }
 
 export const config = {
-	matcher: ['/((?!api|_next/static|_next/image|favicon.ico|public).*)'],
+	matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
