@@ -9,7 +9,7 @@ const createJestConfig = nextJest({
 /** @type {import('jest').Config} */
 const customJestConfig = {
 	// Add more setup options before each test is run
-	setupFilesAfterEnv: ['<rootDir>/test-utils/jest.setup.js'],
+	setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 	// Ensure jsdom is set here for component tests
 	testEnvironment: 'jest-environment-jsdom',
 	// Automatically clear mock calls, instances, contexts and results before every test
