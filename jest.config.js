@@ -5,11 +5,12 @@ const createJestConfig = nextJest({
 	dir: './',
 });
 
-// Add any custom config to be passed to Jest
+// Initial custom config to be passed to Jest
 /** @type {import('jest').Config} */
-const config = {
+const customJestConfig = {
 	// Add more setup options before each test is run
 	setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+	// Ensure jsdom is set here for component tests
 	testEnvironment: 'jest-environment-jsdom',
 	// Automatically clear mock calls, instances, contexts and results before every test
 	clearMocks: true,
@@ -20,19 +21,37 @@ const config = {
 	// An array of glob patterns indicating a set of files for which coverage information should be collected
 	collectCoverageFrom: [
 		'src/**/*.{js,jsx,ts,tsx}',
-		'!src/**/*.d.ts', // Exclude type definition files
-		'!src/**/index.{js,jsx,ts,tsx}', // Often just re-exports
-		'!src/app/api/**', // Exclude API routes for now
-		'!src/env.js', // Exclude environment setup
-		'!src/trpc/**', // Exclude tRPC setup for now
-		'!src/server/**', // Exclude server-specific logic for now
+		'!src/**/*.d.ts',
+		'!src/**/index.{js,jsx,ts,tsx}',
+		// '!src/app/api/**', // Consider including API routes if testing them
+		'!src/env.js',
+		'!src/trpc/**',
+		'!src/server/**',
 	],
 	// Tell Jest how to resolve path aliases
 	moduleNameMapper: {
 		// Handle module aliases (this will be automatically configured for you soon)
 		'^~/(.*)$': '<rootDir>/src/$1',
 	},
+	// Remove transformIgnorePatterns from here
+	// transformIgnorePatterns: [
+	//     '/node_modules/(?!(next-auth|@auth/core|oauth4webapi)/)',
+	// ],
 };
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-export default createJestConfig(config);
+// Export an async function as required by next/jest
+// This ensures we can modify the config *after* next/jest applies its defaults.
+export default async () => {
+	// Create the base config object from next/jest
+	// Pass our custom config, including the transformIgnorePatterns attempt
+	const jestConfig = await createJestConfig(customJestConfig)();
+
+	// *** Forcefully override transformIgnorePatterns after creation ***
+	jestConfig.transformIgnorePatterns = ['/node_modules/(?!(next-auth|@auth/core|oauth4webapi|@auth/prisma-adapter)/)', '^.+.module.(css|sass|scss)$'];
+
+	// Verify the environment is correctly set for component tests
+	console.log('Final Jest testEnvironment:', jestConfig.testEnvironment); // Add log for debugging
+
+	// Return the final, modified config
+	return jestConfig;
+};

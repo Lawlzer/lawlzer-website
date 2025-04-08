@@ -3,61 +3,53 @@
  */
 
 import { testApiHandler } from 'next-test-api-route-handler';
-import * as handler from './route'; // Import your route handlers
+// Remove direct handler import, will import dynamically
+// import * as handler from './route';
 // We will mock env and auth, so don't import them directly here if we mock the whole module
 // import { env } from '../../../../env';
 // import { auth } from '../../../../server/auth';
 import type { Session } from 'next-auth';
 
-// Import the mocked versions AFTER setting up the mocks
-// Now that the modules are mocked, these imports will get the mocked versions.
+// Import the base mocked versions AFTER jest.mock calls
 import { auth } from '../../../../server/auth';
-import { env } from '../../../../env';
 
 // --- Mocking Setup ---
-// Mock the entire auth module
 jest.mock('../../../../server/auth');
-// Mock the entire env module, providing a factory to ensure structure
+// Default mock for env, can be overridden by doMock
 jest.mock('../../../../env', () => ({
 	env: {
-		NODE_ENV: 'production', // Default value for tests
-		// Add other required env variables with mock values if necessary
+		NODE_ENV: 'production', // Default for tests where it's not specified
 		AUTH_SECRET: 'mock-secret',
 		AUTH_URL: 'http://localhost:3000/api/auth',
-		// ... other env vars
 	},
 }));
+// env import might not be needed directly if using doMock consistently
+// import { env } from '../../../../env';
 
-// Assign the mocked imports to const variables
-// We use 'as jest.Mock' to tell TypeScript this is indeed a Jest mock
-const mockAuth = auth as jest.Mock<Promise<Session | null>>;
-// The mock factory ensures env exists with the correct structure
-const mockEnv = { env };
+// Use MockedFunction for better typing
+let mockAuth = auth as jest.MockedFunction<typeof auth>; // Use let as it's reassigned in beforeEach
 // --- End Mocking Setup ---
-
-// Use beforeAll *after* declarations - Removed as it's better inside describe
-// beforeAll(() => {
-//     // No dynamic imports needed here anymore
-// });
 
 // Store original NODE_ENV - Less reliable due to module caching, mocking env directly is better
 // const originalNodeEnv = process.env.NODE_ENV;
 
 describe('GET /api/dev/account', () => {
-	// beforeAll can go here if setup applies to all tests in this describe block
-
-	beforeEach(() => {
-		// Reset mocks before each test
+	beforeEach(async () => {
+		// Reset the auth mock
 		mockAuth.mockClear();
-		// Reset the NODE_ENV mock to a default (e.g., 'production') before each test
-		// Ensure env and env.NODE_ENV exist in the mock - No longer needed due to factory
-		// if (!mockEnv.env) {
-		//     mockEnv.env = { NODE_ENV: 'production' };
-		// } else {
-		//     mockEnv.env.NODE_ENV = 'production';
-		// }
-		// Reset NODE_ENV to the default 'production' before each test
-		mockEnv.env.NODE_ENV = 'production';
+		// Reset modules to ensure changes in doMock are picked up
+		jest.resetModules();
+		// Re-mock auth after resetModules to ensure it's available
+		// and re-assign the global mockAuth variable using dynamic import
+		jest.mock('../../../../server/auth');
+		const authModule = await import('../../../../server/auth'); // Use dynamic import
+		mockAuth = authModule.auth as jest.MockedFunction<typeof auth>;
+	});
+
+	afterEach(() => {
+		// Important: Unmock 'env' after each test that uses doMock
+		// to prevent mock state leaking between tests.
+		jest.unmock('../../../../env');
 	});
 
 	// afterAll(() => {
@@ -66,9 +58,13 @@ describe('GET /api/dev/account', () => {
 	// });
 
 	it('should return 403 if NODE_ENV is not development', async () => {
-		// Ensure NODE_ENV is 'production' - Handled by beforeEach
-		// mockEnv.env.NODE_ENV = 'production';
-		// NODE_ENV is 'production' by default from beforeEach
+		// Explicitly mock env for this test's context (even if it's the default)
+		jest.doMock('../../../../env', () => ({
+			env: { NODE_ENV: 'production' },
+		}));
+
+		// Dynamically import the handler *after* mocks are set
+		const handler = await import('./route');
 
 		await testApiHandler({
 			// We pass the actual handler, the mocks affect its dependencies
@@ -84,15 +80,22 @@ describe('GET /api/dev/account', () => {
 	});
 
 	it('should return 200 and session data if NODE_ENV is development', async () => {
-		// Set NODE_ENV to 'development' specifically for this test
-		mockEnv.env.NODE_ENV = 'development';
+		// Mock env specifically for development mode in this test
+		jest.doMock('../../../../env', () => ({
+			env: { NODE_ENV: 'development' },
+		}));
+
+		// Dynamically import the handler *after* mocks are set
+		const handler = await import('./route');
+		// Use the mockAuth assigned in beforeEach
+		const currentMockAuth = mockAuth;
 
 		const mockSessionData: Session = {
 			user: { id: 'test-user-id', name: 'Test User', email: 'test@example.com' },
 			expires: '2099-01-01T00:00:00.000Z',
 		};
-		// Ensure the mock resolves with the correct type
-		mockAuth.mockResolvedValue(mockSessionData);
+		// Cast mock function to any before calling method
+		(currentMockAuth as any).mockResolvedValue(mockSessionData);
 
 		await testApiHandler({
 			appHandler: handler,
@@ -100,17 +103,25 @@ describe('GET /api/dev/account', () => {
 				const res = await fetch({ method: 'GET' });
 				expect(res.status).toBe(200);
 				await expect(res.json()).resolves.toEqual({ session: mockSessionData });
-				expect(mockAuth).toHaveBeenCalledTimes(1);
+				expect(currentMockAuth).toHaveBeenCalledTimes(1); // Auth should be called only in dev mode
 			},
 		});
 	});
 
 	it('should return correct Content-Type header in development', async () => {
-		// Set NODE_ENV to 'development' specifically for this test
-		mockEnv.env.NODE_ENV = 'development';
+		// Mock env specifically for development mode
+		jest.doMock('../../../../env', () => ({
+			env: { NODE_ENV: 'development' },
+		}));
+
+		// Dynamically import the handler *after* mocks are set
+		const handler = await import('./route');
+		// Use the mockAuth assigned in beforeEach
+		const currentMockAuth = mockAuth;
 
 		// Session data doesn't matter, can be null
-		mockAuth.mockResolvedValue(null);
+		// Cast mock function to any before calling method
+		(currentMockAuth as any).mockResolvedValue(null);
 
 		await testApiHandler({
 			appHandler: handler,
@@ -122,10 +133,13 @@ describe('GET /api/dev/account', () => {
 	});
 
 	it('should return correct Content-Type header when forbidden', async () => {
-		// Ensure NODE_ENV is not 'development'
-		// mockEnv.env.NODE_ENV = 'production'; // Already set by beforeEach
-		// Ensure NODE_ENV is not 'development' (it's 'production' by default)
-		// mockEnv.env.NODE_ENV = 'production'; // Already set by beforeEach
+		// Mock env specifically for non-development mode
+		jest.doMock('../../../../env', () => ({
+			env: { NODE_ENV: 'production' },
+		}));
+
+		// Dynamically import the handler *after* mocks are set
+		const handler = await import('./route');
 
 		await testApiHandler({
 			appHandler: handler,
@@ -138,23 +152,33 @@ describe('GET /api/dev/account', () => {
 	});
 });
 
+// For unsupported methods, NODE_ENV usually doesn't matter, so we might
+// not need the complexity of doMock/dynamic imports here.
+// Let's import the handler once for this block.
 describe('Unsupported Methods /api/dev/account', () => {
-	// Set NODE_ENV for these tests - No longer needed
-	// beforeAll(() => {
-	//     if (!mockEnv.env) {
-	//         mockEnv.env = { NODE_ENV: 'production' };
-	//     } else {
-	//         mockEnv.env.NODE_ENV = 'production'; // Or 'development', shouldn't matter for method check
-	//     }
-	// });
-	// You could use beforeAll here if you needed specific setup for this block
-	// beforeAll(() => {
-	//     mockEnv.env.NODE_ENV = 'production'; // Set desired env for all these tests
-	// });
+	// Use 'any' type for the handler due to linter rule
+	let handler: any;
+
+	beforeAll(async () => {
+		// Reset modules once before this block to ensure clean state
+		jest.resetModules();
+		// Mock env consistently for this block if necessary
+		jest.doMock('../../../../env', () => ({
+			env: { NODE_ENV: 'production' }, // Or whatever is appropriate
+		}));
+		// Re-mock auth after resetModules
+		jest.mock('../../../../server/auth');
+		handler = await import('./route');
+	});
+
+	afterAll(() => {
+		// Unmock env after the block
+		jest.unmock('../../../../env');
+	});
 
 	it('should return 405 for POST requests', async () => {
 		await testApiHandler({
-			appHandler: handler,
+			appHandler: handler, // Use handler loaded in beforeAll
 			test: async ({ fetch }) => {
 				const res = await fetch({
 					method: 'POST',
