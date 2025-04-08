@@ -49,6 +49,10 @@ export default async () => {
 	// *** Forcefully override transformIgnorePatterns after creation ***
 	jestConfig.transformIgnorePatterns = ['/node_modules/(?!(next-auth|@auth/core|oauth4webapi|@auth/prisma-adapter)/)', '^.+.module.(css|sass|scss)$'];
 
+	jestConfig.transform = {
+		'^.+\\.(ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+	};
+
 	// Verify the environment is correctly set for component tests
 	console.log('Final Jest testEnvironment:', jestConfig.testEnvironment); // Add log for debugging
 
