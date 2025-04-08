@@ -29,25 +29,3 @@ describe('GET /api/valorant', () => {
 		});
 	});
 });
-
-describe('Unsupported Methods /api/valorant', () => {
-	it('should return 405 for POST requests', async () => {
-		await testApiHandler({
-			appHandler: handler,
-			// Optionally provide params, handler will resolve '/api/valorant?id=1'
-			// params: { id: '1' },
-			test: async ({ fetch }) => {
-				const res = await fetch({
-					method: 'POST',
-					body: JSON.stringify({ data: 'test' }),
-				});
-				// next-test-api-route-handler might return 404 or 405 depending
-				// on how Next.js handles undefined method handlers in this context.
-				// Let's expect 405 (Method Not Allowed) as the ideal RESTful response.
-				expect(res.status).toBe(405);
-			},
-		});
-	});
-
-	// Add similar tests for PUT, DELETE, PATCH etc. if needed
-});

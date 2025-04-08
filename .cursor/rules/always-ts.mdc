@@ -12,3 +12,4 @@ Use console.log for temporary logs. Use console.info for long-term logs, and use
 Use short-circuits, or short-returns whenever possible. if (!something) return; 
 
 Do NOT use JSDoc, as this is TypeScript. There is no point in JSDoc and TypeScript.
+Do not add comments unless it's absolutely necessary.
