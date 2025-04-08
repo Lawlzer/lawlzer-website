@@ -18,6 +18,19 @@ const config = {
 			},
 		];
 	},
+	async headers() {
+		return [
+			{
+				source: '/(.*)',
+				headers: [
+					{
+						key: 'x-subdomain-handled',
+						value: 'true',
+					},
+				],
+			},
+		];
+	},
 };
 
 export default config;

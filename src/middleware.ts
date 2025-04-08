@@ -1,23 +1,14 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { env } from './env';
 
 export function middleware(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
 	const { pathname, hostname } = url;
 
-	if (pathname.startsWith('/valorant/') && !pathname.startsWith('/valorant/api/')) {
-		return NextResponse.next();
-	}
+	const isValorantSubdomain = hostname === 'valorant.localhost' || hostname === 'valorant.lawlzer.com' || hostname.startsWith('valorant.');
 
-	if (hostname === 'localhost' && pathname === '/valorant') {
-		return NextResponse.rewrite(new URL('/valorant', request.url));
-	}
-
-	if (hostname === 'localhost' && pathname.startsWith('/valorant/')) {
-		return NextResponse.next();
-	}
-
-	if (hostname.startsWith('valorant.')) {
+	if (isValorantSubdomain) {
 		if (pathname === '/') {
 			return NextResponse.rewrite(new URL('/valorant', request.url));
 		}
