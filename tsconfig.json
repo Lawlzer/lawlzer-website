@@ -96,7 +96,7 @@
     // React does not allow "baseUrl: '.'", or using non-relative paths as ~/ :( So we have to do it this way.
     "baseUrl": "." /* Specify the base directory to resolve non-relative module names. */,
     "paths": {
-      // If edited here, you must also edit jest.config.ts, and babel.config.js
+      // If edited here, you must also edit test-utils/jest.config.js, and babel.config.js
       "~/*": [
         "src/*"
       ],
@@ -124,7 +124,7 @@
     "**/*/.config/.eslintrc.js", // After "src", all of these are used to make ESLint happy.
     "**/*/.config/.prettierrc.js",
     "**/*/.config/.swcrc",
-    "**/*/.config/jest.config.ts",
+    "test-utils/**/*.{js,jsx,ts,tsx}",
     "**/*/.config/lint-staged.config.js",
     "**/*/package-lock.json",
     "**/*/package.json",
