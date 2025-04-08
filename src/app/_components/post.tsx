@@ -9,12 +9,13 @@ export function LatestPost(): JSX.Element {
 
 	const utils = api.useUtils();
 	const [name, setName] = useState('');
-	const createPost = api.post.create.useMutation({
-		onSuccess: async () => {
-			await utils.post.invalidate();
-			setName('');
-		},
-	});
+
+	const handleSuccess = async (): Promise<void> => {
+		await utils.post.invalidate();
+		setName('');
+	};
+
+	const createPost = api.post.create.useMutation();
 
 	return (
 		<div className='w-full max-w-xs'>
@@ -22,7 +23,16 @@ export function LatestPost(): JSX.Element {
 			<form
 				onSubmit={(e) => {
 					e.preventDefault();
-					createPost.mutate({ name });
+					createPost.mutate(
+						{ name },
+						{
+							onSuccess: () => {
+								handleSuccess().catch((error) => {
+									console.error('Error during post creation success handling:', error);
+								});
+							},
+						}
+					);
 				}}
 				className='flex flex-col gap-2'
 			>
