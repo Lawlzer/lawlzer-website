@@ -10,8 +10,7 @@ const createJestConfig = nextJest({
 const customJestConfig = {
 	// Add more setup options before each test is run
 	setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-	// Ensure jsdom is set here for component tests
-	testEnvironment: 'jest-environment-jsdom',
+	testEnvironment: 'node',
 	// Automatically clear mock calls, instances, contexts and results before every test
 	clearMocks: true,
 	// Indicates whether the coverage information should be collected while executing the test
