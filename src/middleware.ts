@@ -10,9 +10,16 @@ export function middleware(request: NextRequest): NextResponse {
 
 	if (isValorantSubdomain) {
 		if (pathname === '/') {
-			return NextResponse.rewrite(new URL('/valorant', request.url));
+			const newUrl = new URL('/valorant', request.url);
+			return NextResponse.rewrite(newUrl);
 		}
-		return NextResponse.rewrite(new URL(`/valorant${pathname}`, request.url));
+
+		if (pathname.startsWith('/_next/')) {
+			return NextResponse.next();
+		}
+
+		const newUrl = new URL(`/valorant${pathname}`, request.url);
+		return NextResponse.rewrite(newUrl);
 	}
 
 	return NextResponse.next();
