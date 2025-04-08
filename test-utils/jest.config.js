@@ -50,7 +50,7 @@ export default async () => {
 	jestConfig.transformIgnorePatterns = ['/node_modules/(?!(next-auth|@auth/core|oauth4webapi|@auth/prisma-adapter)/)', '^.+.module.(css|sass|scss)$'];
 
 	jestConfig.transform = {
-		'^.+\\.(ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+		'^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
 	};
 
 	// Verify the environment is correctly set for component tests
