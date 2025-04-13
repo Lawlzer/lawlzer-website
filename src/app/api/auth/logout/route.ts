@@ -1,0 +1,32 @@
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { destroySession } from '~/server/db/session';
+import { env } from '~/env.mjs';
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+	try {
+		const sessionToken = request.cookies.get('session_token')?.value;
+
+		if (!sessionToken) {
+			return NextResponse.redirect(new URL('/', request.url));
+		}
+
+		await destroySession(sessionToken);
+
+		const response = NextResponse.redirect(new URL('/', request.url));
+
+		console.log('setting logout cookie');
+		response.cookies.set({
+			name: 'session_token',
+			value: '',
+			expires: new Date(0),
+			path: '/',
+			domain: env.NEXT_PUBLIC_COOKIE_DOMAIN,
+		});
+
+		return response;
+	} catch (error) {
+		console.error('Error during logout:', error);
+		return NextResponse.redirect(new URL('/error/auth?error=logout_failed', request.url));
+	}
+}

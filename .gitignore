@@ -1,0 +1,58 @@
+# Dependencies
+node_modules
+
+# Logs and dev output
+logs
+routeTypes
+
+# Temporary caches
+*.tsbuildinfo
+caches
+cache
+lerna-debug.log
+zig-cache
+Cargo.lock
+bun.lockb
+
+# Environment variables/secrets
+.env
+.env.development
+.env.production
+.env.test
+.envrc
+
+# Build / Generated output
+build
+dist
+output
+zig-out
+
+data
+.next
+coverage
+
+# Temporary/dev locations
+legacy
+temp
+tmp
+debug
+
+todo
+todo.txt
+
+serverOutput
+volume
+volumes
+
+# Python specific
+__pycache__
+.venv
+
+# Model caches
+model_cache/
+**/model_cache/**
+whisper-openai-exp/
+feature_cache
+
+# Specific to this project
+TODO-MAKE-ME-WORK

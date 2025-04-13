@@ -1,0 +1,25 @@
+{
+	"extends": "../tsconfig.json",
+	"include": [
+		//
+		"../**/*.ts",
+		"../**/*.tsx",
+		"../**/*.mts"
+	],
+	"exclude": [
+		//
+		"../node_modules",
+		"../dist",
+		"../.next",
+		"../build",
+		"../logs",
+		"../cache",
+		"../caches",
+		"../temp",
+		"../tmp",
+		"../debug",
+		"../todo",
+		"../serverOutput",
+		"../public"
+	]
+}
