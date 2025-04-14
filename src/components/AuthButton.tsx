@@ -33,7 +33,7 @@ export default function AuthButton(): React.JSX.Element {
 	const user = session?.user;
 
 	if (loading) {
-		return <div className='animate-pulse bg-gray-700 rounded w-20 h-8'></div>;
+		return <div data-testid='auth-loading' className='animate-pulse bg-gray-700 rounded w-20 h-8'></div>;
 	}
 
 	if (user) {
