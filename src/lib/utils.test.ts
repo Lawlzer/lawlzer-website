@@ -12,12 +12,17 @@ describe('getBaseUrl', () => {
 	});
 
 	// Mock the env module
-	function mockEnv(overrides: Record<string, string>): void {
+	function mockEnv(overrides: { NEXT_PUBLIC_SCHEME: string; NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: string; NEXT_PUBLIC_TOP_LEVEL_DOMAIN: string; NEXT_PUBLIC_FRONTEND_PORT: string }): void {
+		const defaultEnv = {
+			// Default values matching roughly the old setup
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'localhost',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: '', // Adjust if needed, maybe 'local'?
+			NEXT_PUBLIC_FRONTEND_PORT: '3000',
+		};
 		vi.doMock('~/env.mjs', () => ({
 			env: {
-				NEXT_PUBLIC_BASE_URL: 'http://localhost',
-				NEXT_PUBLIC_FRONTEND_PORT: '3000',
-				NEXT_PUBLIC_COOKIE_DOMAIN: '.localhost',
+				...defaultEnv,
 				...overrides,
 			},
 		}));
@@ -32,7 +37,9 @@ describe('getBaseUrl', () => {
 
 	it('should handle port 80 by not including the port in the URL', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://example.com',
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
 			NEXT_PUBLIC_FRONTEND_PORT: '80',
 		});
 
@@ -45,7 +52,9 @@ describe('getBaseUrl', () => {
 
 	it('should include subdomain when valorant is requested', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://example.com',
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
 			NEXT_PUBLIC_FRONTEND_PORT: '3000',
 		});
 
@@ -57,7 +66,9 @@ describe('getBaseUrl', () => {
 
 	it('should correctly handle subdomain with port 80', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://example.com',
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
 			NEXT_PUBLIC_FRONTEND_PORT: '80',
 		});
 
@@ -69,7 +80,9 @@ describe('getBaseUrl', () => {
 
 	it('should handle subdomain with HTTPS correctly', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'https://example.com',
+			NEXT_PUBLIC_SCHEME: 'https',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
 			NEXT_PUBLIC_FRONTEND_PORT: '3000',
 		});
 
@@ -81,7 +94,9 @@ describe('getBaseUrl', () => {
 
 	it('should work with HTTP URLs', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://example.com',
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
 			NEXT_PUBLIC_FRONTEND_PORT: '3000',
 		});
 
@@ -93,7 +108,9 @@ describe('getBaseUrl', () => {
 
 	it('should work with HTTPS URLs', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'https://example.com',
+			NEXT_PUBLIC_SCHEME: 'https',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
 			NEXT_PUBLIC_FRONTEND_PORT: '3000',
 		});
 
@@ -103,21 +120,11 @@ describe('getBaseUrl', () => {
 		expect(result).toBe('https://example.com:3000');
 	});
 
-	it('should work with URLs without protocol', async () => {
-		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'example.com',
-			NEXT_PUBLIC_FRONTEND_PORT: '3000',
-		});
-
-		const reloadedGetBaseUrl = await getReloadedBaseUrl();
-		const result = reloadedGetBaseUrl();
-
-		expect(result).toBe('example.com:3000');
-	});
-
 	it('should work with different ports', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://example.com',
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
 			NEXT_PUBLIC_FRONTEND_PORT: '8080',
 		});
 
@@ -129,7 +136,9 @@ describe('getBaseUrl', () => {
 
 	it('should work with localhost', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://localhost',
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'localhost',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: '', // Assuming no TLD for localhost
 			NEXT_PUBLIC_FRONTEND_PORT: '3000',
 		});
 
@@ -141,7 +150,9 @@ describe('getBaseUrl', () => {
 
 	it('should work with localhost and port 80', async () => {
 		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://localhost',
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'localhost',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: '', // Assuming no TLD for localhost
 			NEXT_PUBLIC_FRONTEND_PORT: '80',
 		});
 
@@ -151,27 +162,9 @@ describe('getBaseUrl', () => {
 		expect(result).toBe('http://localhost');
 	});
 
-	it('should work with IP addresses', async () => {
-		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://127.0.0.1',
-			NEXT_PUBLIC_FRONTEND_PORT: '3000',
-		});
+	// Removed tests that are less relevant with the new structure
+	// like IP addresses and subdomains in base URL, as these are now handled by the combination of scheme, domain parts, and port.
+	// If getBaseUrl logic handles these cases specifically beyond combining the env vars, add tests back.
 
-		const reloadedGetBaseUrl = await getReloadedBaseUrl();
-		const result = reloadedGetBaseUrl();
-
-		expect(result).toBe('http://127.0.0.1:3000');
-	});
-
-	it('should work with subdomains in base URL', async () => {
-		mockEnv({
-			NEXT_PUBLIC_BASE_URL: 'http://api.example.com',
-			NEXT_PUBLIC_FRONTEND_PORT: '3000',
-		});
-
-		const reloadedGetBaseUrl = await getReloadedBaseUrl();
-		const result = reloadedGetBaseUrl();
-
-		expect(result).toBe('http://api.example.com:3000');
-	});
+	// Consider adding tests for edge cases like empty TLD if applicable
 });

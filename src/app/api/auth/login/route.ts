@@ -1,13 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { env } from '~/env.mjs';
+import { getCookieDomain } from '~/lib/auth';
+import { getBaseUrl } from '~/lib/utils';
 
 function getGoogleAuthUrl(state: string, callbackUrl: string): string {
 	const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 	const options = {
 		redirect_uri: `${callbackUrl}/google`,
-		client_id: env.AUTH_GOOGLE_ID,
+		client_id: env.NEXT_PUBLIC_AUTH_GOOGLE_ID,
 		access_type: 'offline',
 		response_type: 'code',
 		prompt: 'consent',
@@ -25,7 +27,7 @@ function getDiscordAuthUrl(state: string, callbackUrl: string): string {
 
 	const options = {
 		redirect_uri: `${callbackUrl}/discord`,
-		client_id: env.AUTH_DISCORD_ID,
+		client_id: env.NEXT_PUBLIC_AUTH_DISCORD_ID,
 		response_type: 'code',
 		scope: 'identify email',
 		state,
@@ -41,7 +43,7 @@ function getGithubAuthUrl(state: string, callbackUrl: string): string {
 
 	const options = {
 		redirect_uri: `${callbackUrl}/github`,
-		client_id: env.AUTH_GITHUB_ID,
+		client_id: env.NEXT_PUBLIC_AUTH_GITHUB_ID,
 		scope: 'user:email',
 		state,
 	};
@@ -73,16 +75,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	}
 
 	// Use the configured base URL and port for the callback
-	const baseUrl = env.NEXT_PUBLIC_BASE_URL;
-	const port = env.NEXT_PUBLIC_FRONTEND_PORT;
+	const originWithPort = getBaseUrl();
 
-	if (!baseUrl || !port) {
-		console.error('NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_FRONTEND_PORT is not set in environment variables.');
+	if (!originWithPort) {
+		console.error('getBaseUrl() returned an empty or invalid value. Check environment variables (scheme, domain, port).');
 		return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
 	}
-
-	// Construct the full origin with port
-	const originWithPort = `${baseUrl}:${port}`;
 
 	// Create a proper callback URL using the constructed origin
 	const callbackUrl = `${originWithPort}/api/auth/callback`;
@@ -93,30 +91,27 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	// Set a cookie to verify the state when the user is redirected back
 	const redirectUrl = getAuthorizationUrl(provider, state, callbackUrl);
 	const response = NextResponse.redirect(redirectUrl);
-	console.log(`redirectUrl: ${redirectUrl}`);
 
-	console.log('Setting auth_state cookie');
-	console.log('Using cookie domain:', env.NEXT_PUBLIC_COOKIE_DOMAIN);
 	response.cookies.set({
 		name: 'auth_state',
 		value: state,
 		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
+		secure: env.NODE_ENV === 'production',
 		sameSite: 'lax',
 		maxAge: 60 * 10, // 10 minutes
 		path: '/',
-		domain: env.NEXT_PUBLIC_COOKIE_DOMAIN,
+		domain: getCookieDomain(),
 	});
 
 	response.cookies.set({
 		name: 'aaa222',
 		value: 'test222',
 		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
+		secure: env.NODE_ENV === 'production',
 		sameSite: 'lax',
 		maxAge: 60 * 10, // 10 minutes
 		path: '/',
-		domain: env.NEXT_PUBLIC_COOKIE_DOMAIN,
+		domain: getCookieDomain(),
 	});
 
 	return response;

@@ -1,7 +1,7 @@
 import type { Page, Locator } from '@playwright/test';
 import { test, expect } from '@playwright/test';
 // import { metadata } from './page'; // <-- Remove this import
-import { testPageBasics } from '@testUtils/playwright';
+import { testPageBasics } from '@testUtils/playwright/utils';
 import { pathToURLTestsOnly } from '~/lib/utils';
 const pathToThisFile = import.meta.url;
 

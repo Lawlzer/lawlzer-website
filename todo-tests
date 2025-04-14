@@ -11,6 +11,5 @@ Session/auth expires
 /logout
 Ensure CSS is loaded
 Ensure no errors(?)
-valorant.localhost should be a subdomain page lol
 
 Login cross-domain...

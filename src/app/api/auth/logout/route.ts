@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { destroySession } from '~/server/db/session';
 import { env } from '~/env.mjs';
+import { getCookieDomain } from '~/lib/auth';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
 	try {
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 			value: '',
 			expires: new Date(0),
 			path: '/',
-			domain: env.NEXT_PUBLIC_COOKIE_DOMAIN,
+			domain: getCookieDomain(),
 		});
 
 		return response;

@@ -34,7 +34,7 @@ async function getGoogleOAuthTokens(code: string, request: NextRequest): Promise
 
 	const values = {
 		code,
-		client_id: env.AUTH_GOOGLE_ID,
+		client_id: env.NEXT_PUBLIC_AUTH_GOOGLE_ID,
 		client_secret: env.AUTH_GOOGLE_SECRET,
 		redirect_uri: `${origin}/api/auth/callback/google`,
 		grant_type: 'authorization_code',

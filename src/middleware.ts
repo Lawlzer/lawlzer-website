@@ -6,18 +6,7 @@ import { getBaseUrl } from './lib/utils';
 // Function to determine if the hostname corresponds to the main domain
 function isMainDomain(hostname: string): boolean {
 	// List of hostnames that should be treated as the main domain
-	const mainDomainHostnames = [
-		'localhost',
-		'127.0.0.1',
-		// env.NEXT_PUBLIC_BASE_URL?.split('//')[1], // Temporarily removed for debugging
-		'lawlzer.com',
-		'www.lawlzer.com',
-		'local',
-		'local:3000',
-		'example.test',
-		'test',
-		'dev.localhost',
-	].filter(Boolean); // Filter out potential undefined/null values\
+	const mainDomainHostnames = ['localhost', '127.0.0.1', 'dev.localhost'].filter(Boolean); // Filter out potential undefined/null values\
 	// todo clean up mainDomainHostnames
 
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Input hostname: ${hostname}`);
@@ -31,8 +20,6 @@ function isMainDomain(hostname: string): boolean {
 export function middleware(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
 	const { pathname } = url;
-
-	if (true as unknown as any) console.debug(`[Middleware] Cookies: ${JSON.stringify(request.cookies.getAll())}`);
 
 	const hostHeader = request.headers.get('host');
 	const detectedHostname = hostHeader?.split(':')[0] ?? url.hostname;

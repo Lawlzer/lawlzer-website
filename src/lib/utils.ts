@@ -1,5 +1,9 @@
 import { env } from '~/env.mjs';
 
+function throwError(message: string): never {
+	throw new Error(message);
+}
+
 export function pathToURLTestsOnly(filePath: string): string {
 	// Normalize path separators for consistency, although Windows paths might need more handling if they appear differently
 	const normalizedPath = filePath.replace(/\\\\/g, '/');
@@ -32,35 +36,35 @@ export function pathToURLTestsOnly(filePath: string): string {
 	// Construct the path string
 	const path = remainingSegments.length > 0 ? `/${remainingSegments.join('/')}` : '/';
 
-	// Extract protocol and clean the base URL
-	const protocolMatch = /^(https?:\/\/)/.exec(env.NEXT_PUBLIC_BASE_URL);
-	const protocol = protocolMatch ? protocolMatch[0] : 'http://'; // Default to http if no match (should not happen with valid URL)
-	const cleanedBaseUrl = env.NEXT_PUBLIC_BASE_URL.replace(/^(https?:\/\/)/, '');
+	// Construct the base URL from parts
+	const protocol = env.NEXT_PUBLIC_SCHEME ?? throwError('No process.env.NEXT_PUBLIC_SCHEME found');
+	const secondLevel = env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN ?? throwError('No process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN found');
+	const topLevel = env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN ?? throwError('No process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN found');
+	let port = env.NEXT_PUBLIC_FRONTEND_PORT ?? throwError('No process.env.NEXT_PUBLIC_FRONTEND_PORT found');
 
-	return `${protocol}${subdomain !== 'root' ? `${subdomain}.` : ''}${cleanedBaseUrl}:${env.NEXT_PUBLIC_FRONTEND_PORT}${path}`;
-}
+	if (port === '80' || port === '443') port = '';
 
-// Helper function to parse URL parts
-function parseUrl(url: string): { protocol: string | null; host: string } {
-	const protocolMatch = /^(https?:)\/\//.exec(url);
-	const protocol = protocolMatch ? protocolMatch[1] : null;
-	const host = url.replace(/^(https?:)?\/\//, '');
+	let subdomainText = '';
+	if (subdomain !== 'root') subdomainText = `${subdomain}.`;
 
-	return { protocol, host };
+	return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}${path}`;
 }
 
 export function getBaseUrl(subdomain?: 'valorant' | null): string {
-	if (subdomain) {
-		const urlParts = parseUrl(env.NEXT_PUBLIC_BASE_URL);
-		const protocol = urlParts.protocol ? `${urlParts.protocol}//` : '';
-		const baseWithSubdomain = `${protocol}${subdomain}.${urlParts.host}`;
+	const protocol = env.NEXT_PUBLIC_SCHEME ?? throwError('No process.env.NEXT_PUBLIC_SCHEME found');
+	const secondLevel = env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN ?? throwError('No process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN found');
+	const topLevel = env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN ?? throwError('No process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN found');
+	let port = env.NEXT_PUBLIC_FRONTEND_PORT ?? throwError('No process.env.NEXT_PUBLIC_FRONTEND_PORT found');
 
-		if (env.NEXT_PUBLIC_FRONTEND_PORT === '80') return baseWithSubdomain;
+	if (port === '80' || port === '443') port = '';
 
-		return `${baseWithSubdomain}:${env.NEXT_PUBLIC_FRONTEND_PORT}`;
+	let subdomainText = '';
+	if (subdomain) subdomainText = `${subdomain}.`;
+
+	// Special case for localhost
+	if (secondLevel === 'localhost') {
+		return `${protocol}://${secondLevel}${port ? `:${port}` : ''}`;
 	}
 
-	if (env.NEXT_PUBLIC_FRONTEND_PORT === '80') return String(env.NEXT_PUBLIC_BASE_URL);
-
-	return `${env.NEXT_PUBLIC_BASE_URL}:${env.NEXT_PUBLIC_FRONTEND_PORT}`;
+	return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}`;
 }

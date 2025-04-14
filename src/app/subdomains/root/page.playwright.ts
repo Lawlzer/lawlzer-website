@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { metadata } from './page';
-import { testPageBasics } from '@testUtils/playwright';
+import { testPageBasics } from '@testUtils/playwright/utils';
 import { pathToURLTestsOnly } from '~/lib/utils';
 const pathToThisFile = import.meta.url;
 

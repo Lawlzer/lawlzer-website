@@ -5,6 +5,7 @@ import type { User } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
 import { handleAndGenerateSessionToken } from '~/lib/auth';
 import { createSession } from '~/server/db/session';
+import { getBaseUrl } from '~/lib/utils';
 
 const prisma = new PrismaClient();
 
@@ -29,24 +30,20 @@ async function getDiscordOAuthTokens(code: string, request: NextRequest): Promis
 	const url = 'https://discord.com/api/oauth2/token';
 
 	// Use the configured base URL and port for the callback
-	const baseUrl = env.NEXT_PUBLIC_BASE_URL;
-	const port = env.NEXT_PUBLIC_FRONTEND_PORT;
+	const originWithPort = getBaseUrl(); // Uses scheme, domain, and port from env
 
-	if (!baseUrl || !port) {
-		console.error('NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_FRONTEND_PORT is not set in environment variables.');
+	if (!originWithPort) {
+		console.error('getBaseUrl() returned an empty or invalid value. Check environment variables (scheme, domain, port).');
 		// Throw an error or handle appropriately if the base URL or port is missing
-		throw new Error('Server configuration error: NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_FRONTEND_PORT is missing.');
+		throw new Error('Server configuration error: Could not construct origin with port.');
 	}
-
-	// Construct the full origin with port
-	const originWithPort = `${baseUrl}:${port}`;
 
 	// Construct the redirect URI using the constructed origin
 	const redirectUri = `${originWithPort}/api/auth/callback/discord`;
 
 	const values = {
 		code,
-		client_id: env.AUTH_DISCORD_ID,
+		client_id: env.NEXT_PUBLIC_AUTH_DISCORD_ID,
 		client_secret: env.AUTH_DISCORD_SECRET,
 		redirect_uri: redirectUri, // Use the constructed redirectUri
 		grant_type: 'authorization_code',

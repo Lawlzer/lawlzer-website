@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { env } from '~/env.mjs';
+import { getCookieDomain } from '~/lib/auth';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
 	const searchParams = request.nextUrl.searchParams;
@@ -27,30 +28,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 	// Clear the state cookie
 	const response = NextResponse.redirect(new URL(`/api/auth/callback/${provider}`, request.url));
-	console.log('returning cookie smiles');
 	response.cookies.set({
 		name: 'auth_state',
 		value: '',
 		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
+		secure: env.NODE_ENV === 'production',
 		sameSite: 'lax',
 		maxAge: 0,
 		path: '/',
-		domain: env.NEXT_PUBLIC_COOKIE_DOMAIN,
+		domain: getCookieDomain(),
 	});
-
-	response.cookies.set({
-		name: 'aaa111',
-		value: 'test',
-		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
-		sameSite: 'lax',
-		maxAge: 60 * 10, // 10 minutes
-		path: '/',
-		domain: '.test',
-	});
-
-	console.log('\n\n\naaa\n\n\n');
 
 	return response;
 }

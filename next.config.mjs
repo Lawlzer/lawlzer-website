@@ -31,7 +31,7 @@ const config = {
 			},
 		];
 	},
-	allowedDevOrigins: ['localhost', 'valorant.localhost', 'valorant.localhost.com'],
+	allowedDevOrigins: ['localhost', 'valorant.localhost', 'valorant.localhost.com', 'dev.localhost', 'valorant.dev.localhost'],
 };
 
 export default config;
