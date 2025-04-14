@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '~/app/api/trpc';
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '~/server/api/trpc';
 
 export const postRouter = createTRPCRouter({
 	hello: publicProcedure.input(z.object({ text: z.string() })).query(({ input }) => {
@@ -17,7 +17,6 @@ export const postRouter = createTRPCRouter({
 			},
 		});
 
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 		return thing;
 	}),
 
@@ -27,7 +26,6 @@ export const postRouter = createTRPCRouter({
 			where: { createdBy: { id: ctx.session.userId } },
 		});
 
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 		return post ?? null;
 	}),
 
