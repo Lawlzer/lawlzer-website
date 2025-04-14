@@ -161,10 +161,4 @@ describe('getBaseUrl', () => {
 
 		expect(result).toBe('http://localhost');
 	});
-
-	// Removed tests that are less relevant with the new structure
-	// like IP addresses and subdomains in base URL, as these are now handled by the combination of scheme, domain parts, and port.
-	// If getBaseUrl logic handles these cases specifically beyond combining the env vars, add tests back.
-
-	// Consider adding tests for edge cases like empty TLD if applicable
 });
