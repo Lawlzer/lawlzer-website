@@ -82,8 +82,6 @@ describe('Topbar', () => {
 
 		// Check if nav element has correct classes
 		const nav = screen.getByRole('navigation');
-		expect(nav).toHaveClass('bg-gray-800');
-		expect(nav).toHaveClass('text-white');
 		expect(nav).toHaveClass('h-16');
 
 		// Check container layout

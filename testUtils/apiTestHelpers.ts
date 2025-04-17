@@ -1,6 +1,6 @@
 import type { MockedFunction, Mock } from 'vitest';
-import { vi } from 'vitest';
-import { db } from '~/server/db';
+import { expect, vi } from 'vitest';
+import { db } from '../src/server/db';
 
 export function mockEnv(envOverrides: Record<string, unknown>): void {
 	// Use vi.doMock and importActual to merge mocks with actual env

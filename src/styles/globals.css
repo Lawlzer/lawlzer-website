@@ -1,9 +1,8 @@
-@import 'tailwindcss';
+@import 'tailwindcss/preflight';
+@tailwind utilities;
 
-@theme {
-	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-}
-
+/* Removed test body background rule
 body {
-	@apply bg-slate-100; /* Add a subtle blueish-gray background */
+	background-color: red !important;
 }
+*/

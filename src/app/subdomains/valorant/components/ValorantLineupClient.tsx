@@ -17,7 +17,17 @@ import { useMapMap } from '../hooks/useMapMap'; // Updated import path
 // Added return type
 function CustomButton({ buttonText, isSelected, onClick, disabled }: { disabled?: boolean; buttonText: string; isSelected: boolean; onClick: () => void }): React.JSX.Element {
 	return (
-		<button disabled={!!disabled} className={`${disabled ? 'disabled:opacity-30 text-white border-white hover:max-opacity-40 cursor-not-allowed' : isSelected ? 'bg-blue-500 hover:bg-blue-500 text-white border-blue-500' : ' text-white border-white'} px-4 py-2 rounded-md transition-colors transition-opacity duration-300 font-medium border-2`} onClick={onClick}>
+		<button
+			disabled={!!disabled}
+			className={`${
+				disabled
+					? 'disabled:opacity-30 text-text-disabled border-accent-disabled hover:max-opacity-40 cursor-not-allowed' // Fixed nested border class
+					: isSelected
+						? 'bg-accent-primary hover:bg-accent-primary text-text-primary border-accent' // Fixed nested border class
+						: ' text-text-primary border-text-primary' // Fixed nested border class
+			} px-4 py-2 rounded-md transition-colors transition-opacity duration-300 font-medium border-2`}
+			onClick={onClick}
+		>
 			{buttonText}
 		</button>
 	);
@@ -289,7 +299,7 @@ function ValorantLineupClient(): React.JSX.Element {
 
 	return (
 		// Adjusted to fill the parent container from page.tsx
-		<div className='flex items-stretch w-full h-full bg-gray-800 overflow-hidden'>
+		<div className='flex items-stretch w-full h-full bg-background-primary overflow-hidden'>
 			{fullscreen && (
 				<div
 					className='fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/80 p-10' // Use fixed, inset-0 for true overlay
@@ -303,7 +313,7 @@ function ValorantLineupClient(): React.JSX.Element {
 				</div>
 			)}
 			{/* Control Panel */}
-			<div className='flex w-[400px] flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-gray-600 bg-gray-800 p-4'>
+			<div className='flex w-[400px] flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-primary bg-background-primary p-4'>
 				{/* Maps */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					{/* Use availableMaps derived from mapData */}
@@ -393,7 +403,7 @@ function ValorantLineupClient(): React.JSX.Element {
 							<Image
 								src={imageData.image} // Pass StaticImageData directly
 								alt={`Lineup step ${index + 1}`}
-								className='w-full h-auto cursor-pointer rounded border border-gray-600 object-contain' // Added h-auto
+								className='w-full h-auto cursor-pointer rounded border border-primary object-contain' // Fixed border-border-primary
 								onClick={() => {
 									setFullscreen(imageData.image);
 								}}
@@ -405,7 +415,7 @@ function ValorantLineupClient(): React.JSX.Element {
 									note: string,
 									noteIndex: number // Added types for note and noteIndex
 								) => (
-									<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-white'>
+									<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-text-primary'>
 										• {note}
 									</div>
 								)
@@ -413,12 +423,12 @@ function ValorantLineupClient(): React.JSX.Element {
 						</React.Fragment>
 					))}
 					{/* Placeholder when no lineup selected/found */}
-					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-gray-400'>Select a start and end point to see lineup images.</div>}
+					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-text-secondary'>Select a start and end point to see lineup images.</div>}
 				</div>
 			</div>
 
 			{/* Map Display Area */}
-			<div className='flex flex-grow items-center justify-center overflow-hidden bg-gray-700'>
+			<div className='flex flex-grow items-center justify-center overflow-hidden bg-background-secondary'>
 				{/* Conditional rendering based on map data and SVG component */}
 				{CurrentMapSvgComponent ? (
 					<CurrentMapSvgComponent
@@ -429,7 +439,7 @@ function ValorantLineupClient(): React.JSX.Element {
 					/>
 				) : (
 					// Placeholder or loading state if map/SVG isn't ready
-					<p className='text-white'>Loading map...</p>
+					<p className='text-text-primary'>Loading map...</p>
 				)}
 			</div>
 		</div>

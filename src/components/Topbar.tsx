@@ -16,16 +16,16 @@ export default function Topbar(): React.JSX.Element {
 	const valorantUrl = getBaseUrl('valorant');
 
 	return (
-		<nav className='bg-gray-800 text-white p-4 h-16'>
+		<nav className='bg-background-topbar text-text-primary p-4 h-16'>
 			<div className='container mx-auto flex justify-between items-center h-full'>
 				<div className='flex space-x-4'>
-					<Link href={baseUrl} className='hover:text-gray-300'>
+					<Link href={baseUrl} className='hover:text-text-secondary'>
 						Home
 					</Link>
-					<Link href={valorantUrl} className='hover:text-gray-300'>
+					<Link href={valorantUrl} className='hover:text-text-secondary'>
 						Valorant
 					</Link>
-					<Link href='https://example.com' target='_blank' rel='noopener noreferrer' className='hover:text-gray-300'>
+					<Link href='https://example.com' target='_blank' rel='noopener noreferrer' className='hover:text-text-secondary'>
 						Example
 					</Link>
 				</div>
