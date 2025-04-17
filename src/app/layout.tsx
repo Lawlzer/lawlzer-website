@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
 	return (
 		<html lang='en'>
 			{/* Make body relative to contain the absolute main element */}
-			<body className='flex min-h-screen flex-col relative bg-blue-500'>
+			<body className='flex min-h-screen flex-col relative'>
 				{/* <AuthProvider> */}
 				{/* <SessionProvider> */}
 				{/* Providers are now in ./providers.tsx */}
