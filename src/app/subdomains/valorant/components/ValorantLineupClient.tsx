@@ -3,6 +3,7 @@
 
 import Image, { type StaticImageData } from 'next/image.js'; // Import next/image
 import React, { useEffect, useState, useCallback } from 'react';
+import { COOKIE_KEYS, DEFAULT_COLORS, setCookie } from '~/lib/palette'; // Import palette utilities
 
 import type { Lineup, MapArea, Utility, LineupImage } from '../types'; // Use LineupImage instead of BottomleftImageVideo
 import { agents, agentUtilityMap, imageMap, type Agent } from '../types';
@@ -20,12 +21,9 @@ function CustomButton({ buttonText, isSelected, onClick, disabled }: { disabled?
 		<button
 			disabled={!!disabled}
 			className={`${
-				disabled
-					? 'disabled:opacity-30 text-text-disabled border-accent-disabled hover:max-opacity-40 cursor-not-allowed' // Fixed nested border class
-					: isSelected
-						? 'bg-accent-primary hover:bg-accent-primary text-text-primary border-accent' // Fixed nested border class
-						: ' text-text-primary border-text-primary' // Fixed nested border class
-			} px-4 py-2 rounded-md transition-colors transition-opacity duration-300 font-medium border-2`}
+				// Use theme colors
+				disabled ? 'disabled:opacity-50 text-muted-foreground border-muted cursor-not-allowed' : isSelected ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : 'text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+			} px-4 py-2 rounded-md transition-colors duration-200 font-medium border-2`}
 			onClick={onClick}
 		>
 			{buttonText}
@@ -36,6 +34,12 @@ function CustomButton({ buttonText, isSelected, onClick, disabled }: { disabled?
 export type LineupDirection = 'destinationToStart' | 'startToDestination';
 // Added return type
 function ValorantLineupClient(): React.JSX.Element {
+	// Palette State
+	const [pageBg, setPageBg] = useState<string>(DEFAULT_COLORS.PAGE_BG);
+	const [fgColor, setFgColor] = useState<string>(DEFAULT_COLORS.FG_COLOR);
+	const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_COLORS.PRIMARY_COLOR);
+
+	// Lineup State (existing)
 	const [map, setMap] = useState<string>('Ascent'); // Default map key
 	const [agent, setAgent] = useState<Agent | undefined>('Gekko');
 	const [utility, setUtility] = useState<Utility | undefined>('Mosh Pit');
@@ -297,9 +301,30 @@ function ValorantLineupClient(): React.JSX.Element {
 	}, [mapData, map, getAreaOpacity, handleAreaToClick, utility, imageMap]);
 	// ---- End Functions to build SVG area elements ----
 
+	// Effect 2: Apply palette colors to DOM and save to cookies when state changes
+	useEffect(() => {
+		// Apply colors to the DOM for instant feedback
+		const bodyStyle = document.body.style;
+		bodyStyle.setProperty('--page-background', pageBg);
+		bodyStyle.setProperty('--background', pageBg);
+		bodyStyle.setProperty('--foreground-color', fgColor);
+		bodyStyle.setProperty('--foreground', fgColor);
+		bodyStyle.setProperty('--primary-color', primaryColor);
+		bodyStyle.setProperty('--primary', primaryColor);
+
+		// Save colors to cookies whenever they change
+		try {
+			setCookie(COOKIE_KEYS.PAGE_BG, pageBg);
+			setCookie(COOKIE_KEYS.FG_COLOR, fgColor);
+			setCookie(COOKIE_KEYS.PRIMARY_COLOR, primaryColor);
+		} catch (error) {
+			// Error is logged within setCookie
+		}
+	}, [pageBg, fgColor, primaryColor]); // Re-run only when palette colors change
+
 	return (
 		// Adjusted to fill the parent container from page.tsx
-		<div className='flex items-stretch w-full h-full bg-background-primary overflow-hidden'>
+		<div className='flex items-stretch w-full h-full bg-background text-foreground overflow-hidden'>
 			{fullscreen && (
 				<div
 					className='fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/80 p-10' // Use fixed, inset-0 for true overlay
@@ -313,7 +338,9 @@ function ValorantLineupClient(): React.JSX.Element {
 				</div>
 			)}
 			{/* Control Panel */}
-			<div className='flex w-[400px] flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-primary bg-background-primary p-4'>
+			<div className='flex w-[400px] flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-border bg-card p-4'>
+				{' '}
+				{/* Changed bg-background to bg-card for contrast */}
 				{/* Maps */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					{/* Use availableMaps derived from mapData */}
@@ -328,7 +355,6 @@ function ValorantLineupClient(): React.JSX.Element {
 						/>
 					))}
 				</div>
-
 				{/* Agents */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					{agents.map((agentName) => {
@@ -348,7 +374,6 @@ function ValorantLineupClient(): React.JSX.Element {
 						);
 					})}
 				</div>
-
 				{/* Utilities */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					{agent &&
@@ -370,7 +395,6 @@ function ValorantLineupClient(): React.JSX.Element {
 							);
 						})}
 				</div>
-
 				{/* Lineup Direction */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					<CustomButton
@@ -394,7 +418,6 @@ function ValorantLineupClient(): React.JSX.Element {
 						}}
 					/>
 				</div>
-
 				{/* Image/video sources */}
 				<div className='flex min-h-0 flex-grow flex-col gap-4 overflow-y-auto'>
 					{bottomleftImageVideo?.map((imageData, index) => (
@@ -403,7 +426,7 @@ function ValorantLineupClient(): React.JSX.Element {
 							<Image
 								src={imageData.image} // Pass StaticImageData directly
 								alt={`Lineup step ${index + 1}`}
-								className='w-full h-auto cursor-pointer rounded border border-primary object-contain' // Fixed border-border-primary
+								className='w-full h-auto cursor-pointer rounded border border-border object-contain' // Use border-border
 								onClick={() => {
 									setFullscreen(imageData.image);
 								}}
@@ -415,7 +438,7 @@ function ValorantLineupClient(): React.JSX.Element {
 									note: string,
 									noteIndex: number // Added types for note and noteIndex
 								) => (
-									<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-text-primary'>
+									<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-foreground'>
 										• {note}
 									</div>
 								)
@@ -423,12 +446,51 @@ function ValorantLineupClient(): React.JSX.Element {
 						</React.Fragment>
 					))}
 					{/* Placeholder when no lineup selected/found */}
-					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-text-secondary'>Select a start and end point to see lineup images.</div>}
+					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-muted-foreground'>Select a start and end point to see lineup images.</div>}
+				</div>
+				{/* ADD Color Customization Section HERE, within the control panel */}
+				<div className='mt-8 p-4 border border-border rounded-lg bg-card text-card-foreground shadow-sm'>
+					<h2 className='text-lg font-semibold mb-4'>Color Colors</h2>
+					<div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+						<label className='flex flex-col'>
+							<span className='mb-1 text-sm font-medium'>Page Background</span>
+							<input
+								type='color'
+								value={pageBg}
+								onChange={(e) => {
+									setPageBg(e.target.value);
+								}}
+								className='w-full h-10 rounded border border-input bg-input cursor-pointer'
+							/>
+						</label>
+						<label className='flex flex-col'>
+							<span className='mb-1 text-sm font-medium'>Foreground Text</span>
+							<input
+								type='color'
+								value={fgColor}
+								onChange={(e) => {
+									setFgColor(e.target.value);
+								}}
+								className='w-full h-10 rounded border border-input bg-input cursor-pointer'
+							/>
+						</label>
+						<label className='flex flex-col'>
+							<span className='mb-1 text-sm font-medium'>Primary Color</span>
+							<input
+								type='color'
+								value={primaryColor}
+								onChange={(e) => {
+									setPrimaryColor(e.target.value);
+								}}
+								className='w-full h-10 rounded border border-input bg-input cursor-pointer'
+							/>
+						</label>
+					</div>
 				</div>
 			</div>
 
 			{/* Map Display Area */}
-			<div className='flex flex-grow items-center justify-center overflow-hidden bg-background-secondary'>
+			<div className='flex flex-grow items-center justify-center overflow-hidden bg-background'>
 				{/* Conditional rendering based on map data and SVG component */}
 				{CurrentMapSvgComponent ? (
 					<CurrentMapSvgComponent
@@ -439,10 +501,11 @@ function ValorantLineupClient(): React.JSX.Element {
 					/>
 				) : (
 					// Placeholder or loading state if map/SVG isn't ready
-					<p className='text-text-primary'>Loading map...</p>
+					<p className='text-foreground'>Loading map...</p>
 				)}
 			</div>
 		</div>
 	);
 }
+
 export default ValorantLineupClient;

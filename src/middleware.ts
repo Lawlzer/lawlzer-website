@@ -31,8 +31,10 @@ export function middleware(request: NextRequest): NextResponse {
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Detected hostname (from Host header): ${detectedHostname}`);
 
 	const isValorantSubdomain = detectedHostname.startsWith('valorant.');
+	const isColorsSubdomain = detectedHostname.startsWith('colors.');
 
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] isValorantSubdomain: ${isValorantSubdomain}`);
+	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] isColorsSubdomain: ${isColorsSubdomain}`);
 
 	if (isValorantSubdomain) {
 		if (pathname === '/') {
@@ -46,6 +48,19 @@ export function middleware(request: NextRequest): NextResponse {
 			const valorantSubdomain = getBaseUrl('valorant');
 			if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting path to ${valorantSubdomain}${pathname}`);
 			const newUrl = new URL(`${valorantSubdomain}${pathname}`, request.url);
+			response = NextResponse.rewrite(newUrl);
+		}
+	} else if (isColorsSubdomain) {
+		if (pathname === '/') {
+			if (env.DEBUG_SUBDOMAIN_VALUE) console.debug('[Middleware] Rewriting root path to /colors');
+			const newUrl = new URL('/subdomains/colors', request.url);
+			response = NextResponse.rewrite(newUrl);
+		} else if (pathname.startsWith('/_next/')) {
+			response = NextResponse.next();
+		} else {
+			const colorsSubdomain = getBaseUrl('colors');
+			if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting path to ${colorsSubdomain}${pathname}`);
+			const newUrl = new URL(`${colorsSubdomain}${pathname}`, request.url);
 			response = NextResponse.rewrite(newUrl);
 		}
 	} else if (isMainDomain(detectedHostname)) {

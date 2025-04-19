@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+// import { cookies } from 'next/headers';
 import type { User } from '@prisma/client';
 import { db } from '~/server/db';
 
@@ -7,10 +7,8 @@ export interface SessionData {
 	expires: Date;
 }
 
-export async function getSession(): Promise<SessionData | null> {
-	const cookieStore = await cookies();
-	const sessionToken = cookieStore.get('session_token')?.value;
-
+// New function to get session data based on the token
+export async function getSessionDataByToken(sessionToken: string): Promise<SessionData | null> {
 	if (!sessionToken) {
 		return null;
 	}
@@ -29,6 +27,7 @@ export async function getSession(): Promise<SessionData | null> {
 	}
 
 	if (new Date() > session.expires) {
+		// Session expired, delete it
 		await db.session.delete({
 			where: {
 				id: session.id,
@@ -37,16 +36,53 @@ export async function getSession(): Promise<SessionData | null> {
 		return null;
 	}
 
+	// Session is valid
 	return {
 		user: session.user,
 		expires: session.expires,
 	};
 }
 
-export async function getUserFromSession(): Promise<User | null> {
-	const session = await getSession();
-	return session?.user ?? null;
-}
+// export async function getSession(): Promise<SessionData | null> {
+// 	const cookieStore = await cookies();
+// 	const sessionToken = cookieStore.get('session_token')?.value;
+//
+// 	if (!sessionToken) {
+// 		return null;
+// 	}
+//
+// 	const session = await db.session.findUnique({
+// 		where: {
+// 			sessionToken,
+// 		},
+// 		include: {
+// 			user: true,
+// 		},
+// 	});
+//
+// 	if (!session) {
+// 		return null;
+// 	}
+//
+// 	if (new Date() > session.expires) {
+// 		await db.session.delete({
+// 			where: {
+// 				id: session.id,
+// 			},
+// 		});
+// 		return null;
+// 	}
+//
+// 	return {
+// 		user: session.user,
+// 		expires: session.expires,
+// 	};
+// }
+//
+// export async function getUserFromSession(): Promise<User | null> {
+// 	const session = await getSession();
+// 	return session?.user ?? null;
+// }
 
 export async function createSession(userId: string): Promise<{ sessionToken: string; userId: string; expires: Date }> {
 	const sessionToken = crypto.randomUUID();
