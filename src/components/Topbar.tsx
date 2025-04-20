@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import React from 'react';
+import ProtectedLink from './ProtectedLink';
 import AuthButton from './AuthButton'; // Import the new component
 import { getBaseUrl } from '~/lib/utils';
 // import { useUser } from '@auth0/nextjs-auth0'; // Remove Auth0 hook
@@ -20,15 +20,15 @@ export default function Topbar(): React.JSX.Element {
 		<nav className='bg-secondary text-secondary-foreground p-4 h-16 border-b border-border'>
 			<div className='container mx-auto flex justify-between items-center h-full'>
 				<div className='flex space-x-4'>
-					<Link href={baseUrl} className='hover:text-primary'>
+					<ProtectedLink href={baseUrl} className='hover:text-primary'>
 						Home
-					</Link>
-					<Link href={valorantUrl} className='hover:text-primary'>
+					</ProtectedLink>
+					<ProtectedLink href={valorantUrl} className='hover:text-primary'>
 						Valorant
-					</Link>
-					<Link href={colorsUrl} className='hover:text-primary'>
+					</ProtectedLink>
+					<ProtectedLink href={colorsUrl} className='hover:text-primary'>
 						Colors
-					</Link>
+					</ProtectedLink>
 				</div>
 				<div>
 					<AuthButton />
