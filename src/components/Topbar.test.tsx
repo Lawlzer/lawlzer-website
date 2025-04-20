@@ -26,6 +26,10 @@ vi.mock('./AuthButton', () => ({
 
 vi.mock('~/lib/utils', () => ({
 	getBaseUrl: vi.fn(),
+	subdomains: [
+		{ name: 'valorant', path: '/subdomains/valorant' },
+		{ name: 'colors', path: '/subdomains/colors' },
+	],
 }));
 
 describe('Topbar', () => {
@@ -67,8 +71,8 @@ describe('Topbar', () => {
 		// Check if getBaseUrl was called with correct parameters
 		expect(getBaseUrl).toHaveBeenCalledTimes(3);
 		expect(getBaseUrl).toHaveBeenCalledWith(); // For base URL
-		expect(getBaseUrl).toHaveBeenCalledWith('valorant'); // For valorant URL
-		expect(getBaseUrl).toHaveBeenCalledWith('colors'); // Added for colors URL
+		expect(getBaseUrl).toHaveBeenCalledWith('valorant'); // For valorant subdomain
+		expect(getBaseUrl).toHaveBeenCalledWith('colors'); // For colors subdomain
 	});
 
 	it('has the correct layout and styling', () => {
