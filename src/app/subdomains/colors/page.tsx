@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { JSX } from 'react';
 import {
 	COOKIE_KEYS,
@@ -9,6 +9,8 @@ import {
 	getCookie,
 	PREDEFINED_PALETTES, // Import predefined palettes
 } from '~/lib/palette';
+import { useRouter, usePathname } from 'next/navigation';
+import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 // Define the type for a single palette
 interface ColorPalette {
@@ -20,12 +22,29 @@ interface ColorPalette {
 	BORDER_COLOR: string;
 }
 
+// Extend Window interface for our custom property
+declare global {
+	interface Window {
+		__NEXT_PROTECT_UNSAVED_CHANGES__?: (targetPath: string) => boolean;
+	}
+}
+
 // Helper to detect if we're in test environment
 const isTestEnvironment = (): boolean => {
 	return typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 };
 
 export default function ColorsPage(): JSX.Element {
+	// Safe check for testing environments where router might not be available
+	let router: AppRouterInstance | undefined;
+	let pathname: string = '/';
+	try {
+		router = useRouter();
+		pathname = usePathname() || '/';
+	} catch (e) {
+		// Router is not available in test environment
+	}
+
 	// Initialize state with DEFAULT_COLORS but don't render them until properly loaded
 	const [pageBg, setPageBg] = useState<string>(DEFAULT_COLORS.PAGE_BG);
 	const [primaryTextColor, setPrimaryTextColor] = useState<string>(DEFAULT_COLORS.PRIMARY_TEXT_COLOR);
@@ -39,6 +58,27 @@ export default function ColorsPage(): JSX.Element {
 	const [colorsLoaded, setColorsLoaded] = useState<boolean>(isTestEnvironment());
 	// Track if the initial render has occurred
 	const initialRenderRef = useRef<boolean>(true);
+	// State to track if there are unsaved changes
+	const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+	// State to control the confirmation dialog
+	const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+	// Store the intended navigation path
+	const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+
+	// Track the last saved colors to detect actual changes
+	const [savedColors, setSavedColors] = useState<ColorPalette>({
+		PAGE_BG: DEFAULT_COLORS.PAGE_BG,
+		PRIMARY_TEXT_COLOR: DEFAULT_COLORS.PRIMARY_TEXT_COLOR,
+		PRIMARY_COLOR: DEFAULT_COLORS.PRIMARY_COLOR,
+		SECONDARY_COLOR: DEFAULT_COLORS.SECONDARY_COLOR,
+		SECONDARY_TEXT_COLOR: DEFAULT_COLORS.SECONDARY_TEXT_COLOR,
+		BORDER_COLOR: DEFAULT_COLORS.BORDER_COLOR,
+	});
+
+	// Function to check if current colors differ from saved colors
+	const checkForUnsavedChanges = useCallback((): boolean => {
+		return pageBg !== savedColors.PAGE_BG || primaryTextColor !== savedColors.PRIMARY_TEXT_COLOR || primaryColor !== savedColors.PRIMARY_COLOR || secondaryColor !== savedColors.SECONDARY_COLOR || secondaryTextColor !== savedColors.SECONDARY_TEXT_COLOR || borderColor !== savedColors.BORDER_COLOR;
+	}, [pageBg, primaryTextColor, primaryColor, secondaryColor, secondaryTextColor, borderColor, savedColors]);
 
 	// Effect: Load colors from cookies on mount and prevent applying styles until complete
 	useEffect(() => {
@@ -52,20 +92,33 @@ export default function ColorsPage(): JSX.Element {
 		}
 
 		// Always load cookies (even in test mode)
-		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG);
-		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR);
-		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR);
-		const savedSecondaryColor = getCookie(COOKIE_KEYS.SECONDARY_COLOR);
-		const savedSecondaryTextColor = getCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR);
-		const savedBorderColor = getCookie(COOKIE_KEYS.BORDER_COLOR);
+		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG) ?? DEFAULT_COLORS.PAGE_BG;
+		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR) ?? DEFAULT_COLORS.PRIMARY_TEXT_COLOR;
+		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR) ?? DEFAULT_COLORS.PRIMARY_COLOR;
+		const savedSecondaryColor = getCookie(COOKIE_KEYS.SECONDARY_COLOR) ?? DEFAULT_COLORS.SECONDARY_COLOR;
+		const savedSecondaryTextColor = getCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR) ?? DEFAULT_COLORS.SECONDARY_TEXT_COLOR;
+		const savedBorderColor = getCookie(COOKIE_KEYS.BORDER_COLOR) ?? DEFAULT_COLORS.BORDER_COLOR;
 
-		// Only update state if cookie values exist
-		if (savedPageBg) setPageBg(savedPageBg);
-		if (savedPrimaryTextColor) setPrimaryTextColor(savedPrimaryTextColor);
-		if (savedPrimaryColor) setPrimaryColor(savedPrimaryColor);
-		if (savedSecondaryColor) setSecondaryColor(savedSecondaryColor);
-		if (savedSecondaryTextColor) setSecondaryTextColor(savedSecondaryTextColor);
-		if (savedBorderColor) setBorderColor(savedBorderColor);
+		// Store the saved values in state
+		setSavedColors({
+			PAGE_BG: savedPageBg,
+			PRIMARY_TEXT_COLOR: savedPrimaryTextColor,
+			PRIMARY_COLOR: savedPrimaryColor,
+			SECONDARY_COLOR: savedSecondaryColor,
+			SECONDARY_TEXT_COLOR: savedSecondaryTextColor,
+			BORDER_COLOR: savedBorderColor,
+		});
+
+		// Update the current values
+		setPageBg(savedPageBg);
+		setPrimaryTextColor(savedPrimaryTextColor);
+		setPrimaryColor(savedPrimaryColor);
+		setSecondaryColor(savedSecondaryColor);
+		setSecondaryTextColor(savedSecondaryTextColor);
+		setBorderColor(savedBorderColor);
+
+		// Initial load should not count as unsaved changes
+		setHasUnsavedChanges(false);
 
 		// Only add delay in non-test environment
 		if (!inTestEnv) {
@@ -134,8 +187,11 @@ export default function ColorsPage(): JSX.Element {
 		rootStyle.setProperty('--border', borderColor);
 		bodyStyle.setProperty('--border', borderColor);
 
-		// REMOVED: Saving to cookies is now handled by handleSaveColors
-	}, [pageBg, primaryTextColor, primaryColor, secondaryColor, secondaryTextColor, borderColor, colorsLoaded]); // Re-run when colors change or when loaded
+		// Check if colors have actually changed from the saved values
+		if (colorsLoaded) {
+			setHasUnsavedChanges(checkForUnsavedChanges());
+		}
+	}, [pageBg, primaryTextColor, primaryColor, secondaryColor, secondaryTextColor, borderColor, colorsLoaded, checkForUnsavedChanges]);
 
 	// Function to apply a predefined palette
 	const applyPalette = (palette: ColorPalette): void => {
@@ -149,7 +205,7 @@ export default function ColorsPage(): JSX.Element {
 	};
 
 	// Function to save current colors to cookies
-	const handleSaveColors = (): void => {
+	const handleSaveColors = useCallback((): void => {
 		try {
 			setCookie(COOKIE_KEYS.PAGE_BG, pageBg);
 			setCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR, primaryTextColor);
@@ -157,12 +213,103 @@ export default function ColorsPage(): JSX.Element {
 			setCookie(COOKIE_KEYS.SECONDARY_COLOR, secondaryColor);
 			setCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR, secondaryTextColor);
 			setCookie(COOKIE_KEYS.BORDER_COLOR, borderColor);
+
+			// Update the saved colors reference
+			setSavedColors({
+				PAGE_BG: pageBg,
+				PRIMARY_TEXT_COLOR: primaryTextColor,
+				PRIMARY_COLOR: primaryColor,
+				SECONDARY_COLOR: secondaryColor,
+				SECONDARY_TEXT_COLOR: secondaryTextColor,
+				BORDER_COLOR: borderColor,
+			});
+
 			setClipboardStatus('Colors saved successfully!');
+			setHasUnsavedChanges(false); // Mark changes as saved
+
+			// If there was a pending navigation, execute it now
+			if (pendingNavigation && router) {
+				router.push(pendingNavigation);
+				setPendingNavigation(null);
+			}
 		} catch (error) {
 			setClipboardStatus('Error saving colors.');
 			console.error('Failed to save colors:', error);
 		}
-	};
+	}, [pageBg, primaryTextColor, primaryColor, secondaryColor, secondaryTextColor, borderColor, pendingNavigation, router]);
+
+	// Function to handle link/route changes
+	const handleRouteChange = useCallback(
+		(path: string): void => {
+			if (hasUnsavedChanges) {
+				// Store the intended navigation path
+				setPendingNavigation(path);
+				// Show confirmation dialog
+				setShowConfirmDialog(true);
+			} else if (router) {
+				// No unsaved changes, navigate directly if router is available
+				router.push(path);
+			}
+		},
+		[hasUnsavedChanges, router]
+	);
+
+	// Function to continue navigation without saving
+	const handleContinueWithoutSaving = useCallback((): void => {
+		setHasUnsavedChanges(false);
+		setShowConfirmDialog(false);
+
+		if (pendingNavigation && router) {
+			router.push(pendingNavigation);
+			setPendingNavigation(null);
+		}
+	}, [pendingNavigation, router]);
+
+	// Function to cancel navigation
+	const handleCancelNavigation = useCallback((): void => {
+		setShowConfirmDialog(false);
+		setPendingNavigation(null);
+	}, []);
+
+	// Function to handle beforeunload event (for browser navigation/refresh)
+	const handleBeforeUnload = useCallback(
+		(e: BeforeUnloadEvent): string => {
+			if (hasUnsavedChanges) {
+				// Standard way to show a confirmation dialog when closing/refreshing the page
+				e.preventDefault();
+				e.returnValue = '';
+				return '';
+			}
+			return '';
+		},
+		[hasUnsavedChanges]
+	);
+
+	// Listen for beforeunload event
+	useEffect(() => {
+		window.addEventListener('beforeunload', handleBeforeUnload);
+		return () => {
+			window.removeEventListener('beforeunload', handleBeforeUnload);
+		};
+	}, [handleBeforeUnload]);
+
+	// This effect sets up intercepting Link component navigation attempts
+	useEffect(() => {
+		// Define a global function to check if navigation should be intercepted
+		window.__NEXT_PROTECT_UNSAVED_CHANGES__ = (targetPath: string): boolean => {
+			// If we have unsaved changes, intercept the navigation
+			if (hasUnsavedChanges && targetPath !== pathname) {
+				handleRouteChange(targetPath);
+				return true; // Returning true prevents default navigation
+			}
+			return false; // Returning false allows default navigation
+		};
+
+		return () => {
+			// Clean up
+			delete window.__NEXT_PROTECT_UNSAVED_CHANGES__;
+		};
+	}, [hasUnsavedChanges, pathname, handleRouteChange]);
 
 	// Function to export colors to clipboard
 	const handleExportColors = async (): Promise<void> => {
@@ -427,6 +574,27 @@ export default function ColorsPage(): JSX.Element {
 					))}
 				</div>
 			</div>
+
+			{/* Confirmation Dialog */}
+			{showConfirmDialog && (
+				<div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+					<div className='bg-background p-6 rounded-lg max-w-md w-full shadow-lg'>
+						<h3 className='text-lg font-medium mb-3'>Unsaved Changes</h3>
+						<p className='mb-4'>You have unsaved color changes. Would you like to save them before leaving?</p>
+						<div className='flex justify-end gap-3'>
+							<button onClick={handleCancelNavigation} className='px-3 py-1.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-sm'>
+								Cancel
+							</button>
+							<button onClick={handleContinueWithoutSaving} className='px-3 py-1.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-sm'>
+								Continue Without Saving
+							</button>
+							<button onClick={handleSaveColors} className='px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-sm font-semibold'>
+								Save & Continue
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
