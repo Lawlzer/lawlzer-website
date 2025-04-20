@@ -16,7 +16,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 		const response = NextResponse.redirect(new URL('/', request.url));
 
-		console.log('setting logout cookie');
 		response.cookies.set({
 			name: 'session_token',
 			value: '',

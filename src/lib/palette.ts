@@ -57,6 +57,10 @@ export function setCookie(name: string, value: string, days: number = 365): void
 
 // Helper function to get cookies client-side
 export function getCookie(name: string): string | null {
+	// Check if running in a browser environment
+	if (typeof document === 'undefined') {
+		return null; // document is not available (e.g., server-side rendering)
+	}
 	try {
 		const nameEQ = name + '=';
 		const ca = document.cookie.split(';');

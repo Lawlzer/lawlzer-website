@@ -35,6 +35,7 @@ describe('Topbar', () => {
 		// Setup default mocks
 		(getBaseUrl as ReturnType<typeof vi.fn>).mockImplementation((subdomain?: string) => {
 			if (subdomain === 'valorant') return 'https://valorant.example.com';
+			if (subdomain === 'colors') return 'https://colors.example.com';
 			return 'https://example.com';
 		});
 	});
@@ -72,9 +73,10 @@ describe('Topbar', () => {
 		render(<Topbar />);
 
 		// Check if getBaseUrl was called with correct parameters
-		expect(getBaseUrl).toHaveBeenCalledTimes(2);
+		expect(getBaseUrl).toHaveBeenCalledTimes(3);
 		expect(getBaseUrl).toHaveBeenCalledWith(); // For base URL
 		expect(getBaseUrl).toHaveBeenCalledWith('valorant'); // For valorant URL
+		expect(getBaseUrl).toHaveBeenCalledWith('colors'); // Added for colors URL
 	});
 
 	it('has the correct layout and styling', () => {

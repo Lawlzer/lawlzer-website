@@ -3,7 +3,7 @@
 
 import Image, { type StaticImageData } from 'next/image.js'; // Import next/image
 import React, { useEffect, useState, useCallback } from 'react';
-import { COOKIE_KEYS, DEFAULT_COLORS, setCookie } from '~/lib/palette'; // Import palette utilities
+import { COOKIE_KEYS, DEFAULT_COLORS, setCookie, getCookie } from '~/lib/palette'; // Import palette utilities
 
 import type { Lineup, MapArea, Utility, LineupImage } from '../types'; // Use LineupImage instead of BottomleftImageVideo
 import { agents, agentUtilityMap, imageMap, type Agent } from '../types';
@@ -34,10 +34,8 @@ function CustomButton({ buttonText, isSelected, onClick, disabled }: { disabled?
 export type LineupDirection = 'destinationToStart' | 'startToDestination';
 // Added return type
 function ValorantLineupClient(): React.JSX.Element {
-	// Palette State
-	const [pageBg, setPageBg] = useState<string>(DEFAULT_COLORS.PAGE_BG);
-	const [fgColor, setFgColor] = useState<string>(DEFAULT_COLORS.FG_COLOR);
-	const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_COLORS.PRIMARY_COLOR);
+	// Palette State - REMOVED local initialization
+	// Colors should be inherited globally via CSS variables
 
 	// Lineup State (existing)
 	const [map, setMap] = useState<string>('Ascent'); // Default map key
@@ -301,27 +299,6 @@ function ValorantLineupClient(): React.JSX.Element {
 	}, [mapData, map, getAreaOpacity, handleAreaToClick, utility, imageMap]);
 	// ---- End Functions to build SVG area elements ----
 
-	// Effect 2: Apply palette colors to DOM and save to cookies when state changes
-	useEffect(() => {
-		// Apply colors to the DOM for instant feedback
-		const bodyStyle = document.body.style;
-		bodyStyle.setProperty('--page-background', pageBg);
-		bodyStyle.setProperty('--background', pageBg);
-		bodyStyle.setProperty('--foreground-color', fgColor);
-		bodyStyle.setProperty('--foreground', fgColor);
-		bodyStyle.setProperty('--primary-color', primaryColor);
-		bodyStyle.setProperty('--primary', primaryColor);
-
-		// Save colors to cookies whenever they change
-		try {
-			setCookie(COOKIE_KEYS.PAGE_BG, pageBg);
-			setCookie(COOKIE_KEYS.FG_COLOR, fgColor);
-			setCookie(COOKIE_KEYS.PRIMARY_COLOR, primaryColor);
-		} catch (error) {
-			// Error is logged within setCookie
-		}
-	}, [pageBg, fgColor, primaryColor]); // Re-run only when palette colors change
-
 	return (
 		// Adjusted to fill the parent container from page.tsx
 		<div className='flex items-stretch w-full h-full bg-background text-foreground overflow-hidden'>
@@ -447,45 +424,6 @@ function ValorantLineupClient(): React.JSX.Element {
 					))}
 					{/* Placeholder when no lineup selected/found */}
 					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-muted-foreground'>Select a start and end point to see lineup images.</div>}
-				</div>
-				{/* ADD Color Customization Section HERE, within the control panel */}
-				<div className='mt-8 p-4 border border-border rounded-lg bg-card text-card-foreground shadow-sm'>
-					<h2 className='text-lg font-semibold mb-4'>Color Colors</h2>
-					<div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
-						<label className='flex flex-col'>
-							<span className='mb-1 text-sm font-medium'>Page Background</span>
-							<input
-								type='color'
-								value={pageBg}
-								onChange={(e) => {
-									setPageBg(e.target.value);
-								}}
-								className='w-full h-10 rounded border border-input bg-input cursor-pointer'
-							/>
-						</label>
-						<label className='flex flex-col'>
-							<span className='mb-1 text-sm font-medium'>Foreground Text</span>
-							<input
-								type='color'
-								value={fgColor}
-								onChange={(e) => {
-									setFgColor(e.target.value);
-								}}
-								className='w-full h-10 rounded border border-input bg-input cursor-pointer'
-							/>
-						</label>
-						<label className='flex flex-col'>
-							<span className='mb-1 text-sm font-medium'>Primary Color</span>
-							<input
-								type='color'
-								value={primaryColor}
-								onChange={(e) => {
-									setPrimaryColor(e.target.value);
-								}}
-								className='w-full h-10 rounded border border-input bg-input cursor-pointer'
-							/>
-						</label>
-					</div>
 				</div>
 			</div>
 

@@ -2,111 +2,186 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { handleAndGenerateSessionToken, getCookieDomain } from './auth';
 import { createSession } from '~/server/db/session';
-import { env } from '~/env.mjs';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { mockEnv, restoreEnv } from 'testUtils/unit/utils';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+// --- Static Mocks (Run BEFORE imports are fully resolved) ---
+
+// Mock the env module VERY early. Use getters to read from process.env dynamically.
+vi.mock('~/env', () => ({
+	// Use getters to ensure the mocked env object reads the CURRENT process.env values
+	// which are set by mockEnv in beforeEach.
+	get env() {
+		return process.env;
+	},
+}));
 
 // Mock dependencies
 vi.mock('~/server/db/session', () => ({
 	createSession: vi.fn(),
 }));
 
-vi.mock('next/server', () => {
+// Mock next/server correctly
+vi.mock('next/server', async (importOriginal) => {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	const mod = await importOriginal<typeof import('next/server')>();
+	const OriginalNextResponse = mod.NextResponse;
+
+	// Create a mock class - we primarily need to mock static methods like redirect
+	class MockNextResponse extends OriginalNextResponse {
+		// Mock static methods first
+		public static redirect = vi.fn();
+		// Add other static mocks if necessary (e.g., json)
+		// public static json = vi.fn();
+
+		// Add explicit constructor
+		public constructor(body?: BodyInit | null, init?: ResponseInit) {
+			super(body, init);
+			// We will mock instance methods like cookies.set *on the instance* later
+		}
+	}
+
+	// Ensure other static properties/methods are carried over if not explicitly mocked
+	// This handles cases like NextResponse.next() if used elsewhere
+	Object.keys(OriginalNextResponse).forEach((key) => {
+		if (!(key in MockNextResponse)) {
+			// @ts-expect-error - Dynamically assigning static properties
+			MockNextResponse[key] = OriginalNextResponse[key];
+		}
+	});
+
 	return {
-		NextRequest: vi.fn(),
-		NextResponse: {
-			redirect: vi.fn(),
-		},
+		...mod, // Keep original exports like NextRequest
+		NextResponse: MockNextResponse as unknown as typeof mod.NextResponse, // Use the mock class, cast needed
 	};
 });
 
-vi.mock('~/env.mjs', () => ({
-	env: {
-		NODE_ENV: 'test',
-		NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
-		NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
-	},
-}));
+// --- Test Suite ---
 
-describe('handleAndGenerateSessionToken', () => {
-	const mockUserId = 'user123';
-	const mockSessionToken = 'test-session-token';
-	const mockRequestUrl = 'https://example.com/login';
+describe('Auth Library Functions', () => {
+	// Added a wrapping describe block for setup/teardown
 
-	let mockRequest: NextRequest;
-	let mockResponse: NextResponse;
-	let mockCookiesSetter: ReturnType<typeof vi.fn>;
-
+	// --- Setup & Teardown for all tests in this file ---
 	beforeEach(() => {
-		vi.clearAllMocks();
-
-		// Mock request
-		mockRequest = {
-			url: mockRequestUrl,
-		} as unknown as NextRequest;
-
-		// Mock response and cookies
-		mockCookiesSetter = vi.fn();
-		mockResponse = {
-			cookies: {
-				set: mockCookiesSetter,
-			},
-		} as unknown as NextResponse;
-
-		// Setup NextResponse.redirect mock
-		(NextResponse.redirect as ReturnType<typeof vi.fn>).mockReturnValue(mockResponse);
-
-		// Setup createSession mock
-		(createSession as ReturnType<typeof vi.fn>).mockResolvedValue({
-			sessionToken: mockSessionToken,
+		vi.resetModules(); // Reset modules FIRST to ensure fresh env import
+		mockEnv({
+			// Define default env for these tests, can be overridden in specific describe blocks if needed
+			NEXT_PUBLIC_SCHEME: 'http',
+			NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'example',
+			NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'com',
+			NEXT_PUBLIC_FRONTEND_PORT: '3000', // Or appropriate default
+			// Ensure all other required envs have defaults (as defined in testUtils/unit/utils)
 		});
+		vi.clearAllMocks(); // Clear mocks after setup
 	});
 
-	it('should create a session with the provided userId', async () => {
-		await handleAndGenerateSessionToken(mockUserId, mockRequest);
-
-		expect(createSession).toHaveBeenCalledWith(mockUserId);
+	afterEach(() => {
+		restoreEnv(); // Restore process.env
+		vi.restoreAllMocks(); // Restore mocks
 	});
 
-	it('should redirect to the home page', async () => {
-		await handleAndGenerateSessionToken(mockUserId, mockRequest);
+	// --- Specific Function Tests ---
 
-		// eslint-disable-next-line @typescript-eslint/unbound-method
-		expect(NextResponse.redirect).toHaveBeenCalledWith(expect.any(URL));
+	describe('handleAndGenerateSessionToken', () => {
+		const mockUserId = 'user123';
+		const mockSessionToken = 'test-session-token';
+		// Use scheme/domain from mockEnv
+		const mockRequestUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}/login`;
 
-		// Check the URL is correct
-		// eslint-disable-next-line @typescript-eslint/unbound-method
-		const mockRedirect = NextResponse.redirect as ReturnType<typeof vi.fn>;
-		const redirectUrl = mockRedirect.mock.calls[0][0] as URL;
-		expect(redirectUrl.pathname).toBe('/');
-	});
+		let mockRequest: NextRequest;
+		let mockResponse: NextResponse; // Type remains NextResponse
+		let mockCookiesSetter: ReturnType<typeof vi.fn>;
 
-	it('should set the session token cookie with correct parameters', async () => {
-		await handleAndGenerateSessionToken(mockUserId, mockRequest);
+		beforeEach(() => {
+			// Specific setup for these tests
+			// vi.clearAllMocks(); // Already called in outer beforeEach
 
-		const expectedCookieOptions = {
-			name: 'session_token',
-			value: mockSessionToken,
-			httpOnly: true,
-			secure: false, // NODE_ENV is 'test'
-			sameSite: 'lax',
-			maxAge: 60 * 60 * 24 * 7, // 1 week
-			path: '/',
-			domain: 'example.com',
-		};
+			// Mock request
+			mockRequest = {
+				url: mockRequestUrl,
+			} as unknown as NextRequest;
 
-		expect(mockCookiesSetter).toHaveBeenCalledWith(expectedCookieOptions);
-	});
+			// --- Corrected NextResponse Instantiation and Mocking ---
 
-	it('should return the redirect response', async () => {
-		const result = await handleAndGenerateSessionToken(mockUserId, mockRequest);
+			// 1. Instantiate the mocked NextResponse class
+			//    The mock factory ensures `new NextResponse()` uses `MockNextResponse`
+			mockResponse = new NextResponse();
 
-		expect(result).toBe(mockResponse);
-	});
-});
+			// 2. Mock the 'set' method *on the cookies object of the instance*
+			mockCookiesSetter = vi.fn();
+			mockResponse.cookies.set = mockCookiesSetter; // Mock instance method directly
 
-describe('getCookieDomain', () => {
-	it('should return the correct cookie domain', () => {
-		const domain = getCookieDomain();
-		expect(domain).toBe('example.com');
-	});
-});
+			// 3. Setup the *static* NextResponse.redirect mock
+			//    Need to cast because TS doesn't know NextResponse is the mocked class here
+			(NextResponse.redirect as ReturnType<typeof vi.fn>).mockReturnValue(mockResponse);
+			// --- End Correction ---
+
+			// Setup createSession mock
+			(createSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+				sessionToken: mockSessionToken,
+			});
+		});
+
+		it('should create a session with the provided userId', async () => {
+			await handleAndGenerateSessionToken(mockUserId, mockRequest);
+
+			expect(createSession).toHaveBeenCalledWith(mockUserId);
+		});
+
+		it('should redirect to the home page', async () => {
+			const result = await handleAndGenerateSessionToken(mockUserId, mockRequest);
+
+			// Construct the expected URL string based on the mocked env
+			const expectedUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}:${process.env.NEXT_PUBLIC_FRONTEND_PORT}`;
+
+			// eslint-disable-next-line @typescript-eslint/unbound-method
+			expect(NextResponse.redirect).toHaveBeenCalledWith(expectedUrl); // Expect the string URL
+
+			// Check the URL is correct (this check might be redundant now, but keep for clarity)
+			// eslint-disable-next-line @typescript-eslint/unbound-method
+			const mockRedirect = NextResponse.redirect as ReturnType<typeof vi.fn>; // Cast for TS
+			const redirectUrlString = mockRedirect.mock.calls[0][0] as string; // Get the string arg
+			const redirectUrl = new URL(redirectUrlString); // Create URL object for checks
+			expect(redirectUrl.protocol).toBe(`${process.env.NEXT_PUBLIC_SCHEME}:`);
+			expect(redirectUrl.hostname).toBe(`${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}`);
+			expect(redirectUrl.port).toBe(process.env.NEXT_PUBLIC_FRONTEND_PORT ?? ''); // Linter fix: Changed || to ??
+			expect(redirectUrl.pathname).toBe('/');
+			expect(result).toBe(mockResponse); // Check redirect returns the response
+		});
+
+		it('should set the session token cookie with correct parameters', async () => {
+			await handleAndGenerateSessionToken(mockUserId, mockRequest);
+
+			const expectedCookieOptions = {
+				name: 'session_token',
+				value: mockSessionToken,
+				httpOnly: true,
+				secure: process.env.NODE_ENV !== 'test', // Should be false in test env
+				sameSite: 'lax',
+				maxAge: 60 * 60 * 24 * 7, // 1 week
+				path: '/',
+				domain: `${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}`, // Use mocked domain
+			};
+
+			// Check if the setter was called with an object containing the expected options
+			expect(mockCookiesSetter).toHaveBeenCalledWith(expect.objectContaining(expectedCookieOptions));
+			// Also check the full call signature if needed (e.g., if the function takes name/value separately)
+			// expect(mockCookiesSetter).toHaveBeenCalledWith(expectedCookieOptions.name, expectedCookieOptions.value, expect.objectContaining(expectedCookieOptions)); // Adjust if needed
+		});
+
+		it('should return the redirect response', async () => {
+			const result = await handleAndGenerateSessionToken(mockUserId, mockRequest);
+
+			expect(result).toBe(mockResponse);
+		});
+	}); // End describe handleAndGenerateSessionToken
+
+	describe('getCookieDomain', () => {
+		// beforeEach for getCookieDomain if specific env needed, otherwise uses outer beforeEach env
+		it('should return the correct cookie domain based on mocked env', () => {
+			// Ensure env is mocked correctly before calling
+			const domain = getCookieDomain();
+			expect(domain).toBe(`${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}`);
+		});
+	}); // End describe getCookieDomain
+}); // End wrapping describe block

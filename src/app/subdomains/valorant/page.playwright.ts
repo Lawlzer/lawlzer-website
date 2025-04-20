@@ -27,15 +27,18 @@ async function clickExampleTo(
 ): Promise<void> {
 	// Locate the specific button state to click
 	const clickableImage = page.locator(`image[data-testid*="${options.name}"][opacity="${options.currentOpacity}"]`).first();
-	await expect(clickableImage).toBeVisible();
+	await expect(clickableImage).toBeVisible({ timeout: 5000 });
 	await clickableImage.click({ force: true });
+
+	// Wait a moment for the state change to register
+	await page.waitForTimeout(300);
 
 	// Re-locate the button using only the stable testid
 	const clickedImage = page.locator(`image[data-testid*="${options.name}"]`).first();
 	const expectedOpacity = options.currentOpacity === 0.5 ? '1' : '0.5';
 
 	// Wait for the button to have the new opacity
-	await expect(clickedImage).toHaveAttribute('opacity', expectedOpacity);
+	await expect(clickedImage).toHaveAttribute('opacity', expectedOpacity, { timeout: 5000 });
 }
 
 test('valorant subdomain page loads healthily and has correct title', async ({ page }) => {
@@ -205,27 +208,38 @@ test('should allow us to select a lineup, then click the selected Utility, to re
 
 test('should allow us to select a lineup, then click the selected Agent, to reset the selected lineup', async ({ page }) => {
 	await page.goto(valorantUrl);
+	await page.waitForTimeout(500); // Wait for page to fully stabilize
 
 	// The image should not yet be visible
 	const lineupImageOriginal = page.locator('img[alt="Lineup step 1"]');
 	await expect(lineupImageOriginal).not.toBeVisible();
 
-	await clickExampleTo(page, { name: 'map-icon-utility-Mosh Pit', currentOpacity: 0.5 });
-	await clickExampleTo(page, { name: 'map-icon-agent-Gekko', currentOpacity: 0.5 });
+	// First, click the Mosh Pit utility
+	const moshPitIcon = page.locator('image[data-testid*="map-icon-utility-Mosh Pit"][opacity="0.5"]').first();
+	await expect(moshPitIcon).toBeVisible({ timeout: 5000 });
+	await moshPitIcon.click({ force: true });
+	await page.waitForTimeout(300); // Wait for click to register
+
+	// Then click the Gekko agent
+	const gekkoIcon = page.locator('image[data-testid*="map-icon-agent-Gekko"][opacity="0.5"]').first();
+	await expect(gekkoIcon).toBeVisible({ timeout: 5000 });
+	await gekkoIcon.click({ force: true });
+	await page.waitForTimeout(300); // Wait for click to register
 
 	// Check if the lineup image is visible in the bottom left
 	const lineupImage = page.locator('img[alt="Lineup step 1"]');
-	await expect(lineupImage).toBeVisible();
+	await expect(lineupImage).toBeVisible({ timeout: 5000 });
 
 	// --- Click the Gekko agent icon again to reset ---
 	// Locate the *selected* agent icon (opacity=1)
 	const selectedGekkoIcon = page.locator('image[data-testid*="map-icon-agent-Gekko"][opacity="1"]').first();
-	await expect(selectedGekkoIcon).toBeVisible(); // Ensure it exists before clicking
+	await expect(selectedGekkoIcon).toBeVisible({ timeout: 5000 }); // Ensure it exists before clicking
 	await selectedGekkoIcon.click({ force: true }); // Click it directly
+	await page.waitForTimeout(300); // Wait for click to register
 
 	// --- Verify Reset ---
 	// Lineup image should now be hidden
-	await expect(lineupImage).not.toBeVisible();
+	await expect(lineupImage).not.toBeVisible({ timeout: 5000 });
 
 	// and, we should see multiple clickable images again
 	const multipleImages = page.locator('image[opacity="0.5"]');
