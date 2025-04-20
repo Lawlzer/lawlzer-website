@@ -64,22 +64,25 @@ describe('ColorsPage Component', () => {
 		render(React.createElement(ColorsPage));
 
 		expect(screen.getByLabelText('Page Background')).toHaveValue(DEFAULT_COLORS.PAGE_BG);
-		expect(screen.getByLabelText('Foreground Text')).toHaveValue(DEFAULT_COLORS.FG_COLOR);
 		expect(screen.getByLabelText('Primary Color')).toHaveValue(DEFAULT_COLORS.PRIMARY_COLOR);
-		expect(screen.getByLabelText('Topbar Background')).toHaveValue(DEFAULT_COLORS.TOPBAR_BG);
+		expect(screen.getByLabelText('Secondary Colour')).toHaveValue(DEFAULT_COLORS.SECONDARY_COLOR);
+		expect(screen.getByLabelText('Primary Text')).toHaveValue(DEFAULT_COLORS.PRIMARY_TEXT_COLOR);
+		expect(screen.getByLabelText('Secondary Text')).toHaveValue(DEFAULT_COLORS.SECONDARY_TEXT_COLOR);
 	});
 
 	it('should load colors from cookies on mount', () => {
-		getCookieMock.mockImplementation((key: string) => {
-			switch (key) {
+		getCookieMock.mockImplementation((name: string) => {
+			switch (name) {
 				case COOKIE_KEYS.PAGE_BG:
 					return '#111111';
-				case COOKIE_KEYS.FG_COLOR:
-					return '#222222';
 				case COOKIE_KEYS.PRIMARY_COLOR:
 					return '#333333';
-				case COOKIE_KEYS.TOPBAR_BG:
+				case COOKIE_KEYS.SECONDARY_COLOR:
 					return '#444444';
+				case COOKIE_KEYS.PRIMARY_TEXT_COLOR:
+					return '#222222';
+				case COOKIE_KEYS.SECONDARY_TEXT_COLOR:
+					return '#555555';
 				default:
 					return null;
 			}
@@ -88,9 +91,10 @@ describe('ColorsPage Component', () => {
 		render(React.createElement(ColorsPage));
 
 		expect(screen.getByLabelText('Page Background')).toHaveValue('#111111');
-		expect(screen.getByLabelText('Foreground Text')).toHaveValue('#222222');
 		expect(screen.getByLabelText('Primary Color')).toHaveValue('#333333');
-		expect(screen.getByLabelText('Topbar Background')).toHaveValue('#444444');
+		expect(screen.getByLabelText('Secondary Colour')).toHaveValue('#444444');
+		expect(screen.getByLabelText('Primary Text')).toHaveValue('#222222');
+		expect(screen.getByLabelText('Secondary Text')).toHaveValue('#555555');
 	});
 
 	it('should update color state and DOM when input changes', () => {
@@ -121,11 +125,14 @@ describe('ColorsPage Component', () => {
 		});
 
 		await waitFor(() => {
+			// Check that cookies are set with the actual values, not DEFAULT_COLORS
 			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PAGE_BG, '#123456');
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PRIMARY_TEXT_COLOR, '#f0e0f8');
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PRIMARY_COLOR, '#bb0fd9');
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.SECONDARY_COLOR, '#3b0047');
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.SECONDARY_TEXT_COLOR, '#c0a0c8');
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.BORDER_COLOR, '#450052');
 		});
-		expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.FG_COLOR, DEFAULT_COLORS.FG_COLOR);
-		expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PRIMARY_COLOR, DEFAULT_COLORS.PRIMARY_COLOR);
-		expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.TOPBAR_BG, DEFAULT_COLORS.TOPBAR_BG);
 
 		// Check for success message
 		await screen.findByText('Colors saved successfully!');
@@ -140,15 +147,15 @@ describe('ColorsPage Component', () => {
 		// Assuming PREDEFINED_PALETTES['Light Mode'] is available via the mock
 		const lightPalette = {
 			PAGE_BG: '#ffffff',
-			FG_COLOR: '#111827',
 			PRIMARY_COLOR: '#3c33e6',
-			TOPBAR_BG: '#f2f2f2',
+			SECONDARY_COLOR: '#f2f2f2',
+			PRIMARY_TEXT_COLOR: '#111827',
 		};
 
 		expect(screen.getByLabelText('Page Background')).toHaveValue(lightPalette.PAGE_BG);
-		expect(screen.getByLabelText('Foreground Text')).toHaveValue(lightPalette.FG_COLOR);
 		expect(screen.getByLabelText('Primary Color')).toHaveValue(lightPalette.PRIMARY_COLOR);
-		expect(screen.getByLabelText('Topbar Background')).toHaveValue(lightPalette.TOPBAR_BG);
+		expect(screen.getByLabelText('Secondary Colour')).toHaveValue(lightPalette.SECONDARY_COLOR);
+		expect(screen.getByLabelText('Primary Text')).toHaveValue(lightPalette.PRIMARY_TEXT_COLOR);
 	});
 
 	it('should call clipboard.writeText when Export button is clicked', async () => {
@@ -171,9 +178,11 @@ describe('ColorsPage Component', () => {
 		const validJson = JSON.stringify(
 			{
 				PAGE_BG: '#aabbcc',
-				FG_COLOR: '#ddeeff',
 				PRIMARY_COLOR: '#112233',
-				TOPBAR_BG: '#445566',
+				SECONDARY_COLOR: '#445566',
+				PRIMARY_TEXT_COLOR: '#ddeeff',
+				SECONDARY_TEXT_COLOR: '#556677',
+				BORDER_COLOR: '#778899',
 			},
 			null,
 			2
@@ -194,9 +203,11 @@ describe('ColorsPage Component', () => {
 		// Check if colors updated
 		await waitFor(() => {
 			expect(screen.getByLabelText('Page Background')).toHaveValue('#aabbcc');
-			expect(screen.getByLabelText('Foreground Text')).toHaveValue('#ddeeff');
 			expect(screen.getByLabelText('Primary Color')).toHaveValue('#112233');
-			expect(screen.getByLabelText('Topbar Background')).toHaveValue('#445566');
+			expect(screen.getByLabelText('Secondary Colour')).toHaveValue('#445566');
+			expect(screen.getByLabelText('Primary Text')).toHaveValue('#ddeeff');
+			expect(screen.getByLabelText('Secondary Text')).toHaveValue('#556677');
+			expect(screen.getByLabelText('Border Color')).toHaveValue('#778899');
 		});
 
 		// Check for success message
@@ -222,13 +233,17 @@ describe('ColorsPage Component', () => {
 	});
 
 	it('should show error message when Import button is clicked with invalid color format', async () => {
-		const invalidColorJson = JSON.stringify({
-			PAGE_BG: '#aabbcc',
-			FG_COLOR: 'not-a-hex',
-			PRIMARY_COLOR: '#112233',
-			TOPBAR_BG: '#445566',
-		});
-		mockClipboard.readText.mockResolvedValue(invalidColorJson);
+		// Setup mock to return invalid JSON
+		mockClipboard.readText.mockResolvedValueOnce(
+			JSON.stringify({
+				PAGE_BG: 'not-a-color',
+				PRIMARY_COLOR: '#112233',
+				SECONDARY_COLOR: '#445566',
+				PRIMARY_TEXT_COLOR: '#778899',
+				SECONDARY_TEXT_COLOR: '#aabbcc',
+				BORDER_COLOR: '#ddeeff',
+			})
+		);
 
 		render(React.createElement(ColorsPage));
 		const importButton = screen.getByRole('button', { name: 'Import' });
@@ -241,7 +256,7 @@ describe('ColorsPage Component', () => {
 			expect(mockClipboard.readText).toHaveBeenCalledTimes(1);
 		});
 
-		// Check for error message containing specific reason
-		await screen.findByText(/Invalid hex color format found/i);
+		// Check for error message with updated format
+		await screen.findByText(/Failed to import colors from clipboard. Invalid hex color format found in clipboard data./i);
 	});
 });

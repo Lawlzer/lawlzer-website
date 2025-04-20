@@ -21,9 +21,18 @@ function CustomButton({ buttonText, isSelected, onClick, disabled }: { disabled?
 		<button
 			disabled={!!disabled}
 			className={`${
-				// Use theme colors
-				disabled ? 'disabled:opacity-50 text-muted-foreground border-muted cursor-not-allowed' : isSelected ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : 'text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+				// Use theme colors with better contrast
+				disabled ? 'disabled:opacity-50 text-secondary-text border-border cursor-not-allowed' : isSelected ? 'font-bold shadow-md' : 'bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground'
 			} px-4 py-2 rounded-md transition-colors duration-200 font-medium border-2`}
+			style={
+				isSelected && !disabled
+					? {
+							backgroundColor: 'var(--primary)',
+							color: 'var(--primary-text-color)', // Use primary-text-color instead of primary-foreground
+							borderColor: 'var(--primary)',
+						}
+					: undefined
+			}
 			onClick={onClick}
 		>
 			{buttonText}
@@ -423,7 +432,7 @@ function ValorantLineupClient(): React.JSX.Element {
 						</React.Fragment>
 					))}
 					{/* Placeholder when no lineup selected/found */}
-					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-muted-foreground'>Select a start and end point to see lineup images.</div>}
+					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-secondary-text'>Select a start and end point to see lineup images.</div>}
 				</div>
 			</div>
 

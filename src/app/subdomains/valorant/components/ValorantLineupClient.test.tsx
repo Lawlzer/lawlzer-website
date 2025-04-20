@@ -179,15 +179,16 @@ describe('ValorantLineupClient', () => {
 
 		// Default direction is 'destinationToStart'
 		const destToStartButton = screen.getByText('Destination ➔ Start');
-		expect(destToStartButton.className).toContain('bg-primary');
+		// Check for inline style with backgroundColor instead of className
+		expect(destToStartButton).toHaveStyle({ backgroundColor: 'var(--primary)' });
 
 		// Change direction
 		const startToDestButton = screen.getByText('Start ➔ Destination');
 		fireEvent.click(startToDestButton);
 
-		// Check that button state changed
-		expect(startToDestButton.className).toContain('bg-primary');
-		expect(destToStartButton.className).not.toContain('bg-primary');
+		// Check that button state changed using inline styles
+		expect(startToDestButton).toHaveStyle({ backgroundColor: 'var(--primary)' });
+		expect(destToStartButton).not.toHaveStyle({ backgroundColor: 'var(--primary)' });
 	});
 
 	it('disables agent buttons that have no lineups for the selected map', () => {

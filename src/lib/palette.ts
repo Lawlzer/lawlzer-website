@@ -6,17 +6,21 @@
 // Define COOKIE keys
 export const COOKIE_KEYS = {
 	PAGE_BG: 'theme_page_bg',
-	FG_COLOR: 'theme_fg_color',
+	PRIMARY_TEXT_COLOR: 'theme_primary_text_color',
 	PRIMARY_COLOR: 'theme_primary_color',
-	TOPBAR_BG: 'theme_topbar_bg',
+	SECONDARY_COLOR: 'theme_secondary_color',
+	SECONDARY_TEXT_COLOR: 'theme_secondary_text_color',
+	BORDER_COLOR: 'theme_border_color',
 };
 
 // Define default colors
 export const DEFAULT_COLORS = {
 	PAGE_BG: '#640175',
-	FG_COLOR: '#f0e0f8',
+	PRIMARY_TEXT_COLOR: '#f0e0f8',
 	PRIMARY_COLOR: '#bb0fd9',
-	TOPBAR_BG: '#3b0047',
+	SECONDARY_COLOR: '#3b0047',
+	SECONDARY_TEXT_COLOR: '#c0a0c8',
+	BORDER_COLOR: '#450052',
 };
 
 // Helper function to get the base domain (e.g., example.com) from hostname
@@ -83,44 +87,58 @@ export function getCookie(name: string): string | null {
 export const PREDEFINED_PALETTES = {
 	'Light Mode': {
 		PAGE_BG: '#ffffff',
-		FG_COLOR: '#111827',
+		PRIMARY_TEXT_COLOR: '#111827',
 		PRIMARY_COLOR: '#3c33e6',
-		TOPBAR_BG: '#f2f2f2',
+		SECONDARY_COLOR: '#f2f2f2',
+		SECONDARY_TEXT_COLOR: '#6b7280',
+		BORDER_COLOR: '#e5e7eb',
 	},
 	'Dark Mode': {
 		PAGE_BG: '#1f2937',
-		FG_COLOR: '#f9fafb',
+		PRIMARY_TEXT_COLOR: '#f9fafb',
 		PRIMARY_COLOR: '#818cf8',
-		TOPBAR_BG: '#374151',
+		SECONDARY_COLOR: '#374151',
+		SECONDARY_TEXT_COLOR: '#9ca3af',
+		BORDER_COLOR: '#4b5563',
 	},
 	'Vibrant Fun': {
 		PAGE_BG: '#ec4899',
-		FG_COLOR: '#1e293b',
+		PRIMARY_TEXT_COLOR: '#1e293b',
 		PRIMARY_COLOR: '#8b5cf6',
-		TOPBAR_BG: '#fef3c7',
+		SECONDARY_COLOR: '#fef3c7',
+		SECONDARY_TEXT_COLOR: '#4b5563',
+		BORDER_COLOR: '#c026d3',
 	},
 	'Ocean Breeze': {
 		PAGE_BG: '#e0f2fe',
-		FG_COLOR: '#075985',
+		PRIMARY_TEXT_COLOR: '#075985',
 		PRIMARY_COLOR: '#38bdf8',
-		TOPBAR_BG: '#bae6fd',
+		SECONDARY_COLOR: '#bae6fd',
+		SECONDARY_TEXT_COLOR: '#0369a1',
+		BORDER_COLOR: '#7dd3fc',
 	},
 	'Forest Calm': {
 		PAGE_BG: '#f0fdf4',
-		FG_COLOR: '#166534',
+		PRIMARY_TEXT_COLOR: '#166534',
 		PRIMARY_COLOR: '#4ade80',
-		TOPBAR_BG: '#dcfce7',
+		SECONDARY_COLOR: '#dcfce7',
+		SECONDARY_TEXT_COLOR: '#22c55e',
+		BORDER_COLOR: '#86efac',
 	},
 	'All Black': {
 		PAGE_BG: '#000000',
-		FG_COLOR: '#000000',
+		PRIMARY_TEXT_COLOR: '#000000',
 		PRIMARY_COLOR: '#000000',
-		TOPBAR_BG: '#000000',
+		SECONDARY_COLOR: '#000000',
+		SECONDARY_TEXT_COLOR: '#000000',
+		BORDER_COLOR: '#000000',
 	},
 	'All White': {
 		PAGE_BG: '#ffffff',
-		FG_COLOR: '#ffffff',
+		PRIMARY_TEXT_COLOR: '#ffffff',
 		PRIMARY_COLOR: '#ffffff',
-		TOPBAR_BG: '#ffffff',
+		SECONDARY_COLOR: '#ffffff',
+		SECONDARY_TEXT_COLOR: '#ffffff',
+		BORDER_COLOR: '#ffffff',
 	},
 };

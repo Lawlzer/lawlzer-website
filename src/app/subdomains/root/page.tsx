@@ -41,7 +41,7 @@ export default function MainPage(): JSX.Element {
 	return (
 		<div className='flex flex-col flex-grow w-full p-4 sm:p-6 md:p-8'>
 			<h1>Main Domain Page</h1>
-			<p className='mt-2 text-muted-foreground'>This is the page for the main domain.</p>
+			<p className='mt-2 text-secondary-text'>This is the page for the main domain.</p>
 
 			{/* Removed color customization section */}
 		</div>

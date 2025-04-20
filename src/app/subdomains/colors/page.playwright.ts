@@ -13,13 +13,27 @@ const expectedMetadata = {
 };
 const colorsPageUrl = pathToURLTestsOnly(pathToThisFile);
 
-// Helper function to get color inputs locators
-const getColorInputs = (page: Page): { [key: string]: Locator } => ({
-	pageBg: page.locator('label:has-text("Page Background") input[type="color"]'),
-	fgColor: page.locator('label:has-text("Foreground Text") input[type="color"]'),
-	primaryColor: page.locator('label:has-text("Primary Color") input[type="color"]'),
-	topbarBg: page.locator('label:has-text("Topbar Background") input[type="color"]'),
-});
+// Define a type for our input elements to improve type checking
+type ColorInputs = {
+	pageBg: Locator;
+	primaryTextColor: Locator;
+	primaryColor: Locator;
+	secondaryColor: Locator;
+	secondaryTextColor: Locator;
+	borderColor: Locator;
+};
+
+// Utility function to get all the color inputs
+const getColorInputs = (page: Page): ColorInputs => {
+	return {
+		pageBg: page.locator('label:has-text("Page Background") input[type="color"]'),
+		primaryTextColor: page.locator('label:has-text("Primary Text") input[type="color"]'),
+		primaryColor: page.locator('label:has-text("Primary Color") input[type="color"]'),
+		secondaryColor: page.locator('label:has-text("Secondary Colour") input[type="color"]'),
+		secondaryTextColor: page.locator('label:has-text("Secondary Text") input[type="color"]'),
+		borderColor: page.locator('label:has-text("Border Color") input[type="color"]'),
+	};
+};
 
 // Helper function to get the current value of a color input
 async function getColorInputValue(locator: Locator): Promise<string> {
@@ -66,12 +80,16 @@ test.describe('Colors Page E2E Tests', () => {
 
 	test('should display default colors on initial load', async ({ page }) => {
 		const inputs = getColorInputs(page);
-		await expect(inputs.pageBg).toHaveValue(DEFAULT_COLORS.PAGE_BG);
-		await expect(inputs.fgColor).toHaveValue(DEFAULT_COLORS.FG_COLOR);
-		await expect(inputs.primaryColor).toHaveValue(DEFAULT_COLORS.PRIMARY_COLOR);
-		await expect(inputs.topbarBg).toHaveValue(DEFAULT_COLORS.TOPBAR_BG);
 
-		// Also check if body background matches (example)
+		// Checking each input's value
+		await expect(inputs.pageBg).toHaveValue(DEFAULT_COLORS.PAGE_BG);
+		await expect(inputs.primaryColor).toHaveValue(DEFAULT_COLORS.PRIMARY_COLOR);
+		await expect(inputs.secondaryColor).toHaveValue(DEFAULT_COLORS.SECONDARY_COLOR);
+		await expect(inputs.primaryTextColor).toHaveValue(DEFAULT_COLORS.PRIMARY_TEXT_COLOR);
+		await expect(inputs.secondaryTextColor).toHaveValue(DEFAULT_COLORS.SECONDARY_TEXT_COLOR);
+		await expect(inputs.borderColor).toHaveValue(DEFAULT_COLORS.BORDER_COLOR);
+
+		// Check if body background matches
 		await checkElementStyle(page, 'body', 'background-color', DEFAULT_COLORS.PAGE_BG);
 	});
 
@@ -100,11 +118,13 @@ test.describe('Colors Page E2E Tests', () => {
 
 		await lightModeButton.click();
 
-		// Verify all inputs match the light palette
+		// Verify all inputs match the light palette in the new order
 		await expect(inputs.pageBg).toHaveValue(lightPalette.PAGE_BG);
-		await expect(inputs.fgColor).toHaveValue(lightPalette.FG_COLOR);
 		await expect(inputs.primaryColor).toHaveValue(lightPalette.PRIMARY_COLOR);
-		await expect(inputs.topbarBg).toHaveValue(lightPalette.TOPBAR_BG);
+		await expect(inputs.secondaryColor).toHaveValue(lightPalette.SECONDARY_COLOR);
+		await expect(inputs.primaryTextColor).toHaveValue(lightPalette.PRIMARY_TEXT_COLOR);
+		await expect(inputs.secondaryTextColor).toHaveValue(lightPalette.SECONDARY_TEXT_COLOR);
+		await expect(inputs.borderColor).toHaveValue(lightPalette.BORDER_COLOR);
 
 		// Verify a style change, e.g., body background
 		await checkElementStyle(page, 'body', 'background-color', lightPalette.PAGE_BG);
@@ -116,8 +136,8 @@ test.describe('Colors Page E2E Tests', () => {
 		const newFgColor = '#f0f0f0';
 
 		// Change a color
-		await inputs.fgColor.fill(newFgColor);
-		await expect(inputs.fgColor).toHaveValue(newFgColor);
+		await inputs.primaryTextColor.fill(newFgColor);
+		await expect(inputs.primaryTextColor).toHaveValue(newFgColor);
 
 		// Wait for change to be fully applied
 		await page.waitForTimeout(300);
@@ -131,12 +151,14 @@ test.describe('Colors Page E2E Tests', () => {
 		// Verify cookies were set - use the current input values rather than expected values
 		const cookies = await context.cookies();
 		const findCookie = (name: string): any => cookies.find((c) => c.name === name);
-		const currentFgColor = await inputs.fgColor.inputValue();
+		const currentFgColor = await inputs.primaryTextColor.inputValue();
 
 		expect(findCookie(COOKIE_KEYS.PAGE_BG)?.value).toBe(await getColorInputValue(inputs.pageBg));
-		expect(findCookie(COOKIE_KEYS.FG_COLOR)?.value).toBe(currentFgColor);
+		expect(findCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR)?.value).toBe(currentFgColor);
 		expect(findCookie(COOKIE_KEYS.PRIMARY_COLOR)?.value).toBe(await getColorInputValue(inputs.primaryColor));
-		expect(findCookie(COOKIE_KEYS.TOPBAR_BG)?.value).toBe(await getColorInputValue(inputs.topbarBg));
+		expect(findCookie(COOKIE_KEYS.SECONDARY_COLOR)?.value).toBe(await getColorInputValue(inputs.secondaryColor));
+		expect(findCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR)?.value).toBe(await getColorInputValue(inputs.secondaryTextColor));
+		expect(findCookie(COOKIE_KEYS.BORDER_COLOR)?.value).toBe(await getColorInputValue(inputs.borderColor));
 	});
 
 	test('should load saved colors from cookies on reload', async ({ page, context }) => {
@@ -144,27 +166,33 @@ test.describe('Colors Page E2E Tests', () => {
 		const saveButton = page.getByRole('button', { name: 'Save' });
 		const testColors = {
 			[COOKIE_KEYS.PAGE_BG]: '#99aabb',
-			[COOKIE_KEYS.FG_COLOR]: '#ccddff',
 			[COOKIE_KEYS.PRIMARY_COLOR]: '#119922',
-			[COOKIE_KEYS.TOPBAR_BG]: '#665544',
+			[COOKIE_KEYS.SECONDARY_COLOR]: '#665544',
+			[COOKIE_KEYS.PRIMARY_TEXT_COLOR]: '#ccddff',
+			[COOKIE_KEYS.SECONDARY_TEXT_COLOR]: '#776655',
+			[COOKIE_KEYS.BORDER_COLOR]: '#887766',
 		};
 
 		// Manually set cookies before going to the page (alternative to UI interaction)
 		await context.addCookies([
 			{ name: COOKIE_KEYS.PAGE_BG, value: testColors[COOKIE_KEYS.PAGE_BG], url: colorsPageUrl },
-			{ name: COOKIE_KEYS.FG_COLOR, value: testColors[COOKIE_KEYS.FG_COLOR], url: colorsPageUrl },
 			{ name: COOKIE_KEYS.PRIMARY_COLOR, value: testColors[COOKIE_KEYS.PRIMARY_COLOR], url: colorsPageUrl },
-			{ name: COOKIE_KEYS.TOPBAR_BG, value: testColors[COOKIE_KEYS.TOPBAR_BG], url: colorsPageUrl },
+			{ name: COOKIE_KEYS.SECONDARY_COLOR, value: testColors[COOKIE_KEYS.SECONDARY_COLOR], url: colorsPageUrl },
+			{ name: COOKIE_KEYS.PRIMARY_TEXT_COLOR, value: testColors[COOKIE_KEYS.PRIMARY_TEXT_COLOR], url: colorsPageUrl },
+			{ name: COOKIE_KEYS.SECONDARY_TEXT_COLOR, value: testColors[COOKIE_KEYS.SECONDARY_TEXT_COLOR], url: colorsPageUrl },
+			{ name: COOKIE_KEYS.BORDER_COLOR, value: testColors[COOKIE_KEYS.BORDER_COLOR], url: colorsPageUrl },
 		]);
 
 		// Reload the page
 		await page.reload();
 
-		// Verify inputs load the cookie values
+		// Verify inputs load the cookie values in the new order
 		await expect(inputs.pageBg).toHaveValue(testColors[COOKIE_KEYS.PAGE_BG]);
-		await expect(inputs.fgColor).toHaveValue(testColors[COOKIE_KEYS.FG_COLOR]);
 		await expect(inputs.primaryColor).toHaveValue(testColors[COOKIE_KEYS.PRIMARY_COLOR]);
-		await expect(inputs.topbarBg).toHaveValue(testColors[COOKIE_KEYS.TOPBAR_BG]);
+		await expect(inputs.secondaryColor).toHaveValue(testColors[COOKIE_KEYS.SECONDARY_COLOR]);
+		await expect(inputs.primaryTextColor).toHaveValue(testColors[COOKIE_KEYS.PRIMARY_TEXT_COLOR]);
+		await expect(inputs.secondaryTextColor).toHaveValue(testColors[COOKIE_KEYS.SECONDARY_TEXT_COLOR]);
+		await expect(inputs.borderColor).toHaveValue(testColors[COOKIE_KEYS.BORDER_COLOR]);
 	});
 
 	// --- Import/Export Tests (Clipboard interaction can be tricky) ---
@@ -199,9 +227,11 @@ test.describe('Colors Page E2E Tests', () => {
 		// Create valid test data
 		const validJson = JSON.stringify({
 			PAGE_BG: '#aabbcc',
-			FG_COLOR: '#ddeeff',
 			PRIMARY_COLOR: '#112233',
-			TOPBAR_BG: '#445566',
+			SECONDARY_COLOR: '#445566',
+			PRIMARY_TEXT_COLOR: '#ddeeff',
+			SECONDARY_TEXT_COLOR: '#776655',
+			BORDER_COLOR: '#887766',
 		});
 
 		// Mock the clipboard API before loading the page
@@ -223,10 +253,14 @@ test.describe('Colors Page E2E Tests', () => {
 		// Check for success message with increased timeout
 		await expect(page.getByText('Colors imported successfully!')).toBeVisible({ timeout: 10000 });
 
-		// Verify colors changed
+		// Verify colors changed in the new order
 		const inputs = getColorInputs(page);
 		await expect(inputs.pageBg).toHaveValue('#aabbcc');
-		await expect(inputs.fgColor).toHaveValue('#ddeeff');
+		await expect(inputs.primaryColor).toHaveValue('#112233');
+		await expect(inputs.secondaryColor).toHaveValue('#445566');
+		await expect(inputs.primaryTextColor).toHaveValue('#ddeeff');
+		await expect(inputs.secondaryTextColor).toHaveValue('#776655');
+		await expect(inputs.borderColor).toHaveValue('#887766');
 	});
 
 	test('Import button shows error message with invalid data', async ({ page }) => {
