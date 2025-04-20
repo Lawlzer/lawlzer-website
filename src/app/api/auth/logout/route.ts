@@ -3,18 +3,23 @@ import { NextResponse } from 'next/server';
 import { destroySession } from '~/server/db/session';
 import { env } from '~/env.mjs';
 import { getCookieDomain } from '~/lib/auth';
+import { getBaseUrl } from '~/lib/utils';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
 	try {
 		const sessionToken = request.cookies.get('session_token')?.value;
 
+		// Get the referer URL to redirect back after logout
+		const referer = request.headers.get('referer') ?? '/';
+
 		if (!sessionToken) {
-			return NextResponse.redirect(new URL('/', request.url));
+			return NextResponse.redirect(new URL(referer, request.url));
 		}
 
 		await destroySession(sessionToken);
 
-		const response = NextResponse.redirect(new URL('/', request.url));
+		// Redirect to the referer URL instead of just the root
+		const response = NextResponse.redirect(new URL(referer, request.url));
 
 		response.cookies.set({
 			name: 'session_token',
