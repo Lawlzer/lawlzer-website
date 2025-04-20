@@ -1,8 +1,3 @@
-when we go to /setup-account and are already logged in, we should receive an error
-when we go to /setup-account and are NOT already logged in, we should be given a page to log in
-- that page should work and log us in (lol)
-
-
 
 auth -> redirects us to previous page
 

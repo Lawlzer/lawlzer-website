@@ -11,9 +11,14 @@ export function getCookieDomain(): string {
 export async function handleAndGenerateSessionToken(userId: string, request: NextRequest): Promise<NextResponse> {
 	const session = await createSession(userId);
 
-	const redirectUrl = getBaseUrl();
+	// Get the redirect URL from the auth_redirect cookie if available
+	const redirectCookie = request.cookies.get('auth_redirect');
+	// Default to the base URL if no redirect cookie is found
+	const redirectUrl = redirectCookie?.value ?? getBaseUrl();
+
 	const response = NextResponse.redirect(redirectUrl);
 
+	// Set the session token cookie
 	response.cookies.set({
 		name: 'session_token',
 		value: session.sessionToken,
@@ -24,6 +29,20 @@ export async function handleAndGenerateSessionToken(userId: string, request: Nex
 		path: '/',
 		domain: getCookieDomain(),
 	});
+
+	// Clear the auth_redirect cookie
+	if (redirectCookie) {
+		response.cookies.set({
+			name: 'auth_redirect',
+			value: '',
+			httpOnly: true,
+			secure: env.NODE_ENV === 'production',
+			sameSite: 'lax',
+			maxAge: 0, // Delete immediately
+			path: '/',
+			domain: getCookieDomain(),
+		});
+	}
 
 	return response;
 }

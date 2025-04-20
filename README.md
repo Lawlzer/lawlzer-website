@@ -7,3 +7,5 @@ docker exec -it mongo-replica mongosh --eval "rs.initiate({\_id: 'rs0', members:
 something something make an _actual_ readme
 
 mention dynamic/customizable UI colours and how it's done (layout.tsx)
+
+automatic redirecting upon login

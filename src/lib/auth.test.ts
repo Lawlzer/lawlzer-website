@@ -87,18 +87,24 @@ describe('Auth Library Functions', () => {
 		const mockSessionToken = 'test-session-token';
 		// Use scheme/domain from mockEnv
 		const mockRequestUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}/login`;
+		const mockRedirectUrl = '/some-previous-page';
 
 		let mockRequest: NextRequest;
 		let mockResponse: NextResponse; // Type remains NextResponse
 		let mockCookiesSetter: ReturnType<typeof vi.fn>;
+		let mockCookiesGetter: ReturnType<typeof vi.fn>;
 
 		beforeEach(() => {
 			// Specific setup for these tests
 			// vi.clearAllMocks(); // Already called in outer beforeEach
 
-			// Mock request
+			// Mock request with cookies
+			mockCookiesGetter = vi.fn();
 			mockRequest = {
 				url: mockRequestUrl,
+				cookies: {
+					get: mockCookiesGetter,
+				},
 			} as unknown as NextRequest;
 
 			// --- Corrected NextResponse Instantiation and Mocking ---
@@ -128,7 +134,10 @@ describe('Auth Library Functions', () => {
 			expect(createSession).toHaveBeenCalledWith(mockUserId);
 		});
 
-		it('should redirect to the home page', async () => {
+		it('should redirect to the base URL when no redirect cookie exists', async () => {
+			// Mock cookies.get to return null for auth_redirect
+			mockCookiesGetter.mockReturnValue(null);
+
 			const result = await handleAndGenerateSessionToken(mockUserId, mockRequest);
 
 			// Construct the expected URL string based on the mocked env
@@ -147,6 +156,32 @@ describe('Auth Library Functions', () => {
 			expect(redirectUrl.port).toBe(process.env.NEXT_PUBLIC_FRONTEND_PORT ?? ''); // Linter fix: Changed || to ??
 			expect(redirectUrl.pathname).toBe('/');
 			expect(result).toBe(mockResponse); // Check redirect returns the response
+		});
+
+		it('should redirect to the value in the redirect cookie when it exists', async () => {
+			// Mock cookies.get to return a cookie with the redirect URL
+			mockCookiesGetter.mockReturnValue({ value: mockRedirectUrl });
+
+			await handleAndGenerateSessionToken(mockUserId, mockRequest);
+
+			// eslint-disable-next-line @typescript-eslint/unbound-method
+			expect(NextResponse.redirect).toHaveBeenCalledWith(mockRedirectUrl);
+		});
+
+		it('should clear the redirect cookie when it exists', async () => {
+			// Mock cookies.get to return a cookie with the redirect URL
+			mockCookiesGetter.mockReturnValue({ value: mockRedirectUrl });
+
+			await handleAndGenerateSessionToken(mockUserId, mockRequest);
+
+			// Check if the cookie was cleared (set with empty value and 0 maxAge)
+			expect(mockCookiesSetter).toHaveBeenCalledWith(
+				expect.objectContaining({
+					name: 'auth_redirect',
+					value: '',
+					maxAge: 0,
+				})
+			);
 		});
 
 		it('should set the session token cookie with correct parameters', async () => {

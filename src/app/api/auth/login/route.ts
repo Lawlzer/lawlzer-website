@@ -88,9 +88,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	// Create a CSRF token for security
 	const state = crypto.randomUUID();
 
+	// Get the referer URL to redirect back after login
+	const referer = request.headers.get('referer') ?? '/';
+
 	// Set a cookie to verify the state when the user is redirected back
 	const redirectUrl = getAuthorizationUrl(provider, state, callbackUrl);
 	const response = NextResponse.redirect(redirectUrl);
+
+	// Store the referrer URL in a cookie to redirect back after successful login
+	response.cookies.set({
+		name: 'auth_redirect',
+		value: referer,
+		httpOnly: true,
+		secure: env.NODE_ENV === 'production',
+		sameSite: 'lax',
+		maxAge: 60 * 10, // 10 minutes
+		path: '/',
+		domain: getCookieDomain(),
+	});
 
 	response.cookies.set({
 		name: 'auth_state',
