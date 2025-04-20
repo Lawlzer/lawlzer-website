@@ -49,9 +49,6 @@ async function getDiscordOAuthTokens(code: string, request: NextRequest): Promis
 		grant_type: 'authorization_code',
 	};
 
-	// Log the redirect_uri being sent to Discord for debugging
-	console.log('Discord callback redirect_uri:', values.redirect_uri);
-
 	const response = await fetch(url, {
 		method: 'POST',
 		headers: {

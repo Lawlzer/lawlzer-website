@@ -1,16 +1,22 @@
 import { defineConfig } from 'vitest/config';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import { loadEnv } from 'vite';
+import path from 'path';
+
+const __dirname = path.resolve();
+const setupFilesPath = path.resolve(__dirname, 'testUtils', 'unit', 'vitest.setup.ts');
 
 export default defineConfig({
 	plugins: [tsconfigPaths()],
 	test: {
 		environment: 'jsdom', // or 'jsdom' if testing React components
 		globals: true, // Use Vitest's globals (describe, it, expect, etc.)
-		setupFiles: ['src/vitest.setup.ts'],
+		setupFiles: [setupFilesPath],
 		coverage: {
 			provider: 'v8', // or 'istanbul'
 			reporter: ['text', 'json', 'html'],
 		},
+		env: {}, // Assign the loaded environment variables
 		exclude: [
 			'**/node_modules/**',
 			'**/dist/**',

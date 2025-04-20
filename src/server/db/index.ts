@@ -22,7 +22,7 @@ if (env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
 (async () => {
 	try {
 		await db.$connect();
-		console.log('⚪ Database connection established successfully.');
+		console.info('⚪ Database connection established successfully.');
 	} catch (error) {
 		console.error('🔴 Failed to connect to the database. Please ensure MongoDB is running.');
 		console.error('Original error:', error);

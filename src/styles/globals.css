@@ -1,76 +1,117 @@
 @import 'tailwindcss';
-@import 'tailwindcss/preflight';
-@tailwind utilities;
+/* @plugin 'tailwindcss-animate'; - Removed, now configured in postcss.config.mjs */
 
-/* Define customizable CSS variables */
-:root {
-	--background: 0 0% 100%; /* Default light background */
-	--foreground: 0 0% 3.9%; /* Default dark text */
+/* Define custom dark variant based on .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
 
-	--card: 0 0% 100%;
-	--card-foreground: 0 0% 3.9%;
+/* Define theme variables using Hex codes */
+@theme {
+	/* Define semantic colors first using hex */
+	--page-background: #640175; /* Dark Purple */
+	--topbar-background: #3b0047; /* Even Darker Purple */
+	--foreground-color: #f0e0f8; /* Light Lavender/Off-white */
+	--primary-color: #bb0fd9; /* Purple */
+	--primary-foreground-color: #ffffff; /* White */
+	--secondary-foreground-color: #f0e0f8; /* Light Lavender/Off-white */
+	--muted-foreground-color: #c0a0c8; /* Muted Lavender/Grey */
+	--accent-foreground-color: #ffffff; /* White (for contrast on accent bg) */
+	--destructive-color: #e80008; /* Red */
+	--destructive-foreground-color: #ffffff; /* White */
+	--ring-color: #fc03d7; /* Pink */
+	--popover-background: #7a1f8a; /* Slightly Lighter Dark Purple */
+	--popover-foreground-color: #f0e0f8; /* Light Lavender/Off-white */
 
-	--popover: 0 0% 100%;
-	--popover-foreground: 0 0% 3.9%;
+	/* Map semantic colors to Tailwind CSS variables */
+	--background: var(--page-background);
+	--foreground: var(--foreground-color);
 
-	--primary: 0 0% 9%;
-	--primary-foreground: 0 0% 98%;
+	--card: var(--page-background);
+	--card-foreground: var(--foreground-color);
 
-	--secondary: 0 0% 96.1%;
-	--secondary-foreground: 0 0% 9%;
+	--popover: var(--popover-background);
+	--popover-foreground: var(--popover-foreground-color);
 
-	--muted: 0 0% 96.1%;
-	--muted-foreground: 0 0% 45.1%;
+	--primary: var(--primary-color);
+	--primary-foreground: var(--primary-foreground-color);
 
-	--accent: 0 0% 96.1%;
-	--accent-foreground: 0 0% 9%;
+	--secondary: var(--topbar-background);
+	--secondary-foreground: var(--secondary-foreground-color);
 
-	--destructive: 0 84.2% 60.2%;
-	--destructive-foreground: 0 0% 98%;
+	--muted: var(--topbar-background); /* Sync muted with the new secondary */
+	--muted-foreground: var(--muted-foreground-color);
 
-	--border: 0 0% 89.8%;
-	--input: 0 0% 89.8%;
-	--ring: 0 0% 3.9%;
+	--accent: var(--primary-color); /* Use Primary Purple for Accent Background */
+	--accent-foreground: var(--accent-foreground-color);
+
+	--destructive: var(--destructive-color);
+	--destructive-foreground: var(--destructive-foreground-color);
+
+	--border: var(--topbar-background); /* Sync border with the new secondary */
+	--input: var(--topbar-background); /* Sync input with the new secondary */
+	--ring: var(--ring-color);
 
 	--radius: 0.5rem;
+
+	/* Example font variable like in the provided snippet */
+	/* --font-inter: "Inter", sans-serif; */
 }
 
-/* Example: Dark mode variables (can be toggled via class on html/body) */
-.dark {
-	--background: 0 0% 3.9%;
-	--foreground: 0 0% 98%;
-
-	--card: 0 0% 3.9%;
-	--card-foreground: 0 0% 98%;
-
-	--popover: 0 0% 3.9%;
-	--popover-foreground: 0 0% 98%;
-
-	--primary: 0 0% 98%;
-	--primary-foreground: 0 0% 9%;
-
-	--secondary: 0 0% 14.9%;
-	--secondary-foreground: 0 0% 98%;
-
-	--muted: 0 0% 14.9%;
-	--muted-foreground: 0 0% 63.9%;
-
-	--accent: 0 0% 14.9%;
-	--accent-foreground: 0 0% 98%;
-
-	--destructive: 0 62.8% 30.6%;
-	--destructive-foreground: 0 0% 98%;
-
-	--border: 0 0% 14.9%;
-	--input: 0 0% 14.9%;
-	--ring: 0 0% 83.1%;
+/* Define utilities based on theme variables for use with @apply */
+/* Updated to use raw variable values */
+@utility bg-background {
+	@apply bg-[var(--background)];
+}
+@utility text-foreground {
+	@apply text-[var(--foreground)];
+}
+@utility border-border {
+	@apply border-[var(--border)];
+}
+@utility text-primary {
+	@apply text-[var(--primary)];
+}
+@utility bg-secondary {
+	@apply bg-[var(--secondary)];
+}
+@utility text-secondary-foreground {
+	@apply text-[var(--secondary-foreground)];
+}
+@utility text-muted-foreground {
+	@apply text-[var(--muted-foreground)];
+}
+@utility bg-primary {
+	@apply bg-[var(--primary)];
+}
+@utility text-primary-foreground {
+	@apply text-[var(--primary-foreground)];
+}
+@utility ring-ring {
+	@apply ring-[var(--ring)];
+}
+@utility bg-popover {
+	@apply bg-[var(--popover)];
+}
+@utility text-popover-foreground {
+	@apply text-[var(--popover-foreground)];
+}
+@utility divide-border {
+	@apply divide-[var(--border)];
+}
+@utility bg-accent {
+	@apply bg-[var(--accent)];
+}
+@utility text-accent-foreground {
+	@apply text-[var(--accent-foreground)];
+}
+@utility bg-muted {
+	@apply bg-[var(--muted)];
 }
 
 /* Apply base styles */
 @layer base {
 	body {
-		background-color: hsl(var(--background));
-		color: hsl(var(--foreground));
+		/* Use @apply with the defined utilities */
+		@apply bg-background text-foreground;
 		/* Add smooth scrolling */
 		scroll-behavior: smooth;
 		/* Improve font rendering */
@@ -85,8 +126,7 @@
 	h4,
 	h5,
 	h6 {
-		font-weight: 600; /* Corresponds to font-semibold */
-		letter-spacing: -0.025em; /* Corresponds to tracking-tight */
+		@apply font-semibold tracking-tight;
 	}
 
 	h1 {
@@ -110,26 +150,17 @@
 
 	/* Basic link styles */
 	a {
-		color: hsl(var(--primary));
-		text-underline-offset: 4px;
+		/* Use @apply with the defined utility */
+		@apply text-primary underline-offset-4;
 		text-decoration-line: none; /* Start with no underline */
 	}
 
 	a:hover {
-		text-decoration-line: underline;
+		@apply underline;
 	}
 }
 
 /* Keep existing utilities or add new ones */
 @layer utilities {
-	.example-test-me {
-		background-color: hsl(var(--destructive));
-		padding: theme('spacing.4');
-		color: hsl(var(--destructive-foreground));
-	}
-
-	/* Add custom utilities here if needed */
-	/* .my-utility {
-		 @apply ...;
-	   } */
+	/* All custom utility classes removed as they were unused in provided files */
 }

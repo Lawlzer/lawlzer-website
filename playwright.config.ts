@@ -1,9 +1,13 @@
 // Load environment variables before anything else
-import './testUtils/playwright/loadEnv';
+// import './testUtils/playwright/loadEnv';
 
 import { defineConfig, devices } from '@playwright/test';
 
-import { getBaseUrl } from './src/lib/utils';
+import path from 'path';
+
+// Define the path to the global setup file
+const __dirname = path.resolve();
+const globalSetupPath = path.resolve(__dirname, 'testUtils', 'playwright', 'globalSetup.ts');
 
 export default defineConfig({
 	testDir: './src', // Directory where tests are located
@@ -17,7 +21,7 @@ export default defineConfig({
 	expect: {
 		timeout: 10000,
 	},
-	globalSetup: './testUtils/playwright/globalSetup.ts',
+	globalSetup: globalSetupPath,
 	globalTeardown: undefined,
 	globalTimeout: 60 * 60 * 1000,
 	grep: undefined,
@@ -43,6 +47,7 @@ export default defineConfig({
 		{
 			name: 'chromium',
 			use: { ...devices['Desktop Chrome'] },
+			dependencies: [],
 		},
 	],
 	webServer: {

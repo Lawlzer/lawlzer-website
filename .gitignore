@@ -18,7 +18,6 @@ bun.lockb
 .env
 .env.development
 .env.production
-.env.test
 .envrc
 
 # Build / Generated output
@@ -30,6 +29,7 @@ zig-out
 data
 .next
 coverage
+
 
 # Temporary/dev locations
 legacy
@@ -55,4 +55,3 @@ whisper-openai-exp/
 feature_cache
 
 # Specific to this project
-TODO-MAKE-ME-WORK

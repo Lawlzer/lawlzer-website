@@ -12,8 +12,6 @@ interface SvgComponentProps {
 
 // Destructure the new props and remove the old ones
 const SvgComponent = ({ className, newBuildFrom, newBuildTo }: SvgComponentProps): React.JSX.Element => {
-	// Remove the old console log or update it
-	console.log('Rendering Ascent Map SVG with newBuildFrom/newBuildTo props');
 	return (
 		// Apply className passed from parent for positioning/scaling
 		<svg className={className} width={804} height={860} viewBox='0 0 804 860' fill='none' xmlns='http://www.w3.org/2000/svg'>

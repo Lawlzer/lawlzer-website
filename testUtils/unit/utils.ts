@@ -1,30 +1,81 @@
 import type { MockedFunction, Mock } from 'vitest';
 import { expect, vi } from 'vitest';
-import { db } from '../src/server/db';
+import { db } from '../../src/server/db';
+
+// Store the original process.env to restore later
+const originalProcessEnv = { ...process.env };
+
+// Function to restore original env (call this in test teardown like afterEach)
+export function restoreEnv(): void {
+	process.env = originalProcessEnv;
+}
 
 export function mockEnv(envOverrides: Record<string, unknown>): void {
-	// Use vi.doMock and importActual to merge mocks with actual env
-	vi.doMock('~/env', async () => {
-		// Import the actual module - Allow type inference
-		const actualEnvModule = await vi.importActual('~/env');
+	// --- 1. Define All Required Env Vars with Defaults ---
+	const defaultTestEnv = {
+		// From test requirements
+		NEXT_PUBLIC_SCHEME: 'http',
+		NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'dev',
+		NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'localhost',
+		NEXT_PUBLIC_FRONTEND_PORT: '3005',
+		NODE_ENV: 'test',
 
-		// Construct the mocked env object
-		const mockedEnv = {
-			// Spread the actual environment variables
-			...(actualEnvModule as any).env, // Use 'as any' to bypass potential type issue
-			// Apply specific test defaults/overrides
-			NODE_ENV: 'test', // Ensure test environment
-			// Apply user-provided overrides last
-			...envOverrides,
-		};
+		// Other required vars from src/env.mjs (provide dummy values)
+		DATABASE_URL: 'mongodb://test:test@localhost:27017/testdb',
+		NEXT_PUBLIC_AUTH_GOOGLE_ID: 'test_google_id',
+		AUTH_GOOGLE_SECRET: 'test_google_secret',
+		NEXT_PUBLIC_AUTH_DISCORD_ID: 'test_discord_id',
+		AUTH_DISCORD_SECRET: 'test_discord_secret',
+		NEXT_PUBLIC_AUTH_GITHUB_ID: 'test_github_id',
+		AUTH_GITHUB_SECRET: 'test_github_secret',
 
-		// Return the mocked module structure, including both env and authUrl
+		// Optional vars - can be omitted or set to undefined/empty
+		VERCEL_URL: undefined,
+		DEBUG_CONTEXT_KEYS: undefined,
+		DEBUG_SUBDOMAIN_VALUE: undefined,
+		DEBUG_SESSION_STUFF: undefined,
+	};
+
+	// --- 2. Merge Defaults and Overrides ---
+	const mergedEnv = {
+		...defaultTestEnv,
+		...envOverrides, // User overrides take precedence
+	};
+
+	// --- 3. Set process.env ---
+	// Store keys relevant to our env schema from the defaults
+	const relevantKeys = Object.keys(defaultTestEnv);
+
+	// First, ensure all relevant keys from our defaults/overrides exist on process.env
+	for (const key of relevantKeys) {
+		const value = mergedEnv[key as keyof typeof mergedEnv]; // Use type assertion
+		process.env[key] = value === undefined ? undefined : String(value);
+	}
+
+	// Optionally, remove keys from process.env that were in the original but are not in our merged set
+	// (Be cautious with this - might remove needed system vars if not careful)
+	// Example (if needed):
+	// for (const key in originalProcessEnv) {
+	//    if (!relevantKeys.includes(key) && process.env[key] !== undefined) {
+	//        // console.log('Deleting potentially stale env var:', key);
+	//        delete process.env[key]; // Linter might complain here too
+	//    }
+	// }
+
+	// --- 4. Mock the ~/env module ---
+	// This ensures that code importing `env` gets the mocked values
+	/* vi.doMock('~/env', async () => {
+        // We *could* importActual here, but createEnv would run again with the modified process.env.
+        // It's simpler and safer to just return the already merged object.
+        // const actualEnvModule = await vi.importActual('~/env'); // Not strictly needed now
+
+        // Return the structure expected from src/env.mjs
 		return {
-			env: mockedEnv,
-			// Use the authUrl from the actual module unless explicitly overridden
-			authUrl: (actualEnvModule as any).authUrl, // Use 'as any' to bypass potential type issue
+            env: mergedEnv, // Return the merged object directly
+            // If src/env.mjs exported other things, mock them here too if needed.
 		};
-	});
+	}); */
+	// ^^^^ Removed vi.doMock call. Module mocking will be handled statically in the test file. ^^^^
 }
 
 type PrismaMockOverrides = {

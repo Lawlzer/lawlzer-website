@@ -7,10 +7,8 @@ export interface SessionData {
 	expires: Date;
 }
 
-export async function getSession(): Promise<SessionData | null> {
-	const cookieStore = await cookies();
-	const sessionToken = cookieStore.get('session_token')?.value;
-
+// New function to get session data based on the token
+export async function getSessionDataByToken(sessionToken: string): Promise<SessionData | null> {
 	if (!sessionToken) {
 		return null;
 	}
@@ -29,6 +27,7 @@ export async function getSession(): Promise<SessionData | null> {
 	}
 
 	if (new Date() > session.expires) {
+		// Session expired, delete it
 		await db.session.delete({
 			where: {
 				id: session.id,
@@ -37,10 +36,23 @@ export async function getSession(): Promise<SessionData | null> {
 		return null;
 	}
 
+	// Session is valid
 	return {
 		user: session.user,
 		expires: session.expires,
 	};
+}
+
+export async function getSession(): Promise<SessionData | null> {
+	const cookieStore = await cookies();
+	const sessionToken = cookieStore.get('session_token')?.value;
+
+	if (!sessionToken) {
+		return null;
+	}
+
+	// Call the new function to get session data
+	return getSessionDataByToken(sessionToken);
 }
 
 export async function getUserFromSession(): Promise<User | null> {
