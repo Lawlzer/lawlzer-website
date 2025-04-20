@@ -8,8 +8,8 @@
 @theme {
 	/* Define semantic colors first using hex */
 	--page-background: #640175; /* Dark Purple */
-	--topbar-background: #3b0047; /* Even Darker Purple */
-	--foreground-color: #f0e0f8; /* Light Lavender/Off-white */
+	--secondary-colour: #3b0047; /* Even Darker Purple */
+	--primary-text-color: #f0e0f8; /* Light Lavender/Off-white */
 	--primary-color: #bb0fd9; /* Purple */
 	--primary-foreground-color: #ffffff; /* White */
 	--secondary-foreground-color: #f0e0f8; /* Light Lavender/Off-white */
@@ -20,13 +20,15 @@
 	--ring-color: #fc03d7; /* Pink */
 	--popover-background: #7a1f8a; /* Slightly Lighter Dark Purple */
 	--popover-foreground-color: #f0e0f8; /* Light Lavender/Off-white */
+	--secondary-text-color: #c0a0c8; /* Secondary Text Color */
+	--custom-border-color: #450052; /* Custom Border Color */
 
 	/* Map semantic colors to Tailwind CSS variables */
 	--background: var(--page-background);
-	--foreground: var(--foreground-color);
+	--foreground: var(--primary-text-color);
 
 	--card: var(--page-background);
-	--card-foreground: var(--foreground-color);
+	--card-foreground: var(--primary-text-color);
 
 	--popover: var(--popover-background);
 	--popover-foreground: var(--popover-foreground-color);
@@ -34,10 +36,10 @@
 	--primary: var(--primary-color);
 	--primary-foreground: var(--primary-foreground-color);
 
-	--secondary: var(--topbar-background);
+	--secondary: var(--secondary-colour);
 	--secondary-foreground: var(--secondary-foreground-color);
 
-	--muted: var(--topbar-background); /* Sync muted with the new secondary */
+	--muted: var(--secondary-colour); /* Sync muted with the new secondary */
 	--muted-foreground: var(--muted-foreground-color);
 
 	--accent: var(--primary-color); /* Use Primary Purple for Accent Background */
@@ -46,9 +48,11 @@
 	--destructive: var(--destructive-color);
 	--destructive-foreground: var(--destructive-foreground-color);
 
-	--border: var(--topbar-background); /* Sync border with the new secondary */
-	--input: var(--topbar-background); /* Sync input with the new secondary */
+	--border: var(--custom-border-color); /* Now uses the custom border color */
+	--input: var(--secondary-colour); /* Sync input with the new secondary */
 	--ring: var(--ring-color);
+
+	--secondary-text: var(--secondary-text-color);
 
 	--radius: 0.5rem;
 
@@ -105,6 +109,9 @@
 }
 @utility bg-muted {
 	@apply bg-[var(--muted)];
+}
+@utility text-secondary-text {
+	@apply text-[var(--secondary-text)];
 }
 
 /* Apply base styles */

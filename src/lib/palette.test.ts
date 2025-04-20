@@ -151,18 +151,22 @@ describe('Palette Library Functions', () => {
 		it('COOKIE_KEYS should contain expected keys', () => {
 			expect(COOKIE_KEYS).toEqual({
 				PAGE_BG: 'theme_page_bg',
-				FG_COLOR: 'theme_fg_color',
+				PRIMARY_TEXT_COLOR: 'theme_primary_text_color',
 				PRIMARY_COLOR: 'theme_primary_color',
-				TOPBAR_BG: 'theme_topbar_bg',
+				SECONDARY_COLOR: 'theme_secondary_color',
+				SECONDARY_TEXT_COLOR: 'theme_secondary_text_color',
+				BORDER_COLOR: 'theme_border_color',
 			});
 		});
 
 		it('DEFAULT_COLORS should contain expected colors', () => {
 			expect(DEFAULT_COLORS).toEqual({
 				PAGE_BG: '#640175',
-				FG_COLOR: '#f0e0f8',
+				PRIMARY_TEXT_COLOR: '#f0e0f8',
 				PRIMARY_COLOR: '#bb0fd9',
-				TOPBAR_BG: '#3b0047',
+				SECONDARY_COLOR: '#3b0047',
+				SECONDARY_TEXT_COLOR: '#c0a0c8',
+				BORDER_COLOR: '#450052',
 			});
 		});
 
@@ -171,7 +175,7 @@ describe('Palette Library Functions', () => {
 			expect(PREDEFINED_PALETTES).toBeDefined();
 			expect(PREDEFINED_PALETTES['Light Mode']).toBeDefined();
 			expect(PREDEFINED_PALETTES['Dark Mode']).toBeDefined();
-			expect(Object.keys(PREDEFINED_PALETTES['Light Mode'])).toEqual(expect.arrayContaining(['PAGE_BG', 'FG_COLOR', 'PRIMARY_COLOR', 'TOPBAR_BG']));
+			expect(Object.keys(PREDEFINED_PALETTES['Light Mode'])).toEqual(expect.arrayContaining(['PAGE_BG', 'PRIMARY_TEXT_COLOR', 'PRIMARY_COLOR', 'SECONDARY_COLOR', 'SECONDARY_TEXT_COLOR', 'BORDER_COLOR']));
 		});
 	});
 });
