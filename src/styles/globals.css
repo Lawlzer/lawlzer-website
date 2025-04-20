@@ -1,67 +1,85 @@
 @import 'tailwindcss';
 /* @plugin 'tailwindcss-animate'; - Removed, now configured in postcss.config.mjs */
 
-/* Define custom dark variant based on .dark class */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Define custom dark variant based on .dark class (Keep if needed for manual toggle, otherwise remove) */
+/* @custom-variant dark (&:where(.dark, .dark *)); */ /* Commenting out for now, focusing on prefers-color-scheme */
 
-/* Define theme variables using Hex codes */
-@theme {
-	/* Define semantic colors first using hex */
-	--page-background: #640175; /* Dark Purple */
-	--secondary-colour: #3b0047; /* Even Darker Purple */
-	--primary-text-color: #f0e0f8; /* Light Lavender/Off-white */
-	--primary-color: #bb0fd9; /* Purple */
-	--primary-foreground-color: #ffffff; /* White */
-	--secondary-foreground-color: #f0e0f8; /* Light Lavender/Off-white */
-	--muted-foreground-color: #c0a0c8; /* Muted Lavender/Grey */
-	--accent-foreground-color: #ffffff; /* White (for contrast on accent bg) */
-	--destructive-color: #e80008; /* Red */
+/* Define theme variables using standard CSS custom properties */
+:root {
+	/* Light Mode Defaults (from PREDEFINED_PALETTES['Light Mode']) */
+	--page-background: #ffffff;
+	--primary-text-color: #111827;
+	--primary-color: #3c33e6;
+	--secondary-colour: #f2f2f2; /* Mapped from SECONDARY_COLOR */
+	--secondary-text-color: #6b7280;
+	--custom-border-color: #e5e7eb;
+
+	/* Default derived/semantic colors (Light Mode) */
+	--primary-foreground-color: #ffffff; /* White text on primary blue */
+	--secondary-foreground-color: #111827; /* Dark text on secondary light gray */
+	--muted-foreground-color: #6b7280; /* Standard secondary text color */
+	--accent-foreground-color: #ffffff; /* White text on primary blue accent */
+	--destructive-color: #ef4444; /* Tailwind red-500 */
 	--destructive-foreground-color: #ffffff; /* White */
-	--ring-color: #fc03d7; /* Pink */
-	--popover-background: #7a1f8a; /* Slightly Lighter Dark Purple */
-	--popover-foreground-color: #f0e0f8; /* Light Lavender/Off-white */
-	--secondary-text-color: #c0a0c8; /* Secondary Text Color */
-	--custom-border-color: #450052; /* Custom Border Color */
+	--ring-color: #6366f1; /* Tailwind indigo-500 (adjust as needed) */
+	--popover-background: #ffffff; /* Same as page background */
+	--popover-foreground-color: #111827; /* Same as primary text */
 
 	/* Map semantic colors to Tailwind CSS variables */
 	--background: var(--page-background);
 	--foreground: var(--primary-text-color);
-
 	--card: var(--page-background);
 	--card-foreground: var(--primary-text-color);
-
 	--popover: var(--popover-background);
 	--popover-foreground: var(--popover-foreground-color);
-
 	--primary: var(--primary-color);
 	--primary-foreground: var(--primary-foreground-color);
-
 	--secondary: var(--secondary-colour);
 	--secondary-foreground: var(--secondary-foreground-color);
-
-	--muted: var(--secondary-colour); /* Sync muted with the new secondary */
+	--muted: var(--secondary-colour);
 	--muted-foreground: var(--muted-foreground-color);
-
-	--accent: var(--primary-color); /* Use Primary Purple for Accent Background */
+	--accent: var(--primary-color);
 	--accent-foreground: var(--accent-foreground-color);
-
 	--destructive: var(--destructive-color);
 	--destructive-foreground: var(--destructive-foreground-color);
-
-	--border: var(--custom-border-color); /* Now uses the custom border color */
-	--input: var(--secondary-colour); /* Sync input with the new secondary */
+	--border: var(--custom-border-color);
+	--input: var(--secondary-colour); /* Input background often matches secondary/muted */
 	--ring: var(--ring-color);
-
-	--secondary-text: var(--secondary-text-color);
+	--secondary-text: var(--secondary-text-color); /* Explicit variable for secondary text */
 
 	--radius: 0.5rem;
+}
 
-	/* Example font variable like in the provided snippet */
-	/* --font-inter: "Inter", sans-serif; */
+@media (prefers-color-scheme: dark) {
+	:root {
+		/* Dark Mode Defaults (from PREDEFINED_PALETTES['Dark Mode']) */
+		--page-background: #1f2937;
+		--primary-text-color: #f9fafb;
+		--primary-color: #818cf8;
+		--secondary-colour: #374151; /* Mapped from SECONDARY_COLOR */
+		--secondary-text-color: #9ca3af;
+		--custom-border-color: #4b5563;
+
+		/* Default derived/semantic colors (Dark Mode) */
+		--primary-foreground-color: #1f2937; /* Dark text on primary light purple */
+		--secondary-foreground-color: #f9fafb; /* Light text on secondary dark gray */
+		--muted-foreground-color: #9ca3af; /* Standard secondary text color */
+		--accent-foreground-color: #1f2937; /* Dark text on primary light purple accent */
+		--destructive-color: #f87171; /* Tailwind red-400 */
+		--destructive-foreground-color: #ffffff; /* White */
+		--ring-color: #a5b4fc; /* Tailwind indigo-300 (adjust as needed) */
+		--popover-background: #374151; /* Darker background for popovers */
+		--popover-foreground-color: #f9fafb; /* Light text */
+
+		/* Tailwind variable mappings will inherit from :root unless overridden here */
+		/* Most mappings are likely okay, but check if any need specific dark mode overrides */
+		/* Example: --input might use a slightly different shade in dark mode */
+		/* --input: #4b5563; */ /* If needed */
+	}
 }
 
 /* Define utilities based on theme variables for use with @apply */
-/* Updated to use raw variable values */
+/* Keep these as they map Tailwind concepts to our CSS variables */
 @utility bg-background {
 	@apply bg-[var(--background)];
 }
