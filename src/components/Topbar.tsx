@@ -29,9 +29,6 @@ export default function Topbar(): React.JSX.Element {
 					<Link href={colorsUrl} className='hover:text-primary'>
 						Colors
 					</Link>
-					<Link href='https://example.com' target='_blank' rel='noopener noreferrer' className='hover:text-primary'>
-						Example
-					</Link>
 				</div>
 				<div>
 					<AuthButton />
