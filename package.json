@@ -25,7 +25,7 @@
 		"start": "next start",
 		"test": "npm run test:unit && npm run test:e2e",
 		"test:e2e": "cross-env SKIP_ENV_VALIDATION=true playwright test",
-		"test:e2e:watch": "cross-env SKIP_ENV_VALIDATION=true playwright test --watch",
+		"test:e2e:watch": "nodemon --watch app --watch src --watch tests --ext ts,tsx,js,jsx,mdx --exec \"cross-env SKIP_ENV_VALIDATION=true playwright test\"",
 		"test:unit": "cross-env SKIP_ENV_VALIDATION=true vitest run",
 		"test:unit:watch": "cross-env SKIP_ENV_VALIDATION=true vitest watch",
 		"typecheck": "tsc --noEmit"
