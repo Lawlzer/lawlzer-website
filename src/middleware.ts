@@ -1,7 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { env } from './env.mjs';
-import { getBaseUrl } from './lib/utils';
+import type { SubdomainName } from './lib/utils';
+import { getBaseUrl, subdomains } from './lib/utils';
 
 // Function to determine if the hostname corresponds to the main domain
 function isMainDomain(hostname: string): boolean {
@@ -24,55 +25,42 @@ export function middleware(request: NextRequest): NextResponse {
 	const hostHeader = request.headers.get('host');
 	const detectedHostname = hostHeader?.split(':')[0] ?? url.hostname;
 
-	let response: NextResponse;
-
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Request hostname (from URL): ${url.hostname}, pathname: ${pathname}`);
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Host header: ${hostHeader}`);
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Detected hostname (from Host header): ${detectedHostname}`);
 
-	const isValorantSubdomain = detectedHostname.startsWith('valorant.');
-	const isColorsSubdomain = detectedHostname.startsWith('colors.');
+	// Check for subdomain matches
+	for (const subdomain of subdomains) {
+		const isSubdomainMatch = detectedHostname.startsWith(`${subdomain.name}.`);
 
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] isValorantSubdomain: ${isValorantSubdomain}`);
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] isColorsSubdomain: ${isColorsSubdomain}`);
+		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] is${subdomain.name.charAt(0).toUpperCase() + subdomain.name.slice(1)}Subdomain: ${isSubdomainMatch}`);
 
-	if (isValorantSubdomain) {
-		if (pathname === '/') {
-			if (env.DEBUG_SUBDOMAIN_VALUE) console.debug('[Middleware] Rewriting root path to /valorant');
-			const newUrl = new URL('/subdomains/valorant', request.url);
-			response = NextResponse.rewrite(newUrl);
-		} else if (pathname.startsWith('/_next/')) {
-			// console.log(`pathname starts with /_next/, doing SPECIAL STUFF`); // Removed noisy log
-			response = NextResponse.next();
-		} else {
-			const valorantSubdomain = getBaseUrl('valorant');
-			if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting path to ${valorantSubdomain}${pathname}`);
-			const newUrl = new URL(`${valorantSubdomain}${pathname}`, request.url);
-			response = NextResponse.rewrite(newUrl);
+		if (isSubdomainMatch) {
+			if (pathname === '/') {
+				if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting root path to ${subdomain.path}`);
+				const newUrl = new URL(subdomain.path, request.url);
+				return NextResponse.rewrite(newUrl);
+			} else if (pathname.startsWith('/_next/')) {
+				return NextResponse.next();
+			} else {
+				const subdomainBaseUrl = getBaseUrl(subdomain.name);
+				if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting path to ${subdomainBaseUrl}${pathname}`);
+				const newUrl = new URL(`${subdomainBaseUrl}${pathname}`, request.url);
+				return NextResponse.rewrite(newUrl);
+			}
 		}
-	} else if (isColorsSubdomain) {
-		if (pathname === '/') {
-			if (env.DEBUG_SUBDOMAIN_VALUE) console.debug('[Middleware] Rewriting root path to /colors');
-			const newUrl = new URL('/subdomains/colors', request.url);
-			response = NextResponse.rewrite(newUrl);
-		} else if (pathname.startsWith('/_next/')) {
-			response = NextResponse.next();
-		} else {
-			const colorsSubdomain = getBaseUrl('colors');
-			if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting path to ${colorsSubdomain}${pathname}`);
-			const newUrl = new URL(`${colorsSubdomain}${pathname}`, request.url);
-			response = NextResponse.rewrite(newUrl);
-		}
-	} else if (isMainDomain(detectedHostname)) {
-		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Main domain detected. Rewriting path to /subdomains/root${pathname}`);
-		const newUrl = new URL(`/subdomains/root${pathname}`, request.url);
-		response = NextResponse.rewrite(newUrl);
-	} else {
-		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug('[Middleware] Not a matched domain, passing through.');
-		response = NextResponse.next();
 	}
 
-	return response;
+	// Handle main domain
+	if (isMainDomain(detectedHostname)) {
+		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Main domain detected. Rewriting path to /subdomains/root${pathname}`);
+		const newUrl = new URL(`/subdomains/root${pathname}`, request.url);
+		return NextResponse.rewrite(newUrl);
+	}
+
+	// Default case
+	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug('[Middleware] Not a matched domain, passing through.');
+	return NextResponse.next();
 }
 
 // todo there's definitely some legacy stuff in here, like the below stuff I'm guessing

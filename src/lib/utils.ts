@@ -50,7 +50,19 @@ export function pathToURLTestsOnly(filePath: string): string {
 	return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}${path}`;
 }
 
-export function getBaseUrl(subdomain?: 'colors' | 'valorant' | null): string {
+export type Subdomain = {
+	name: string;
+	path: string;
+};
+
+export const subdomains: Subdomain[] = [
+	{ name: 'valorant', path: '/subdomains/valorant' },
+	{ name: 'colors', path: '/subdomains/colors' },
+];
+
+export type SubdomainName = (typeof subdomains)[number]['name'];
+
+export function getBaseUrl(subdomain?: SubdomainName | null): string {
 	const protocol = env.NEXT_PUBLIC_SCHEME ?? throwError('No process.env.NEXT_PUBLIC_SCHEME found');
 	const secondLevel = env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN ?? throwError('No process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN found');
 	const topLevel = env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN ?? throwError('No process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN found');
