@@ -1,11 +1,8 @@
+'use client';
+
 import React from 'react';
 import type { JSX } from 'react';
-import type { Metadata } from 'next';
 import ValorantLineupClient from './components/ValorantLineupClient';
-
-export const metadata: Metadata = {
-	title: 'Valorant Lineups',
-};
 
 export default function ValorantPage(): JSX.Element {
 	return (

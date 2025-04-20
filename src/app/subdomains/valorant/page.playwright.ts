@@ -1,14 +1,10 @@
 import type { Page, Locator } from '@playwright/test';
 import { test, expect } from '@playwright/test';
-// import { metadata } from './page'; // <-- Remove this import
+import { metadata } from './layout';
 import { testPageBasics } from '@testUtils/playwright/utils';
 import { pathToURLTestsOnly } from '~/lib/utils';
 const pathToThisFile = import.meta.url;
 
-// Define the expected metadata directly for the test
-const expectedMetadata = {
-	title: 'Valorant Lineups',
-};
 const valorantUrl = pathToURLTestsOnly(pathToThisFile);
 
 export async function getMapSvg(page: Page): Promise<Locator> {
@@ -47,8 +43,8 @@ async function clickExampleTo(
 }
 
 test('valorant subdomain page loads healthily and has correct title', async ({ page }) => {
-	// Use the locally defined metadata
-	await testPageBasics(page, valorantUrl, expectedMetadata, {});
+	// Use the imported metadata
+	await testPageBasics(page, valorantUrl, metadata, {});
 });
 
 test('images load correctly and multiple maps work', async ({ page }) => {

@@ -5,6 +5,8 @@ import { env } from '~/env.mjs';
 interface TestPageBasicsOptions {
 	/** Check if the page title matches the provided metadata title. */
 	titleCheck?: boolean;
+	/** Check if the page description meta tag matches the provided metadata description. */
+	descriptionCheck?: boolean;
 	/** Check if the page loads successfully (2xx status code). */
 	pageLoadCheck?: boolean;
 	/** Check if the page has HTML content. */
@@ -16,7 +18,7 @@ interface TestPageBasicsOptions {
 }
 
 export async function testPageBasics(page: Page, url: string, metadata: Metadata, options: TestPageBasicsOptions = {}): Promise<Response> {
-	const { titleCheck = true, pageLoadCheck = true, htmlCheck = true, noScrollbarCheck = true, topbarCheck = true } = options;
+	const { titleCheck = true, descriptionCheck = true, pageLoadCheck = true, htmlCheck = true, noScrollbarCheck = true, topbarCheck = true } = options;
 
 	let pageErrorOccurred: Error | null = null;
 
@@ -92,6 +94,16 @@ export async function testPageBasics(page: Page, url: string, metadata: Metadata
 				}
 			}
 		}
+	}
+
+	if (descriptionCheck) {
+		if (!metadata.description) throw new Error('Metadata description is required for descriptionCheck');
+
+		// Try to get the description meta tag content
+		const descriptionContent = await page.locator('meta[name="description"]').getAttribute('content');
+
+		expect(descriptionContent, `${url}: Description meta tag should not be null`).not.toBeNull();
+		expect(descriptionContent, `${url}: Description meta tag content should match "${metadata.description}"`).toBe(metadata.description);
 	}
 
 	if (noScrollbarCheck) {
