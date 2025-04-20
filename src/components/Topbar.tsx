@@ -14,45 +14,27 @@ import { getBaseUrl } from '~/lib/utils';
 export default function Topbar(): React.JSX.Element {
 	const baseUrl = getBaseUrl(); // todo these can be generated on demand
 	const valorantUrl = getBaseUrl('valorant');
+	const colorsUrl = getBaseUrl('colors');
 
 	return (
-		<nav className='bg-background-topbar text-text-primary p-4 h-16'>
+		<nav className='bg-secondary text-secondary-foreground p-4 h-16 border-b border-border'>
 			<div className='container mx-auto flex justify-between items-center h-full'>
 				<div className='flex space-x-4'>
-					<Link href={baseUrl} className='hover:text-text-secondary'>
+					<Link href={baseUrl} className='hover:text-primary'>
 						Home
 					</Link>
-					<Link href={valorantUrl} className='hover:text-text-secondary'>
+					<Link href={valorantUrl} className='hover:text-primary'>
 						Valorant
 					</Link>
-					<Link href='https://example.com' target='_blank' rel='noopener noreferrer' className='hover:text-text-secondary'>
+					<Link href={colorsUrl} className='hover:text-primary'>
+						Colors
+					</Link>
+					<Link href='https://example.com' target='_blank' rel='noopener noreferrer' className='hover:text-primary'>
 						Example
 					</Link>
 				</div>
 				<div>
-					{/* Replace the placeholder with the AuthButton component */}
 					<AuthButton />
-					{/* Original conditional rendering logic:
-					{isLoading ? (
-						<div>Loading...</div>
-					) : error ? (
-						(() => {
-							console.error(error);
-							return <div>Error fetching user</div>; // Simplified error message
-						})()
-					) : user ? (
-						<div className='flex items-center space-x-4'>
-							<span>User Name</span>
-							<a href='/logout' className='hover:text-gray-300'> 
-								Logout
-							</a>
-						</div>
-					) : (
-						<a href='/login' className='hover:text-gray-300'> 
-							Login
-						</a>
-					)}
-					*/}
 				</div>
 			</div>
 		</nav>
