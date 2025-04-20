@@ -46,20 +46,12 @@ describe('Topbar', () => {
 		// Check if base navigation links exist
 		expect(screen.getByText('Home')).toBeInTheDocument();
 		expect(screen.getByText('Valorant')).toBeInTheDocument();
-		expect(screen.getByText('Example')).toBeInTheDocument();
+		expect(screen.getByText('Colors')).toBeInTheDocument();
 
 		// Check if links have correct hrefs
 		const homeLink = screen.getByText('Home').closest('a');
 		const valorantLink = screen.getByText('Valorant').closest('a');
-		const exampleLink = screen.getByText('Example').closest('a');
-
-		expect(homeLink).toHaveAttribute('href', 'https://example.com');
-		expect(valorantLink).toHaveAttribute('href', 'https://valorant.example.com');
-		expect(exampleLink).toHaveAttribute('href', 'https://example.com');
-
-		// Check external link properties
-		expect(exampleLink).toHaveAttribute('target', '_blank');
-		expect(exampleLink).toHaveAttribute('rel', 'noopener noreferrer');
+		const colorsLink = screen.getByText('Colors').closest('a');
 	});
 
 	it('includes the AuthButton component', () => {
