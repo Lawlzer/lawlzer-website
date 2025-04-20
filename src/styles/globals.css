@@ -119,6 +119,21 @@
 		-moz-osx-font-smoothing: grayscale;
 	}
 
+	/* Control color transitions */
+	:root {
+		/* Add a smooth transition for colors by default */
+		transition:
+			background-color 0.2s ease,
+			color 0.2s ease,
+			border-color 0.2s ease;
+	}
+
+	/* Class to pause color transitions during initial load */
+	.color-transition-paused {
+		/* Immediately apply colors without transition */
+		transition: none !important;
+	}
+
 	/* Basic heading styles */
 	h1,
 	h2,
