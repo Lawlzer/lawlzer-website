@@ -227,6 +227,24 @@ export default function ColorsPage(): JSX.Element {
 		}
 	};
 
+	// Function to reset colors to the last saved configuration from cookies
+	const handleResetColors = (): void => {
+		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG) ?? DEFAULT_COLORS.PAGE_BG;
+		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR) ?? DEFAULT_COLORS.PRIMARY_TEXT_COLOR;
+		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR) ?? DEFAULT_COLORS.PRIMARY_COLOR;
+		const savedSecondaryColor = getCookie(COOKIE_KEYS.SECONDARY_COLOR) ?? DEFAULT_COLORS.SECONDARY_COLOR;
+		const savedSecondaryTextColor = getCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR) ?? DEFAULT_COLORS.SECONDARY_TEXT_COLOR;
+		const savedBorderColor = getCookie(COOKIE_KEYS.BORDER_COLOR) ?? DEFAULT_COLORS.BORDER_COLOR;
+
+		setPageBg(savedPageBg);
+		setPrimaryTextColor(savedPrimaryTextColor);
+		setPrimaryColor(savedPrimaryColor);
+		setSecondaryColor(savedSecondaryColor);
+		setSecondaryTextColor(savedSecondaryTextColor);
+		setBorderColor(savedBorderColor);
+		setClipboardStatus('Colors reset to last saved configuration.');
+	};
+
 	// Clear status message after a delay
 	useEffect(() => {
 		if (clipboardStatus) {
@@ -374,6 +392,9 @@ export default function ColorsPage(): JSX.Element {
 						disabled={!colorsLoaded}
 					>
 						Export
+					</button>
+					<button type='button' onClick={handleResetColors} className='px-3 py-1.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-sm' title='Reset to last saved configuration' disabled={!colorsLoaded}>
+						Reset
 					</button>
 					<button type='button' onClick={handleSaveColors} className='px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-sm font-semibold' disabled={!colorsLoaded}>
 						Save
