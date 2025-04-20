@@ -9,6 +9,7 @@ import type { SessionData } from '~/server/db/session'; // Assuming SessionData 
 export default function AuthButton(): React.JSX.Element {
 	const [session, setSession] = useState<SessionData | null>(null);
 	const [loading, setLoading] = useState(true);
+	const isDevelopment = process.env.NODE_ENV === 'development'; // Check NODE_ENV
 
 	useEffect(() => {
 		async function fetchSession(): Promise<void> {
@@ -81,14 +82,18 @@ export default function AuthButton(): React.JSX.Element {
 			<Transition as={Fragment} enter='transition ease-out duration-100' enterFrom='transform opacity-0 scale-95' enterTo='transform opacity-100 scale-100' leave='transition ease-in duration-75' leaveFrom='transform opacity-100 scale-100' leaveTo='transform opacity-0 scale-95'>
 				<Menu.Items data-testid='menuitems' className='absolute right-0 mt-2 w-56 origin-top-right divide-y divide-border rounded-md bg-popover text-popover-foreground shadow-lg ring-1 ring-border focus:outline-none z-50'>
 					<div className='px-1 py-1'>
-						<Menu.Item>
-							{({ active }) => (
+						<Menu.Item disabled={isDevelopment}>
+							{({ active, disabled }) => (
 								<button
 									role='menuitem'
 									onClick={() => {
-										window.location.href = '/api/auth/login?provider=google';
+										if (!disabled) {
+											window.location.href = '/api/auth/login?provider=google';
+										}
 									}}
-									className={`${active ? 'bg-accent text-accent-foreground' : 'text-foreground'} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+									disabled={disabled}
+									title={disabled ? "NODE_ENV === 'development', and Google OAuth does not work on localhost" : undefined}
+									className={`${active ? 'bg-accent text-accent-foreground' : 'text-foreground'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
 								>
 									<svg className='w-5 h-5 mr-2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
 										<path fill='#EA4335' d='M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z' />

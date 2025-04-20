@@ -5,6 +5,7 @@ import type { User } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
 import { handleAndGenerateSessionToken } from '~/lib/auth';
 import { createSession } from '~/server/db/session';
+import { getBaseUrl } from '~/lib/utils';
 
 const prisma = new PrismaClient();
 
@@ -30,13 +31,20 @@ interface GoogleUserInfo {
 async function getGoogleOAuthTokens(code: string, request: NextRequest): Promise<GoogleTokenResponse> {
 	const url = 'https://oauth2.googleapis.com/token';
 
-	const origin = request.headers.get('origin') ?? request.nextUrl.origin;
+	const originWithPort = getBaseUrl();
+
+	if (!originWithPort) {
+		console.error('getBaseUrl() returned an empty or invalid value. Check environment variables (scheme, domain, port).');
+		throw new Error('Server configuration error: Could not construct origin with port.');
+	}
+
+	const redirectUri = `${originWithPort}/api/auth/callback/google`;
 
 	const values = {
 		code,
 		client_id: env.NEXT_PUBLIC_AUTH_GOOGLE_ID,
 		client_secret: env.AUTH_GOOGLE_SECRET,
-		redirect_uri: `${origin}/api/auth/callback/google`,
+		redirect_uri: redirectUri,
 		grant_type: 'authorization_code',
 	};
 
