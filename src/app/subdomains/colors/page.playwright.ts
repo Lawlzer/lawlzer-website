@@ -3,14 +3,10 @@ import type { Page, Locator } from '@playwright/test';
 import { testPageBasics } from '@testUtils/playwright/utils';
 import { pathToURLTestsOnly } from '~/lib/utils';
 import { COOKIE_KEYS, DEFAULT_COLORS, PREDEFINED_PALETTES } from '~/lib/palette';
+import { metadata as expectedMetadata } from './layout';
 
 const pathToThisFile = import.meta.url;
 
-// Define the expected metadata directly for the test
-const expectedMetadata = {
-	title: 'Color Theme Colors',
-	// description: '...', // Add if there's a meta description
-};
 const colorsPageUrl = pathToURLTestsOnly(pathToThisFile);
 
 // Define a type for our input elements to improve type checking
@@ -73,7 +69,7 @@ test.describe('Colors Page E2E Tests', () => {
 		await page.goto(colorsPageUrl);
 	});
 
-	test('page loads healthily and has correct title', async ({ page }) => {
+	test('page loads healthily and has correct metadata', async ({ page }) => {
 		await testPageBasics(page, colorsPageUrl, expectedMetadata, {});
 		await expect(page.locator('h1:has-text("Color Theme Colors")')).toBeVisible();
 	});
