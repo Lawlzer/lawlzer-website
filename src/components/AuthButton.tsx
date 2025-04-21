@@ -1,35 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Menu, MenuButton, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import type { SessionData } from '~/server/db/session'; // Assuming SessionData is exported
 
-export default function AuthButton(): React.JSX.Element {
-	const [session, setSession] = useState<SessionData | null>(null);
-	const [loading, setLoading] = useState(true);
+// Define props type to include initialSession
+interface AuthButtonProps {
+	initialSession: SessionData | null;
+}
+
+export default function AuthButton({ initialSession }: AuthButtonProps): React.JSX.Element {
+	// Initialize state with the prop
+	const [session, setSession] = useState<SessionData | null>(initialSession);
+	// No longer loading initially as data is provided
+	const [loading, setLoading] = useState(false);
 	const isDevelopment = process.env.NODE_ENV === 'development'; // Check NODE_ENV
-
-	useEffect(() => {
-		async function fetchSession(): Promise<void> {
-			try {
-				const response = await fetch('/api/auth/session');
-				if (!response.ok) {
-					throw new Error('Failed to fetch session');
-				}
-				const data = (await response.json()) as SessionData | null;
-				setSession(data);
-			} catch (error) {
-				console.error('Error fetching session:', error);
-				setSession(null); // Assume logged out on error
-			} finally {
-				setLoading(false);
-			}
-		}
-
-		void fetchSession();
-	}, []);
 
 	const user = session?.user;
 

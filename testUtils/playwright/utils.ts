@@ -1,6 +1,8 @@
 import { type Page, type Response, expect } from '@playwright/test';
 import type { Metadata } from 'next';
 import { env } from '~/env.mjs';
+import { db } from '~/server/db'; // Import Prisma client
+import type { User } from '@prisma/client';
 
 interface TestPageBasicsOptions {
 	/** Check if the page title matches the provided metadata title. */
@@ -120,4 +122,72 @@ export async function testPageBasics(page: Page, url: string, metadata: Metadata
 		expect(content).toContain('Valorant');
 	}
 	return response!;
+}
+
+// --- Database Seeding Helpers ---
+
+const TEST_USER_EMAIL = 'test-e2e-user@example.com';
+const TEST_USER_NAME = 'Test E2E User';
+
+interface SeededData {
+	user: User;
+	sessionToken: string;
+}
+
+/**
+ * Removes the test user and any associated sessions from the database.
+ */
+export async function cleanupTestUserAndSession(): Promise<void> {
+	console.log(`Cleaning up test user ${TEST_USER_EMAIL}...`);
+	const user = await db.user.findUnique({
+		where: { email: TEST_USER_EMAIL },
+	});
+
+	if (user) {
+		// Delete associated sessions first due to foreign key constraints
+		await db.session.deleteMany({
+			where: { userId: user.id },
+		});
+		// Then delete the user
+		await db.user.delete({
+			where: { id: user.id },
+		});
+		console.log(`Cleaned up user ${user.id}.`);
+	} else {
+		console.log('Test user not found, no cleanup needed.');
+	}
+}
+
+/**
+ * Creates a test user and a session in the database.
+ * IMPORTANT: Ensure cleanupTestUserAndSession is called afterwards.
+ * @returns The created user and session token.
+ */
+export async function seedTestUserAndSession(): Promise<SeededData> {
+	console.log('Seeding test user and session...');
+	// Ensure clean slate first (in case previous cleanup failed)
+	await cleanupTestUserAndSession();
+
+	const user = await db.user.create({
+		data: {
+			email: TEST_USER_EMAIL,
+			name: TEST_USER_NAME,
+			// Add other required user fields if necessary, e.g., emailVerified
+			emailVerified: new Date(),
+		},
+	});
+
+	const expires = new Date();
+	expires.setDate(expires.getDate() + 1); // Session valid for 1 day
+
+	const session = await db.session.create({
+		data: {
+			userId: user.id,
+			sessionToken: `fake-test-session-token-${Date.now()}`,
+			expires: expires,
+		},
+	});
+
+	console.log(`Seeded user ${user.id} with session ${session.sessionToken}`);
+	return { user, sessionToken: session.sessionToken };
 }
