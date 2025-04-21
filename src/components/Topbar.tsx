@@ -21,8 +21,8 @@ export default async function Topbar(): Promise<React.JSX.Element> {
 
 	return (
 		<nav className='bg-secondary text-secondary-foreground p-4 h-16 border-b border-border'>
-			<div className='container mx-auto flex justify-between items-center h-full'>
-				<div className='flex space-x-4'>
+			<div className='w-full flex justify-between items-start h-full'>
+				<div className='flex space-x-4 flex-wrap'>
 					<ProtectedLink href={baseUrl} className={buttonClass}>
 						Home
 					</ProtectedLink>

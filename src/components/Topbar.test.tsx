@@ -33,8 +33,8 @@ vi.mock('./Topbar', () => ({
 	__esModule: true,
 	default: () => (
 		<nav role='navigation' className='bg-secondary text-secondary-foreground p-4 h-16 border-b border-border'>
-			<div className='container mx-auto flex justify-between items-center h-full'>
-				<div className='flex space-x-4'>
+			<div className='w-full flex justify-between items-start h-full'>
+				<div className='flex space-x-4 flex-wrap'>
 					<a href='https://example.com' className='button-class'>
 						Home
 					</a>
@@ -90,11 +90,13 @@ describe('Topbar', () => {
 		const nav = screen.getByRole('navigation');
 		expect(nav).toHaveClass('h-16');
 
-		// Check container layout
+		// Check container layout - updated classes
 		const container = nav.firstChild;
-		expect(container).toHaveClass('container');
-		expect(container).toHaveClass('mx-auto');
+		expect(container).not.toHaveClass('container'); // Should not have container
+		expect(container).not.toHaveClass('mx-auto'); // Should not have mx-auto
+		expect(container).toHaveClass('w-full');
 		expect(container).toHaveClass('flex');
 		expect(container).toHaveClass('justify-between');
+		expect(container).toHaveClass('items-start'); // Check for items-start
 	});
 });
