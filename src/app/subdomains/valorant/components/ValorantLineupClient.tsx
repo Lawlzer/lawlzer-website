@@ -477,21 +477,21 @@ function ValorantLineupClient(): React.JSX.Element {
 				{/* Lineup Direction */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					<CustomButton
-						buttonText={'Start ➔ Destination'}
-						isSelected={lineupDirection === 'startToDestination'}
-						onClick={() => {
-							if (lineupDirection !== 'startToDestination') {
-								setLineupDirection('startToDestination');
-								resetLineup();
-							}
-						}}
-					/>
-					<CustomButton
 						buttonText={'Destination ➔ Start'}
 						isSelected={lineupDirection === 'destinationToStart'}
 						onClick={() => {
 							if (lineupDirection !== 'destinationToStart') {
 								setLineupDirection('destinationToStart');
+								resetLineup();
+							}
+						}}
+					/>
+					<CustomButton
+						buttonText={'Start ➔ Destination'}
+						isSelected={lineupDirection === 'startToDestination'}
+						onClick={() => {
+							if (lineupDirection !== 'startToDestination') {
+								setLineupDirection('startToDestination');
 								resetLineup();
 							}
 						}}
