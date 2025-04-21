@@ -50,7 +50,8 @@ function LineupImagesDisplay({ images, onImageClick }: LineupImagesDisplayProps)
 								: undefined
 						}
 						// Adjusted sizes based on potential contexts (sidebar vs overlay)
-						sizes='(max-width: 768px) 90vw, 300px'
+						// Reflect sidebar widths at different breakpoints
+						sizes='(max-width: 767px) 90vw, (max-width: 1023px) 280px, 360px'
 					/>
 					{imageData?.notes.map((note: string, noteIndex: number) => (
 						<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-foreground'>
@@ -400,9 +401,12 @@ function ValorantLineupClient(): React.JSX.Element {
 			{/* Added responsive classes: hidden on small screens unless open, fixed position overlay when open on small screens */}
 			<div
 				className={`
-					fixed inset-y-0 left-0 z-20 w-[300px] transform transition-transform duration-300 ease-in-out md:static md:z-auto md:w-[400px] md:translate-x-0
-					flex flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-border bg-card p-4 shadow-lg md:shadow-none
-					${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+					// Base styles for content
+					flex flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-border bg-card p-4 max-w-md z-20
+					// Mobile: Hidden or Fixed Overlay
+					${isSidebarOpen ? 'fixed inset-y-0 left-0 w-full shadow-lg' : 'hidden'}
+					// Desktop: Static, specific widths, flex display
+					md:static md:z-auto md:w-96 lg:w-[480px] md:shadow-none md:flex
 				`}
 			>
 				{/* Close button inside sidebar for mobile */}
@@ -513,18 +517,19 @@ function ValorantLineupClient(): React.JSX.Element {
 			</div>
 
 			{/* Map Display Area - Wrapped with TransformWrapper */}
-			{/* Added padding-left on md+ screens to account for static sidebar */}
+			{/* Adjusted padding based on multi-breakpoint sidebar */}
 			{/* Added relative positioning for the mobile overlay */}
-			<div className='relative flex flex-grow items-center justify-center overflow-hidden bg-background md:pl-[400px]'>
+			<div className='relative flex flex-grow items-center justify-center overflow-hidden bg-background'>
 				{/* Conditional rendering based on map data and SVG component */}
 				{CurrentMapSvgComponent ? (
 					<TransformWrapper initialScale={1} minScale={0.5} maxScale={5} centerOnInit={true} panning={{ velocityDisabled: true }}>
 						{({ zoomIn, zoomOut, resetTransform, ...rest }) => (
 							<React.Fragment>
-								{/* Zoom/Pan Controls Overlay */}
-								<div className='absolute top-2 right-2 z-10 flex flex-col gap-1 md:right-[calc(400px+0.5rem)]'>
+								{/* Zoom/Pan Controls Overlay - REMOVED */}
+								{/* Adjusted position based on new sidebar width (w-80) */}
+								{/* 
+								<div className='absolute top-2 right-2 z-10 flex flex-col gap-1 md:right-[calc(theme(spacing.80)+0.5rem)]'>
 									{' '}
-									{/* Adjust position based on sidebar */}
 									<button
 										onClick={() => {
 											zoomIn();
@@ -552,10 +557,11 @@ function ValorantLineupClient(): React.JSX.Element {
 										className='rounded bg-card p-1 text-foreground shadow hover:bg-accent'
 									>
 										<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 4v5h5M20 20v-5h-5M4 20l16-16' /> {/* Reset icon */}
+											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 4v5h5M20 20v-5h-5M4 20l16-16' />
 										</svg>
 									</button>
 								</div>
+								 */}
 								<TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
 									<CurrentMapSvgComponent
 										// The parent div already centers. object-contain scales the SVG within its box.
