@@ -7,7 +7,7 @@ import { getBaseUrl, subdomains } from './lib/utils';
 // Function to determine if the hostname corresponds to the main domain
 function isMainDomain(hostname: string): boolean {
 	// List of hostnames that should be treated as the main domain
-	const mainDomainHostnames = ['localhost', '127.0.0.1', 'dev.localhost'].filter(Boolean); // Filter out potential undefined/null values\
+	const mainDomainHostnames = ['localhost', '127.0.0.1', 'dev.localhost']; // Filter out potential undefined/null values\
 	// todo clean up mainDomainHostnames
 
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Input hostname: ${hostname}`);
@@ -37,8 +37,8 @@ export function middleware(request: NextRequest): NextResponse {
 
 		if (isSubdomainMatch) {
 			if (pathname === '/') {
-				if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting root path to ${subdomain.path}`);
-				const newUrl = new URL(subdomain.path, request.url);
+				if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Rewriting root path to ${subdomain.filePath}`);
+				const newUrl = new URL(subdomain.filePath, request.url);
 				return NextResponse.rewrite(newUrl);
 			} else if (pathname.startsWith('/_next/')) {
 				return NextResponse.next();
