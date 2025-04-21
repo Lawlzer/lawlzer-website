@@ -52,12 +52,12 @@ export function pathToURLTestsOnly(filePath: string): string {
 
 export type Subdomain = {
 	name: string;
-	path: string;
+	filePath: string;
 };
 
 export const subdomains: Subdomain[] = [
-	{ name: 'valorant', path: '/subdomains/valorant' },
-	{ name: 'colors', path: '/subdomains/colors' },
+	{ name: 'valorant', filePath: '/subdomains/valorant' },
+	{ name: 'colors', filePath: '/subdomains/colors' },
 ];
 
 export type SubdomainName = (typeof subdomains)[number]['name'];
