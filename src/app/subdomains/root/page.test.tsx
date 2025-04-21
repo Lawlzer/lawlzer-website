@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import MainPage from './page';
 import { vi } from 'vitest';
@@ -33,7 +33,7 @@ describe('MainPage', () => {
 
 	it('renders the "View Source on GitHub" link', () => {
 		render(<MainPage />);
-		const githubLink = screen.getByRole('link', { name: /View Source on GitHub/i });
+		const githubLink = screen.getByRole('link', { name: /View Source Code on GitHub/i });
 		expect(githubLink).toBeInTheDocument();
 		expect(githubLink).toHaveAttribute('href', 'https://github.com/Lawlzer/lawlzer-website');
 	});
@@ -53,14 +53,19 @@ describe('MainPage', () => {
 
 	it('renders the key features including links', () => {
 		render(<MainPage />);
-		expect(screen.getByText(/Key Features:/i)).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: /Dynamic Color Theming/i })).toHaveAttribute('href', 'http://colors.dev.lawlzer');
-		expect(screen.getByRole('link', { name: /Valorant Lineup Tool/i })).toHaveAttribute('href', 'http://valorant.dev.lawlzer');
-		expect(screen.getByText(/Responsive & Mobile-First/i)).toBeInTheDocument();
-	});
+		// Find the container for the first project (This Website!)
+		const projectContainer = screen.getByRole('heading', { name: /dev\.lawlzer \(This Website!\)/i }).closest('div.flex-grow')?.parentElement;
+		expect(projectContainer).toBeInTheDocument(); // Assert the container is found
 
-	it('renders the placeholder text for more projects', () => {
-		render(<MainPage />);
-		expect(screen.getByText(/\(More projects coming soon...\)/i)).toBeInTheDocument();
+		if (projectContainer) {
+			// Scope the search within the first project's container
+			expect(within(projectContainer).getByText(/Key Features:/i)).toBeInTheDocument();
+			expect(within(projectContainer).getByRole('link', { name: /Dynamic Color Theming/i })).toHaveAttribute('href', 'http://colors.dev.lawlzer');
+			expect(within(projectContainer).getByRole('link', { name: /Valorant Lineup Tool/i })).toHaveAttribute('href', 'http://valorant.dev.lawlzer');
+			expect(within(projectContainer).getByText(/Responsive & Mobile-First/i)).toBeInTheDocument();
+		} else {
+			// Fail the test explicitly if the container wasn't found
+			expect(projectContainer).not.toBeNull();
+		}
 	});
 });

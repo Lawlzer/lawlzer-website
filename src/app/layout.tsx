@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
 				<ClientThemeInitializer />
 				<Providers>
 					<Topbar />
-					<main className='absolute inset-x-0 bottom-0 top-16 overflow-hidden'>{children}</main>
+					<main className='absolute inset-x-0 bottom-0 top-16'>{children}</main>
 				</Providers>
 			</body>
 		</html>
