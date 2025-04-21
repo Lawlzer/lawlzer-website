@@ -3,6 +3,8 @@
 
 import Image, { type StaticImageData } from 'next/image.js'; // Import next/image
 import React, { useEffect, useState, useCallback } from 'react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'; // Import zoom/pan library
+import { Bars3Icon as MenuIcon, XMarkIcon as XIcon } from '@heroicons/react/24/solid'; // Corrected import path for Heroicons v2 and using solid variant
 import { COOKIE_KEYS, DEFAULT_COLORS, setCookie, getCookie } from '~/lib/palette'; // Import palette utilities
 
 import type { Lineup, MapArea, Utility, LineupImage } from '../types'; // Use LineupImage instead of BottomleftImageVideo
@@ -14,6 +16,52 @@ import { useMapMap } from '../hooks/useMapMap'; // Updated import path
 
 // Removed map names, get from mapData keys if needed
 // const maps = ['Ascent', 'Bind', 'Breeze', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
+
+// Interface for LineupImagesDisplay props
+interface LineupImagesDisplayProps {
+	images: LineupImage[] | null | undefined;
+	// Renamed prop for clarity and flexibility
+	onImageClick?: (img: StaticImageData) => void;
+}
+
+// Extracted component for displaying lineup images and notes
+// Added return type React.JSX.Element | null for clarity when returning nothing
+function LineupImagesDisplay({ images, onImageClick }: LineupImagesDisplayProps): React.JSX.Element | null {
+	// Return null if no images, parent component handles placeholder logic/visibility
+	if (!images || images.length === 0) {
+		return null;
+	}
+
+	return (
+		// Added padding directly to this container
+		<div className='flex flex-col gap-4 overflow-y-auto p-2'>
+			{images.map((imageData, index) => (
+				<React.Fragment key={index}>
+					<Image
+						src={imageData.image}
+						alt={`Lineup step ${index + 1}`}
+						// Conditionally add cursor-pointer and attach click handler
+						className={`w-full h-auto rounded border border-border object-contain ${onImageClick ? 'cursor-pointer' : ''}`}
+						onClick={
+							onImageClick
+								? () => {
+										onImageClick(imageData.image);
+									}
+								: undefined
+						}
+						// Adjusted sizes based on potential contexts (sidebar vs overlay)
+						sizes='(max-width: 768px) 90vw, 300px'
+					/>
+					{imageData?.notes.map((note: string, noteIndex: number) => (
+						<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-foreground'>
+							• {note}
+						</div>
+					))}
+				</React.Fragment>
+			))}
+		</div>
+	);
+}
 
 // Added return type
 function CustomButton({ buttonText, isSelected, onClick, disabled }: { disabled?: boolean; buttonText: string; isSelected: boolean; onClick: () => void }): React.JSX.Element {
@@ -46,6 +94,9 @@ function ValorantLineupClient(): React.JSX.Element {
 	// Palette State - REMOVED local initialization
 	// Colors should be inherited globally via CSS variables
 
+	// Sidebar State
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
 	// Lineup State (existing)
 	const [map, setMap] = useState<string>('Ascent'); // Default map key
 	const [agent, setAgent] = useState<Agent | undefined>('Gekko');
@@ -64,13 +115,18 @@ function ValorantLineupClient(): React.JSX.Element {
 	// Call the hook - it now returns a stable reference
 	const mapData = useMapMap();
 
+	// NEW state for mobile fullscreen lineup overlay
+	const [showMobileLineupOverlay, setShowMobileLineupOverlay] = useState(false);
+
 	const availableMaps = Object.keys(mapData);
 
 	// Moved resetLineup function definition up
 	const resetLineup = useCallback((): void => {
 		setPrimaryTo(null);
 		setPrimaryFrom(null);
-	}, []);
+		// Also hide mobile overlay on reset
+		setShowMobileLineupOverlay(false);
+	}, [setShowMobileLineupOverlay]);
 
 	// Initialize map state with the first available map
 	useEffect(() => {
@@ -180,6 +236,7 @@ function ValorantLineupClient(): React.JSX.Element {
 		setBottomleftImageVideoImages(null);
 		const currentMapData = mapData[map];
 		if (!currentMapData || !primaryFrom || !primaryTo || !agent || !utility) {
+			setShowMobileLineupOverlay(false); // Ensure overlay is hidden if conditions aren't met
 			return; // Need map data and both points selected
 		}
 
@@ -195,11 +252,14 @@ function ValorantLineupClient(): React.JSX.Element {
 		if (!currentLineup) {
 			// Optionally log the first few lineups for comparison:
 			// console.log('[Lineup Effect] First few lineups:', currentMapData.lineups.slice(0, 3));
+			setShowMobileLineupOverlay(false); // Ensure overlay is hidden if no lineup found
 			return;
 		}
 
 		setBottomleftImageVideoImages(currentLineup.imageStuff);
-	}, [primaryTo, primaryFrom, agent, utility, map, mapData]); // Rerun when relevant state or mapData changes
+		// Trigger the mobile overlay if a lineup is found
+		setShowMobileLineupOverlay(true);
+	}, [primaryTo, primaryFrom, agent, utility, map, mapData, setShowMobileLineupOverlay]); // Rerun when relevant state or mapData changes // Added setShowMobileLineupOverlay dependency
 
 	// Effect to set initial agent/utility when map changes
 	useEffect(() => {
@@ -309,8 +369,9 @@ function ValorantLineupClient(): React.JSX.Element {
 	// ---- End Functions to build SVG area elements ----
 
 	return (
-		// Adjusted to fill the parent container from page.tsx
-		<div className='flex items-stretch w-full h-full bg-background text-foreground overflow-hidden'>
+		// Adjusted to fill the parent container from page.tsx - Added relative positioning for sidebar overlay AND map overlay
+		<div className='relative flex h-full w-full items-stretch overflow-hidden bg-background text-foreground'>
+			{/* Original Fullscreen (Single Image - Desktop/Mobile) */}
 			{fullscreen && (
 				<div
 					className='fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/80 p-10' // Use fixed, inset-0 for true overlay
@@ -323,10 +384,38 @@ function ValorantLineupClient(): React.JSX.Element {
 					<Image src={fullscreen} className='block max-h-full max-w-full object-contain' alt='Fullscreen lineup step' />
 				</div>
 			)}
-			{/* Control Panel */}
-			<div className='flex w-[400px] flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-border bg-card p-4'>
-				{' '}
-				{/* Changed bg-background to bg-card for contrast */}
+
+			{/* Sidebar Toggle Button (Mobile Only) */}
+			<button
+				className='fixed bottom-4 right-4 z-30 rounded-full bg-primary p-3 text-primary-foreground shadow-lg md:hidden' // Show only on small screens
+				onClick={() => {
+					setIsSidebarOpen(!isSidebarOpen);
+				}}
+				aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+			>
+				{isSidebarOpen ? <XIcon className='h-6 w-6' /> : <MenuIcon className='h-6 w-6' />}
+			</button>
+
+			{/* Control Panel (Sidebar) */}
+			{/* Added responsive classes: hidden on small screens unless open, fixed position overlay when open on small screens */}
+			<div
+				className={`
+					fixed inset-y-0 left-0 z-20 w-[300px] transform transition-transform duration-300 ease-in-out md:static md:z-auto md:w-[400px] md:translate-x-0
+					flex flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-border bg-card p-4 shadow-lg md:shadow-none
+					${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+				`}
+			>
+				{/* Close button inside sidebar for mobile */}
+				<button
+					className='absolute top-2 right-2 text-secondary-text hover:text-foreground md:hidden'
+					onClick={() => {
+						setIsSidebarOpen(false);
+					}}
+					aria-label='Close sidebar'
+				>
+					<XIcon className='h-6 w-6' />
+				</button>
+				<h2 className='mb-4 text-lg font-semibold text-center text-foreground'>Controls</h2> {/* Added title */}
 				{/* Maps */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					{/* Use availableMaps derived from mapData */}
@@ -404,53 +493,117 @@ function ValorantLineupClient(): React.JSX.Element {
 						}}
 					/>
 				</div>
-				{/* Image/video sources */}
-				<div className='flex min-h-0 flex-grow flex-col gap-4 overflow-y-auto'>
-					{bottomleftImageVideo?.map((imageData, index) => (
-						<React.Fragment key={index}>
-							{/* Use next/image instead of img */}
-							<Image
-								src={imageData.image} // Pass StaticImageData directly
-								alt={`Lineup step ${index + 1}`}
-								className='w-full h-auto cursor-pointer rounded border border-border object-contain' // Use border-border
-								onClick={() => {
-									setFullscreen(imageData.image);
-								}}
-								// Add sizes attribute for optimization (adjust as needed)
-								sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
-							/>
-							{imageData?.notes.map(
-								(
-									note: string,
-									noteIndex: number // Added types for note and noteIndex
-								) => (
-									<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-foreground'>
-										• {note}
-									</div>
-								)
-							)}
-						</React.Fragment>
-					))}
-					{/* Placeholder when no lineup selected/found */}
-					{(!primaryFrom || !primaryTo || !bottomleftImageVideo || bottomleftImageVideo.length === 0) && <div className='flex h-full items-center justify-center text-secondary-text'>Select a start and end point to see lineup images.</div>}
+				{/* Image/video sources container */}
+				{/* This outer div controls visibility based on screen size / sidebar state */}
+				<div className={`flex min-h-0 flex-grow flex-col overflow-y-auto ${isSidebarOpen ? 'block' : 'hidden md:block'}`}>
+					{/* Render images component */}
+					{/* LineupImagesDisplay returns null if no images */}
+					{/* Pass onImageClick to enable desktop fullscreen zoom */}
+					<LineupImagesDisplay images={bottomleftImageVideo} onImageClick={setFullscreen} />
+
+					{/* Placeholder: Show only when images are absent AND this container is supposed to be visible */}
+					{(!bottomleftImageVideo || bottomleftImageVideo.length === 0) && (
+						<div className='flex h-full flex-grow items-center justify-center p-4 text-center text-secondary-text'>
+							{' '}
+							{/* Added flex-grow and padding/text-center */}
+							Select a start and end point to see lineup images.
+						</div>
+					)}
 				</div>
 			</div>
 
-			{/* Map Display Area */}
-			<div className='flex flex-grow items-center justify-center overflow-hidden bg-background'>
+			{/* Map Display Area - Wrapped with TransformWrapper */}
+			{/* Added padding-left on md+ screens to account for static sidebar */}
+			{/* Added relative positioning for the mobile overlay */}
+			<div className='relative flex flex-grow items-center justify-center overflow-hidden bg-background md:pl-[400px]'>
 				{/* Conditional rendering based on map data and SVG component */}
 				{CurrentMapSvgComponent ? (
-					<CurrentMapSvgComponent
-						// The parent div already centers. object-contain scales the SVG within its box.
-						className='max-h-full max-w-full object-contain' // Adjust classes for direct flex child
-						newBuildFrom={buildFromAreas}
-						newBuildTo={buildToAreas}
-					/>
+					<TransformWrapper initialScale={1} minScale={0.5} maxScale={5} centerOnInit={true} panning={{ velocityDisabled: true }}>
+						{({ zoomIn, zoomOut, resetTransform, ...rest }) => (
+							<React.Fragment>
+								{/* Zoom/Pan Controls Overlay */}
+								<div className='absolute top-2 right-2 z-10 flex flex-col gap-1 md:right-[calc(400px+0.5rem)]'>
+									{' '}
+									{/* Adjust position based on sidebar */}
+									<button
+										onClick={() => {
+											zoomIn();
+										}}
+										className='rounded bg-card p-1 text-foreground shadow hover:bg-accent'
+									>
+										<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 6v12m6-6H6' />
+										</svg>
+									</button>
+									<button
+										onClick={() => {
+											zoomOut();
+										}}
+										className='rounded bg-card p-1 text-foreground shadow hover:bg-accent'
+									>
+										<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M18 12H6' />
+										</svg>
+									</button>
+									<button
+										onClick={() => {
+											resetTransform();
+										}}
+										className='rounded bg-card p-1 text-foreground shadow hover:bg-accent'
+									>
+										<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 4v5h5M20 20v-5h-5M4 20l16-16' /> {/* Reset icon */}
+										</svg>
+									</button>
+								</div>
+								<TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+									<CurrentMapSvgComponent
+										// The parent div already centers. object-contain scales the SVG within its box.
+										className='max-h-full max-w-full object-contain' // Adjust classes for direct flex child
+										newBuildFrom={buildFromAreas}
+										newBuildTo={buildToAreas}
+									/>
+								</TransformComponent>
+							</React.Fragment>
+						)}
+					</TransformWrapper>
 				) : (
 					// Placeholder or loading state if map/SVG isn't ready
 					<p className='text-foreground'>Loading map...</p>
 				)}
 			</div>
+
+			{/* Mobile Fullscreen Lineup Overlay */}
+			{showMobileLineupOverlay && (
+				// Fullscreen container, dims background, only on mobile (md:hidden)
+				<div
+					className='fixed inset-0 z-40 flex cursor-pointer items-center justify-center bg-black/80 p-4 md:hidden'
+					onClick={() => {
+						setShowMobileLineupOverlay(false);
+					}} // Click background to close
+				>
+					{/* Content area, prevents closing when clicking inside */}
+					<div
+						className='relative max-h-full w-full max-w-3xl cursor-default overflow-y-auto rounded bg-card p-4 shadow-lg'
+						onClick={(e) => {
+							e.stopPropagation();
+						}} // Stop click from bubbling to background
+					>
+						{/* Close button inside the mobile overlay */}
+						<button
+							className='absolute top-2 right-2 z-50 text-secondary-text hover:text-foreground'
+							onClick={() => {
+								setShowMobileLineupOverlay(false);
+							}}
+							aria-label='Close lineup view'
+						>
+							<XIcon className='h-6 w-6' />
+						</button>
+						{/* Render images without click-to-zoom functionality */}
+						<LineupImagesDisplay images={bottomleftImageVideo} />
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -8,8 +8,8 @@ const pathToThisFile = import.meta.url;
 const valorantUrl = pathToURLTestsOnly(pathToThisFile);
 
 export async function getMapSvg(page: Page): Promise<Locator> {
-	// Updated selector: target the svg inside the map display container
-	const mapSvg = page.locator('div.flex.flex-grow.items-center.justify-center > svg');
+	// Updated selector: target the svg inside the map display container with specific classes
+	const mapSvg = page.locator('div.flex.flex-grow.items-center.justify-center svg.max-h-full.max-w-full.object-contain');
 	await expect(mapSvg).toBeVisible();
 	return mapSvg;
 }
@@ -83,7 +83,7 @@ test('should allow us to select utilities on the map properly, and show the corr
 	await clickExampleTo(page, { name: 'map-icon-agent-Gekko', currentOpacity: 0.5 });
 
 	// Check if the lineup image is visible in the bottom left
-	const lineupImage = page.locator('img[alt="Lineup step 1"]');
+	const lineupImage = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
 	await expect(lineupImage).toBeVisible();
 });
 
@@ -113,8 +113,8 @@ test('should allow us to change maps, select different agents, and select differ
 	await clickExampleTo(page, { name: 'map-icon-agent-Sova', currentOpacity: 0.5 });
 
 	// Verify a lineup image is visible
-	const lineupImage = page.locator('img[alt="Lineup step 1"]');
-	await expect(lineupImage).toBeVisible();
+	const lineupImageMapChange = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
+	await expect(lineupImageMapChange).toBeVisible();
 });
 
 test('should allow us to change to Split, test Poison clouds', async ({ page }) => {
@@ -146,8 +146,8 @@ test('should allow us to change to Split, test Poison clouds', async ({ page }) 
 	await clickExampleTo(page, { name: 'map-icon-agent-Viper', currentOpacity: 0.5 });
 
 	// Verify a lineup image is visible
-	const lineupImage = page.locator('img[alt="Lineup step 1"]');
-	await expect(lineupImage).toBeVisible();
+	const lineupImageSplit = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
+	await expect(lineupImageSplit).toBeVisible();
 });
 
 test('start->destination button works', async ({ page }) => {
@@ -165,7 +165,7 @@ test('start->destination button works', async ({ page }) => {
 	await moshPitButton.click();
 
 	// Verify lineup is not visible initially
-	const lineupImage = page.locator('img[alt="Lineup step 1"]');
+	const lineupImage = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
 	await expect(lineupImage).not.toBeVisible();
 
 	// 1. Click the Start -> Destination button
@@ -187,14 +187,14 @@ test('should allow us to select a lineup, then click the selected Utility, to re
 	await page.goto(valorantUrl);
 
 	// The image should not yet be visible
-	const lineupImageOriginal = page.locator('img[alt="Lineup step 1"]');
+	const lineupImageOriginal = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
 	await expect(lineupImageOriginal).not.toBeVisible();
 
 	await clickExampleTo(page, { name: 'map-icon-utility-Mosh Pit', currentOpacity: 0.5 });
 	await clickExampleTo(page, { name: 'map-icon-agent-Gekko', currentOpacity: 0.5 });
 
 	// Check if the lineup image is visible in the bottom left
-	const lineupImage = page.locator('img[alt="Lineup step 1"]');
+	const lineupImage = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
 	await expect(lineupImage).toBeVisible();
 
 	// Click the Mosh pit to reset the lineup
@@ -212,7 +212,7 @@ test('should allow us to select a lineup, then click the selected Agent, to rese
 	await page.waitForTimeout(500); // Wait for page to fully stabilize
 
 	// The image should not yet be visible
-	const lineupImageOriginal = page.locator('img[alt="Lineup step 1"]');
+	const lineupImageOriginal = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
 	await expect(lineupImageOriginal).not.toBeVisible();
 
 	// First, click the Mosh Pit utility
@@ -228,7 +228,7 @@ test('should allow us to select a lineup, then click the selected Agent, to rese
 	await page.waitForTimeout(300); // Wait for click to register
 
 	// Check if the lineup image is visible in the bottom left
-	const lineupImage = page.locator('img[alt="Lineup step 1"]');
+	const lineupImage = page.locator('div[class*="md:w-[400px]"] img[alt="Lineup step 1"]');
 	await expect(lineupImage).toBeVisible({ timeout: 5000 });
 
 	// --- Click the Gekko agent icon again to reset ---
