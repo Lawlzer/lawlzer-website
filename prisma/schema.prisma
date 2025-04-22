@@ -24,8 +24,8 @@ model Post {
 
 // Necessary for Next auth
 model Account {
-    id                String   @id @default(auto()) @map("_id") @db.ObjectId
-    userId            String   @db.ObjectId
+    id                String  @id @default(auto()) @map("_id") @db.ObjectId
+    userId            String  @db.ObjectId
     type              String
     provider          String
     providerAccountId String
@@ -36,7 +36,7 @@ model Account {
     scope             String?
     id_token          String?
     session_state     String?
-    user              User     @relation(fields: [userId], references: [id])
+    user              User    @relation(fields: [userId], references: [id])
 
     @@unique([provider, providerAccountId])
 }

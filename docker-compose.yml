@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        # Define the secret to be used during build, referencing the top-level secrets key
+        - dotenv
+    ports:
+      - "3000:3000"
+    env_file:
+      # env_file is still needed for the runtime container
+      - .env
+    depends_on:
+      - mongo
+    # Add healthcheck if needed for production
+    # healthcheck:
+    #   test: ["CMD", "curl", "--fail", "http://localhost:3000"] 
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    # Add healthcheck for MongoDB if needed
+    # healthcheck:
+    #   test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+    #   interval: 10s
+    #   timeout: 10s
+    #   retries: 5
+
+# Define the secret source file
+secrets:
+  dotenv:
+    file: .env
+
+volumes:
+  mongo_data: 
