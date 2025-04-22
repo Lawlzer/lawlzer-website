@@ -70,5 +70,15 @@ export const config = {
 	// The function itself delegates /auth/ to auth0.middleware.
 	// Exclude /api, static assets, image optimization files, and metadata.
 	// Updated matcher to exclude /auth/ paths since they are no longer handled
-	matcher: ['/((?!api|_next/static|_next/image|favicon.ico|auth/).*)'],
+	// Also exclude paths with dots (likely static files in /public)
+	matcher: [
+		// Match all paths except for:
+		// - api routes
+		// - _next/static (static files)
+		// - _next/image (image optimization files)
+		// - favicon.ico (favicon file)
+		// - auth routes
+		// - paths containing a dot (likely static files in /public)
+		'/((?!api|_next/static|_next/image|favicon.ico|auth/|.*..*).*)',
+	],
 };
