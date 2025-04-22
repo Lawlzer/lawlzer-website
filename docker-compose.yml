@@ -9,34 +9,58 @@ services:
         # Define the secret to be used during build, referencing the top-level secrets key
         - dotenv
     ports:
-      - "3000:3000"
+      - '3000:3000'
     env_file:
       # env_file is still needed for the runtime container
       - .env
+    # Add environment override for DATABASE_URL within Docker
+    environment:
+      # Use environment variable if set, otherwise default to the docker mongo service
+      DATABASE_URL: ${DATABASE_URL_OVERRIDE:-mongodb://mongo:27017/lawlzer?replicaSet=rs0}
     depends_on:
-      - mongo
+      # Wait for mongo to be healthy (replica set initialized)
+      mongo:
+        condition: service_healthy
     # Add healthcheck if needed for production
     # healthcheck:
-    #   test: ["CMD", "curl", "--fail", "http://localhost:3000"] 
+    #   test: ["CMD", "curl", "--fail", "http://localhost:3000"]
     #   interval: 30s
     #   timeout: 10s
     #   retries: 3
 
   mongo:
     image: mongo:latest
+    # Add command to start mongod with replica set enabled
+    command: mongod --replSet rs0 --bind_ip localhost,mongo
     ports:
-      - "27017:27017"
+      - '27018:27017'
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db
-    # Add healthcheck for MongoDB if needed
-    # healthcheck:
-    #   test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-    #   interval: 10s
-    #   timeout: 10s
-    #   retries: 5
+    # Add healthcheck for MongoDB replica set initialization
+    healthcheck:
+      # This test attempts to connect and check rs.status(), then initiates if needed.
+      # It might take a few tries on the first startup.
+      test: |
+        mongosh --eval "
+          try {
+            rs.status();
+            print('Replica set already initialized.');
+          } catch (e) {
+            if (e.message.includes('no replset config')) {
+              rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] });
+              print('Replica set initiated.');
+            } else {
+              throw e;
+            }
+          }
+        " --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s # Give mongo time to start before first check
 
 # Define the secret source file
 secrets:
@@ -44,4 +68,4 @@ secrets:
     file: .env
 
 volumes:
-  mongo_data: 
+  mongo_data:
