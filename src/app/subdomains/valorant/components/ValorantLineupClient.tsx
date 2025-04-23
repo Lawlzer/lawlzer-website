@@ -5,7 +5,7 @@ import Image, { type StaticImageData } from 'next/image.js'; // Import next/imag
 import React, { useEffect, useState, useCallback } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'; // Import zoom/pan library
 import { Bars3Icon as MenuIcon, XMarkIcon as XIcon } from '@heroicons/react/24/solid'; // Corrected import path for Heroicons v2 and using solid variant
-import { COOKIE_KEYS, DEFAULT_COLORS, setCookie, getCookie } from '~/lib/palette'; // Import palette utilities
+import { COOKIE_KEYS, getDefaultColors, setCookie, getCookie } from '~/lib/palette'; // Import palette utilities
 
 import type { Lineup, MapArea, Utility, LineupImage } from '../types'; // Use LineupImage instead of BottomleftImageVideo
 import { agents, agentUtilityMap, imageMap, type Agent } from '../types';
