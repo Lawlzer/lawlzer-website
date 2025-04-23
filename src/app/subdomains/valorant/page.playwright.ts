@@ -150,7 +150,7 @@ test('should allow us to change to Split, test Poison clouds', async ({ page }) 
 	await expect(lineupImageSplit).toBeVisible();
 });
 
-test('start->destination button works', async ({ page }) => {
+test('Utility ➔ Agent button works', async ({ page }) => {
 	await page.goto(valorantUrl);
 
 	// --- Setup: Select Ascent, Gekko, Mosh Pit and click icons ---
@@ -168,15 +168,16 @@ test('start->destination button works', async ({ page }) => {
 	const lineupImage = page.locator('div.p-2 img[alt="Lineup step 1"].cursor-pointer');
 	await expect(lineupImage).not.toBeVisible();
 
-	// 1. Click the Start -> Destination button
-	const startDestButton = page.getByRole('button', {
-		name: 'Start ➔ Destination',
+	// 1. Click the Utility ➔ Agent button
+	const utilityAgentButton = page.getByRole('button', {
+		name: 'Utility ➔ Agent',
 	});
-	await expect(startDestButton).toBeVisible();
-	await startDestButton.click();
+	await expect(utilityAgentButton).toBeVisible();
+	await utilityAgentButton.click();
 
-	await clickExampleTo(page, { name: 'map-icon-agent-Gekko', currentOpacity: 0.5 });
+	// Swap the order: Click Utility first, then Agent
 	await clickExampleTo(page, { name: 'map-icon-utility-Mosh Pit', currentOpacity: 0.5 });
+	await clickExampleTo(page, { name: 'map-icon-agent-Gekko', currentOpacity: 0.5 });
 
 	// --- Verification ---
 	// Verify lineup is visible (selector targets the sidebar image)
