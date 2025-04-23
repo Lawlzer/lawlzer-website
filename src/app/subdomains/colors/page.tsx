@@ -91,7 +91,7 @@ export default function ColorsPage(): JSX.Element {
 			initialRenderRef.current = false;
 		}
 
-		// Always load cookies (even in test mode)
+		// Always load from cookies (even in test mode)
 		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG) ?? DEFAULT_COLORS.PAGE_BG;
 		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR) ?? DEFAULT_COLORS.PRIMARY_TEXT_COLOR;
 		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR) ?? DEFAULT_COLORS.PRIMARY_COLOR;

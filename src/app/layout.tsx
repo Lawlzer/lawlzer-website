@@ -24,8 +24,25 @@ import { Providers } from './providers'; // Import the new Providers component
 
 // Function to generate the theme initialization script string
 function getThemeInitializationScript(): string {
+	// Restore Minimal cookie getter function
+	// IMPORTANT: This is duplicated from palette.ts to avoid imports in this critical path script.
+	// Any changes here should likely be reflected in palette.ts too.
+	function getCookie_inline(name: string): string | null {
+		if (typeof document === 'undefined') return null;
+		const nameEQ = name + '=';
+		const ca = document.cookie.split(';');
+		for (let c of ca) {
+			c = c.trimStart();
+			if (c.startsWith(nameEQ)) {
+				return c.substring(nameEQ.length);
+			}
+		}
+		return null;
+	}
+
 	return `
 (function() {
+  // Use COOKIE_KEYS again
   const COOKIE_KEYS = {
     PAGE_BG: 'theme_page_bg',
     PRIMARY_TEXT_COLOR: 'theme_primary_text_color',
@@ -53,7 +70,7 @@ function getThemeInitializationScript(): string {
     BORDER_COLOR: '--custom-border-color',
   };
 
-  // Minimal cookie getter
+  // Minimal cookie getter (copied from palette.ts)
   function getCookie(name) {
     if (typeof document === 'undefined') return null;
     const nameEQ = name + '=';
@@ -67,15 +84,28 @@ function getThemeInitializationScript(): string {
   }
 
   const root = document.documentElement;
-  // Apply colors from cookies or defaults
-  for (const key in COOKIE_KEYS) {
-    const cookieName = COOKIE_KEYS[key];
-    const cssVarName = CSS_VAR_MAP[key];
-    const defaultValue = DEFAULT_COLORS[key];
-    const cookieValue = getCookie(cookieName);
-    const color = cookieValue ?? defaultValue;
-    if (cssVarName) { // Ensure the map entry exists
-      root.style.setProperty(cssVarName, color);
+  // Apply colors from Cookies or defaults
+  try {
+    for (const key in COOKIE_KEYS) {
+      const cookieName = COOKIE_KEYS[key]; // Use COOKIE_KEYS
+      const cssVarName = CSS_VAR_MAP[key];
+      const defaultValue = DEFAULT_COLORS[key];
+      const cookieValue = getCookie(cookieName); // Use getCookie defined inside IIFE
+
+      const color = cookieValue ?? defaultValue;
+      if (cssVarName) { // Ensure the map entry exists
+        root.style.setProperty(cssVarName, color);
+      }
+    }
+  } catch (e) {
+    console.error("Error applying theme from cookies", e);
+    // Apply defaults in case of error
+    for (const key in COOKIE_KEYS) {
+      const cssVarName = CSS_VAR_MAP[key];
+      const defaultValue = DEFAULT_COLORS[key];
+      if (cssVarName) {
+        root.style.setProperty(cssVarName, defaultValue);
+      }
     }
   }
 })();
