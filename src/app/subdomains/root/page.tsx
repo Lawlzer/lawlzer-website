@@ -1,12 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { JSX } from 'react';
 import Link from 'next/link'; // Import Link for navigation
 import Image from 'next/image'; // Import Image for placeholders
+import { motion, AnimatePresence } from 'framer-motion'; // Import motion and AnimatePresence
 import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl
+import DataPlatformPreview from './components/DataPlatformPreview'; // Import the new component
 
 export default function MainPage(): JSX.Element {
+	// State for controlling the overlay
+	const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+
 	// Get the base URL and extract the hostname
 	const fullUrl = getBaseUrl();
 	const hostname = new URL(fullUrl).hostname;
@@ -40,7 +45,13 @@ export default function MainPage(): JSX.Element {
 				<h2 className='text-3xl sm:text-4xl font-semibold mb-8 text-center text-primary'>Featured Projects</h2>
 				<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
 					{/* Project 1: This Website */}
-					<div className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col'>
+					<motion.div
+						initial={{ opacity: 0, x: -100 }} // Start invisible and off-screen left
+						whileInView={{ opacity: 1, x: 0 }} // Animate to visible and original position
+						viewport={{ once: true, amount: 0.2 }} // Trigger animation once when 20% visible
+						transition={{ duration: 0.5, ease: 'easeOut' }} // Animation timing
+						className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col'
+					>
 						<Image
 							src='/placeholder.png'
 							alt='This Website Placeholder'
@@ -67,10 +78,19 @@ export default function MainPage(): JSX.Element {
 								<li>Perfect Google Lighthouse score</li>
 							</ul>
 						</div>
-					</div>
+					</motion.div>
 
 					{/* Project 2: Data Platform */}
-					<div className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col'>
+					<motion.div
+						initial={{ opacity: 0, x: -100 }}
+						whileInView={{ opacity: 1, x: 0 }}
+						viewport={{ once: true, amount: 0.2 }}
+						transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }} // Added slight delay
+						className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col cursor-pointer hover:shadow-xl transition-shadow' // Added cursor-pointer and hover effect
+						onClick={() => {
+							setIsOverlayOpen(true);
+						}} // Add onClick handler
+					>
 						<Image
 							src='/placeholder.png'
 							alt='Data Platform Placeholder'
@@ -89,10 +109,16 @@ export default function MainPage(): JSX.Element {
 								<li>98% test coverage (Jest & Supertest)</li>
 							</ul>
 						</div>
-					</div>
+					</motion.div>
 
 					{/* Project 3: Web Scrapers */}
-					<div className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col'>
+					<motion.div
+						initial={{ opacity: 0, x: -100 }}
+						whileInView={{ opacity: 1, x: 0 }}
+						viewport={{ once: true, amount: 0.2 }}
+						transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }} // Added slight delay
+						className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col'
+					>
 						<Image
 							src='/placeholder.png'
 							alt='Web Scrapers Placeholder'
@@ -110,10 +136,16 @@ export default function MainPage(): JSX.Element {
 								<li>Parallelism</li>
 							</ul>
 						</div>
-					</div>
+					</motion.div>
 
 					{/* Project 4: NPM Packages */}
-					<div className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col'>
+					<motion.div
+						initial={{ opacity: 0, x: -100 }}
+						whileInView={{ opacity: 1, x: 0 }}
+						viewport={{ once: true, amount: 0.2 }}
+						transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }} // Added slight delay
+						className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col'
+					>
 						<Image
 							src='/placeholder.png'
 							alt='NPM Packages Placeholder'
@@ -131,9 +163,34 @@ export default function MainPage(): JSX.Element {
 								<li>GitHub Actions CI/CD</li>
 							</ul>
 						</div>
-					</div>
+					</motion.div>
 				</div>
 			</section>
+
+			{/* Data Platform Overlay */}
+			<AnimatePresence>
+				{isOverlayOpen && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.3 }}
+						className='fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50'
+						onClick={() => {
+							setIsOverlayOpen(false);
+						}} // Close on background click
+					>
+						{/* Prevent content click from closing overlay */}
+						<motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ duration: 0.2, delay: 0.1 }}>
+							<DataPlatformPreview
+								onClose={() => {
+									setIsOverlayOpen(false);
+								}}
+							/>
+						</motion.div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 }
