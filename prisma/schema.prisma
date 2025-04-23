@@ -1,6 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
     provider = "prisma-client-js"
 }
@@ -36,7 +39,8 @@ model Account {
     scope             String?
     id_token          String?
     session_state     String?
-    user              User    @relation(fields: [userId], references: [id])
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([provider, providerAccountId])
 }
@@ -46,7 +50,7 @@ model Session {
     sessionToken String   @unique
     userId       String   @db.ObjectId
     expires      DateTime
-    user         User     @relation(fields: [userId], references: [id])
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -68,4 +72,23 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model DataDocument {
+    id        String      @id @default(auto()) @map("_id") @db.ObjectId
+    entries   DataEntry[]
+    createdAt DateTime    @default(now())
+}
+
+model DataEntry {
+    id         String       @id @default(auto()) @map("_id") @db.ObjectId
+    key        String
+    value      String
+    document   DataDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+    documentId String       @db.ObjectId
+
+    @@index([documentId])
+    @@index([key, value])
+    // If a key should be unique *within* a specific document, uncomment the next line
+    // @@unique([documentId, key])
 }
