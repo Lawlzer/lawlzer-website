@@ -4,7 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import ColorsPage from './page';
-import { COOKIE_KEYS, DEFAULT_COLORS, setCookie, getCookie } from '~/lib/palette';
+import { COOKIE_KEYS, LIGHT_MODE_COLORS, DARK_MODE_COLORS, setCookie, getCookie, PREDEFINED_PALETTES } from '~/lib/palette';
 import type * as PaletteModule from '~/lib/palette';
 
 // --- Mocks --- //
@@ -13,9 +13,11 @@ import type * as PaletteModule from '~/lib/palette';
 vi.mock('~/lib/palette', async (importOriginal) => {
 	const actual = await importOriginal<typeof PaletteModule>();
 	return {
-		...actual, // Keep actual PREDEFINED_PALETTES and COOKIE_KEYS
+		...actual, // Keep actual constants like LIGHT_MODE_COLORS, DARK_MODE_COLORS, etc.
 		getCookie: vi.fn(),
 		setCookie: vi.fn(),
+		// We will mock getDefaultColors within tests if needed, otherwise use actual
+		getDefaultColors: actual.getDefaultColors, // Keep actual unless mocked
 	};
 });
 
@@ -45,6 +47,26 @@ Object.defineProperty(document.body, 'style', {
 	},
 });
 
+// Mock window.matchMedia
+let matchMediaMock: ReturnType<typeof vi.fn>;
+const setupMatchMediaMock = (matches: boolean): void => {
+	matchMediaMock = vi.fn().mockImplementation((query) => ({
+		matches: query === '(prefers-color-scheme: dark)' ? matches : false,
+		media: query,
+		onchange: null,
+		addListener: vi.fn(), // deprecated
+		removeListener: vi.fn(), // deprecated
+		addEventListener: vi.fn(),
+		removeEventListener: vi.fn(),
+		dispatchEvent: vi.fn(),
+	}));
+	Object.defineProperty(window, 'matchMedia', {
+		writable: true,
+		configurable: true,
+		value: matchMediaMock,
+	});
+};
+
 // --- Test Suite --- //
 
 describe('ColorsPage Component', () => {
@@ -58,16 +80,19 @@ describe('ColorsPage Component', () => {
 		// Reset clipboard mocks
 		mockClipboard.writeText.mockResolvedValue(undefined);
 		mockClipboard.readText.mockResolvedValue('');
+		// Default to light mode for matchMedia unless overridden in test
+		setupMatchMediaMock(false);
 	});
 
 	it('should render with default colors if no cookies are set', () => {
 		render(React.createElement(ColorsPage));
 
-		expect(screen.getByLabelText('Page Background')).toHaveValue(DEFAULT_COLORS.PAGE_BG);
-		expect(screen.getByLabelText('Primary Color')).toHaveValue(DEFAULT_COLORS.PRIMARY_COLOR);
-		expect(screen.getByLabelText('Secondary Colour')).toHaveValue(DEFAULT_COLORS.SECONDARY_COLOR);
-		expect(screen.getByLabelText('Primary Text')).toHaveValue(DEFAULT_COLORS.PRIMARY_TEXT_COLOR);
-		expect(screen.getByLabelText('Secondary Text')).toHaveValue(DEFAULT_COLORS.SECONDARY_TEXT_COLOR);
+		expect(screen.getByLabelText('Page Background')).toHaveValue(LIGHT_MODE_COLORS.PAGE_BG);
+		expect(screen.getByLabelText('Primary Color')).toHaveValue(LIGHT_MODE_COLORS.PRIMARY_COLOR);
+		expect(screen.getByLabelText('Secondary Colour')).toHaveValue(LIGHT_MODE_COLORS.SECONDARY_COLOR);
+		expect(screen.getByLabelText('Primary Text')).toHaveValue(LIGHT_MODE_COLORS.PRIMARY_TEXT_COLOR);
+		expect(screen.getByLabelText('Secondary Text')).toHaveValue(LIGHT_MODE_COLORS.SECONDARY_TEXT_COLOR);
+		expect(screen.getByLabelText('Border Color')).toHaveValue(LIGHT_MODE_COLORS.BORDER_COLOR);
 	});
 
 	it('should load colors from cookies on mount', () => {
@@ -117,7 +142,7 @@ describe('ColorsPage Component', () => {
 		render(React.createElement(ColorsPage));
 		const saveButton = screen.getByRole('button', { name: 'Save' });
 
-		// Change a color first
+		// Change a color first to ensure it saves the current state
 		fireEvent.change(screen.getByLabelText('Page Background'), { target: { value: '#123456' } });
 
 		act(() => {
@@ -125,13 +150,13 @@ describe('ColorsPage Component', () => {
 		});
 
 		await waitFor(() => {
-			// Check that cookies are set with the actual values, not DEFAULT_COLORS
-			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PAGE_BG, '#123456');
-			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PRIMARY_TEXT_COLOR, '#f0e0f8');
-			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PRIMARY_COLOR, '#bb0fd9');
-			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.SECONDARY_COLOR, '#3b0047');
-			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.SECONDARY_TEXT_COLOR, '#c0a0c8');
-			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.BORDER_COLOR, '#450052');
+			// Check that cookies are set with the actual values from LIGHT_MODE_COLORS (except the changed one)
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PAGE_BG, '#123456'); // The changed value
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PRIMARY_TEXT_COLOR, LIGHT_MODE_COLORS.PRIMARY_TEXT_COLOR);
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.PRIMARY_COLOR, LIGHT_MODE_COLORS.PRIMARY_COLOR);
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.SECONDARY_COLOR, LIGHT_MODE_COLORS.SECONDARY_COLOR);
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.SECONDARY_TEXT_COLOR, LIGHT_MODE_COLORS.SECONDARY_TEXT_COLOR);
+			expect(setCookieMock).toHaveBeenCalledWith(COOKIE_KEYS.BORDER_COLOR, LIGHT_MODE_COLORS.BORDER_COLOR);
 		});
 
 		// Check for success message
@@ -169,7 +194,7 @@ describe('ColorsPage Component', () => {
 		await waitFor(() => {
 			expect(mockClipboard.writeText).toHaveBeenCalledTimes(1);
 		});
-		expect(mockClipboard.writeText).toHaveBeenCalledWith(JSON.stringify(DEFAULT_COLORS, null, 2));
+		expect(mockClipboard.writeText).toHaveBeenCalledWith(JSON.stringify(LIGHT_MODE_COLORS, null, 2));
 		// Check for success message
 		await screen.findByText('Colors copied to clipboard!');
 	});
@@ -258,5 +283,72 @@ describe('ColorsPage Component', () => {
 
 		// Check for error message with updated format
 		await screen.findByText(/Failed to import colors from clipboard. Invalid hex color format found in clipboard data./i);
+	});
+
+	// --- Tests for System Default Handling ---
+
+	it('should render with dark mode defaults if system prefers dark and no cookies are set', async () => {
+		// Override matchMedia mock for this test
+		setupMatchMediaMock(true); // Simulate dark mode
+		getCookieMock.mockReturnValue(null); // Ensure no cookies override
+
+		render(React.createElement(ColorsPage));
+
+		// Wait for state update after useEffect runs
+		await waitFor(() => {
+			expect(screen.getByLabelText('Page Background')).toHaveValue(DARK_MODE_COLORS.PAGE_BG);
+		});
+
+		// Check other inputs match dark mode defaults
+		expect(screen.getByLabelText('Primary Color')).toHaveValue(DARK_MODE_COLORS.PRIMARY_COLOR);
+		expect(screen.getByLabelText('Secondary Colour')).toHaveValue(DARK_MODE_COLORS.SECONDARY_COLOR);
+		expect(screen.getByLabelText('Primary Text')).toHaveValue(DARK_MODE_COLORS.PRIMARY_TEXT_COLOR);
+		expect(screen.getByLabelText('Secondary Text')).toHaveValue(DARK_MODE_COLORS.SECONDARY_TEXT_COLOR);
+		expect(screen.getByLabelText('Border Color')).toHaveValue(DARK_MODE_COLORS.BORDER_COLOR);
+	});
+
+	// --- Test for Resetting Unsaved Changes ---
+	it('should reset unsaved changes to the last saved state (initial load)', async () => {
+		// Start with light mode defaults, no cookies
+		setupMatchMediaMock(false);
+		getCookieMock.mockReturnValue(null);
+
+		render(React.createElement(ColorsPage));
+
+		// Wait for initial light mode load
+		await waitFor(() => {
+			expect(screen.getByLabelText('Page Background')).toHaveValue(LIGHT_MODE_COLORS.PAGE_BG);
+		});
+
+		// Change a color
+		const pageBgInput = screen.getByLabelText('Page Background');
+		const originalBg = LIGHT_MODE_COLORS.PAGE_BG;
+		const changedBg = '#abcdef';
+		fireEvent.change(pageBgInput, { target: { value: changedBg } });
+		await waitFor(() => {
+			expect(pageBgInput).toHaveValue(changedBg);
+		});
+
+		// Find the "Reset" button (in the main action group)
+		// It might be disabled initially if no changes detected, ensure it's enabled after change
+		const resetButton = screen.getByRole('button', { name: 'Reset' });
+		await waitFor(() => {
+			expect(resetButton).not.toBeDisabled();
+		}); // Wait for button to enable
+
+		// Click the "Reset" button
+		act(() => {
+			fireEvent.click(resetButton);
+		});
+
+		// Verify the color resets to the initial loaded value (Light Mode BG)
+		await waitFor(() => {
+			expect(pageBgInput).toHaveValue(originalBg);
+		});
+
+		// Verify the reset button becomes disabled again as there are no unsaved changes
+		await waitFor(() => {
+			expect(resetButton).toBeDisabled();
+		});
 	});
 });

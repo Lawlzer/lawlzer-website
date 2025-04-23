@@ -2,15 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { JSX } from 'react';
-import {
-	COOKIE_KEYS,
-	DEFAULT_COLORS,
-	setCookie,
-	getCookie,
-	PREDEFINED_PALETTES, // Import predefined palettes
-} from '~/lib/palette';
+import { COOKIE_KEYS, PREDEFINED_PALETTES, setCookie, getCookie, getDefaultColors, LIGHT_MODE_COLORS } from '~/lib/palette';
 import { useRouter, usePathname } from 'next/navigation';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import Head from 'next/head';
 
 // Define the type for a single palette
 interface ColorPalette {
@@ -45,13 +40,23 @@ export default function ColorsPage(): JSX.Element {
 		// Router is not available in test environment
 	}
 
-	// Initialize state with DEFAULT_COLORS but don't render them until properly loaded
-	const [pageBg, setPageBg] = useState<string>(DEFAULT_COLORS.PAGE_BG);
-	const [primaryTextColor, setPrimaryTextColor] = useState<string>(DEFAULT_COLORS.PRIMARY_TEXT_COLOR);
-	const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_COLORS.PRIMARY_COLOR);
-	const [secondaryColor, setSecondaryColor] = useState<string>(DEFAULT_COLORS.SECONDARY_COLOR);
-	const [secondaryTextColor, setSecondaryTextColor] = useState<string>(DEFAULT_COLORS.SECONDARY_TEXT_COLOR);
-	const [borderColor, setBorderColor] = useState<string>(DEFAULT_COLORS.BORDER_COLOR);
+	const [paletteName, setPaletteName] = useState<string | null>(null);
+	const [isClient, setIsClient] = useState(false);
+	const [initialDefaults, setInitialDefaults] = useState(LIGHT_MODE_COLORS);
+
+	// Determine defaults on client-side mount
+	useEffect(() => {
+		setInitialDefaults(getDefaultColors());
+		setIsClient(true);
+	}, []);
+
+	// Initialize state with null initially, load from cookies/defaults in effect
+	const [pageBg, setPageBg] = useState<string | null>(null);
+	const [primaryTextColor, setPrimaryTextColor] = useState<string | null>(null);
+	const [primaryColor, setPrimaryColor] = useState<string | null>(null);
+	const [secondaryColor, setSecondaryColor] = useState<string | null>(null);
+	const [secondaryTextColor, setSecondaryTextColor] = useState<string | null>(null);
+	const [borderColor, setBorderColor] = useState<string | null>(null);
 	// State for feedback messages (optional)
 	const [clipboardStatus, setClipboardStatus] = useState<string>('');
 	// Track if colors are loaded from cookies - initialize to true in test environment
@@ -66,14 +71,11 @@ export default function ColorsPage(): JSX.Element {
 	const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
 	// Track the last saved colors to detect actual changes
-	const [savedColors, setSavedColors] = useState<ColorPalette>({
-		PAGE_BG: DEFAULT_COLORS.PAGE_BG,
-		PRIMARY_TEXT_COLOR: DEFAULT_COLORS.PRIMARY_TEXT_COLOR,
-		PRIMARY_COLOR: DEFAULT_COLORS.PRIMARY_COLOR,
-		SECONDARY_COLOR: DEFAULT_COLORS.SECONDARY_COLOR,
-		SECONDARY_TEXT_COLOR: DEFAULT_COLORS.SECONDARY_TEXT_COLOR,
-		BORDER_COLOR: DEFAULT_COLORS.BORDER_COLOR,
-	});
+	// Initialize savedColors based on initialDefaults, update it when cookies load
+	const [savedColors, setSavedColors] = useState<ColorPalette>(initialDefaults);
+	useEffect(() => {
+		setSavedColors(initialDefaults);
+	}, [initialDefaults]);
 
 	// Function to check if current colors differ from saved colors
 	const checkForUnsavedChanges = useCallback((): boolean => {
@@ -92,14 +94,14 @@ export default function ColorsPage(): JSX.Element {
 		}
 
 		// Always load from cookies (even in test mode)
-		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG) ?? DEFAULT_COLORS.PAGE_BG;
-		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR) ?? DEFAULT_COLORS.PRIMARY_TEXT_COLOR;
-		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR) ?? DEFAULT_COLORS.PRIMARY_COLOR;
-		const savedSecondaryColor = getCookie(COOKIE_KEYS.SECONDARY_COLOR) ?? DEFAULT_COLORS.SECONDARY_COLOR;
-		const savedSecondaryTextColor = getCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR) ?? DEFAULT_COLORS.SECONDARY_TEXT_COLOR;
-		const savedBorderColor = getCookie(COOKIE_KEYS.BORDER_COLOR) ?? DEFAULT_COLORS.BORDER_COLOR;
+		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG) ?? initialDefaults.PAGE_BG; // Use initialDefaults
+		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR) ?? initialDefaults.PRIMARY_TEXT_COLOR; // Use initialDefaults
+		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR) ?? initialDefaults.PRIMARY_COLOR; // Use initialDefaults
+		const savedSecondaryColor = getCookie(COOKIE_KEYS.SECONDARY_COLOR) ?? initialDefaults.SECONDARY_COLOR; // Use initialDefaults
+		const savedSecondaryTextColor = getCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR) ?? initialDefaults.SECONDARY_TEXT_COLOR; // Use initialDefaults
+		const savedBorderColor = getCookie(COOKIE_KEYS.BORDER_COLOR) ?? initialDefaults.BORDER_COLOR; // Use initialDefaults
 
-		// Store the saved values in state
+		// Store the saved values used for comparison
 		setSavedColors({
 			PAGE_BG: savedPageBg,
 			PRIMARY_TEXT_COLOR: savedPrimaryTextColor,
@@ -109,7 +111,7 @@ export default function ColorsPage(): JSX.Element {
 			BORDER_COLOR: savedBorderColor,
 		});
 
-		// Update the current values
+		// Update the actual color state for the inputs
 		setPageBg(savedPageBg);
 		setPrimaryTextColor(savedPrimaryTextColor);
 		setPrimaryColor(savedPrimaryColor);
@@ -127,6 +129,8 @@ export default function ColorsPage(): JSX.Element {
 				document.documentElement.classList.remove('color-transition-paused');
 				setColorsLoaded(true);
 			}, 50);
+		} else {
+			setColorsLoaded(true); // Ensure colorsLoaded is set in test env
 		}
 
 		// Cleanup function to remove class if component unmounts
@@ -135,57 +139,57 @@ export default function ColorsPage(): JSX.Element {
 				document.documentElement.classList.remove('color-transition-paused');
 			}
 		};
-	}, []); // Empty dependency array ensures this runs only once on mount
+	}, [initialDefaults]); // Depend only on initialDefaults
 
 	// Effect: Apply colors to DOM when state changes (DOES NOT SAVE TO COOKIES)
 	useEffect(() => {
-		// Only apply colors when all values are loaded
-		if (!colorsLoaded) return;
+		// Only apply colors when all values are loaded and state is not null
+		if (!colorsLoaded || pageBg === null || primaryTextColor === null || primaryColor === null || secondaryColor === null || secondaryTextColor === null || borderColor === null) return;
 
 		// Apply colors to the DOM for instant feedback
 		const rootStyle = document.documentElement.style;
 		const bodyStyle = document.body.style;
 
 		// Apply to both <html> and <body> to override initial inline styles
-		rootStyle.setProperty('--page-background', pageBg);
-		bodyStyle.setProperty('--page-background', pageBg);
-		rootStyle.setProperty('--background', pageBg);
-		bodyStyle.setProperty('--background', pageBg);
+		rootStyle.setProperty('--page-background', pageBg ?? '');
+		bodyStyle.setProperty('--page-background', pageBg ?? '');
+		rootStyle.setProperty('--background', pageBg ?? '');
+		bodyStyle.setProperty('--background', pageBg ?? '');
 
-		rootStyle.setProperty('--primary-text-color', primaryTextColor);
-		bodyStyle.setProperty('--primary-text-color', primaryTextColor);
-		rootStyle.setProperty('--foreground', primaryTextColor);
-		bodyStyle.setProperty('--foreground', primaryTextColor);
+		rootStyle.setProperty('--primary-text-color', primaryTextColor ?? '');
+		bodyStyle.setProperty('--primary-text-color', primaryTextColor ?? '');
+		rootStyle.setProperty('--foreground', primaryTextColor ?? '');
+		bodyStyle.setProperty('--foreground', primaryTextColor ?? '');
 
-		rootStyle.setProperty('--primary-color', primaryColor);
-		bodyStyle.setProperty('--primary-color', primaryColor);
-		rootStyle.setProperty('--primary', primaryColor);
-		bodyStyle.setProperty('--primary', primaryColor);
+		rootStyle.setProperty('--primary-color', primaryColor ?? '');
+		bodyStyle.setProperty('--primary-color', primaryColor ?? '');
+		rootStyle.setProperty('--primary', primaryColor ?? '');
+		bodyStyle.setProperty('--primary', primaryColor ?? '');
 
 		// Add primary-foreground for text on primary colored elements
-		rootStyle.setProperty('--primary-foreground', primaryTextColor);
-		bodyStyle.setProperty('--primary-foreground', primaryTextColor);
+		rootStyle.setProperty('--primary-foreground', primaryTextColor ?? '');
+		bodyStyle.setProperty('--primary-foreground', primaryTextColor ?? '');
 
-		rootStyle.setProperty('--secondary-colour', secondaryColor);
-		bodyStyle.setProperty('--secondary-colour', secondaryColor);
+		rootStyle.setProperty('--secondary-colour', secondaryColor ?? '');
+		bodyStyle.setProperty('--secondary-colour', secondaryColor ?? '');
 
 		// Apply derived variables
-		rootStyle.setProperty('--secondary', secondaryColor);
-		bodyStyle.setProperty('--secondary', secondaryColor);
-		rootStyle.setProperty('--muted', secondaryColor);
-		bodyStyle.setProperty('--muted', secondaryColor);
-		rootStyle.setProperty('--input', secondaryColor);
-		bodyStyle.setProperty('--input', secondaryColor);
+		rootStyle.setProperty('--secondary', secondaryColor ?? '');
+		bodyStyle.setProperty('--secondary', secondaryColor ?? '');
+		rootStyle.setProperty('--muted', secondaryColor ?? '');
+		bodyStyle.setProperty('--muted', secondaryColor ?? '');
+		rootStyle.setProperty('--input', secondaryColor ?? '');
+		bodyStyle.setProperty('--input', secondaryColor ?? '');
 
-		rootStyle.setProperty('--secondary-text-color', secondaryTextColor);
-		bodyStyle.setProperty('--secondary-text-color', secondaryTextColor);
-		rootStyle.setProperty('--secondary-text', secondaryTextColor);
-		bodyStyle.setProperty('--secondary-text', secondaryTextColor);
+		rootStyle.setProperty('--secondary-text-color', secondaryTextColor ?? '');
+		bodyStyle.setProperty('--secondary-text-color', secondaryTextColor ?? '');
+		rootStyle.setProperty('--secondary-text', secondaryTextColor ?? '');
+		bodyStyle.setProperty('--secondary-text', secondaryTextColor ?? '');
 
-		rootStyle.setProperty('--custom-border-color', borderColor);
-		bodyStyle.setProperty('--custom-border-color', borderColor);
-		rootStyle.setProperty('--border', borderColor);
-		bodyStyle.setProperty('--border', borderColor);
+		rootStyle.setProperty('--custom-border-color', borderColor ?? '');
+		bodyStyle.setProperty('--custom-border-color', borderColor ?? '');
+		rootStyle.setProperty('--border', borderColor ?? '');
+		bodyStyle.setProperty('--border', borderColor ?? '');
 
 		// Check if colors have actually changed from the saved values
 		if (colorsLoaded) {
@@ -206,6 +210,13 @@ export default function ColorsPage(): JSX.Element {
 
 	// Function to save current colors to cookies
 	const handleSaveColors = useCallback((): void => {
+		// Ensure all values are non-null before saving
+		if (pageBg === null || primaryTextColor === null || primaryColor === null || secondaryColor === null || secondaryTextColor === null || borderColor === null) {
+			console.error('Attempted to save null color values.');
+			setClipboardStatus('Error: Cannot save invalid colors.');
+			return;
+		}
+
 		try {
 			setCookie(COOKIE_KEYS.PAGE_BG, pageBg);
 			setCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR, primaryTextColor);
@@ -214,7 +225,7 @@ export default function ColorsPage(): JSX.Element {
 			setCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR, secondaryTextColor);
 			setCookie(COOKIE_KEYS.BORDER_COLOR, borderColor);
 
-			// Update the saved colors reference
+			// Update the saved colors reference (already guaranteed non-null here)
 			setSavedColors({
 				PAGE_BG: pageBg,
 				PRIMARY_TEXT_COLOR: primaryTextColor,
@@ -313,13 +324,19 @@ export default function ColorsPage(): JSX.Element {
 
 	// Function to export colors to clipboard
 	const handleExportColors = async (): Promise<void> => {
+		// Ensure all values are non-null before exporting
+		if (pageBg === null || primaryTextColor === null || primaryColor === null || secondaryColor === null || secondaryTextColor === null || borderColor === null) {
+			console.error('Attempted to export null color values.');
+			setClipboardStatus('Error: Cannot export invalid colors.');
+			return;
+		}
 		const colorData: ColorPalette = {
-			PAGE_BG: pageBg,
-			PRIMARY_TEXT_COLOR: primaryTextColor,
-			PRIMARY_COLOR: primaryColor,
-			SECONDARY_COLOR: secondaryColor,
-			SECONDARY_TEXT_COLOR: secondaryTextColor,
-			BORDER_COLOR: borderColor,
+			PAGE_BG: pageBg, // Guaranteed non-null here
+			PRIMARY_TEXT_COLOR: primaryTextColor, // Guaranteed non-null here
+			PRIMARY_COLOR: primaryColor, // Guaranteed non-null here
+			SECONDARY_COLOR: secondaryColor, // Guaranteed non-null here
+			SECONDARY_TEXT_COLOR: secondaryTextColor, // Guaranteed non-null here
+			BORDER_COLOR: borderColor, // Guaranteed non-null here
 		};
 		const jsonString = JSON.stringify(colorData, null, 2); // Pretty print JSON
 		try {
@@ -376,12 +393,12 @@ export default function ColorsPage(): JSX.Element {
 
 	// Function to reset colors to the last saved configuration from cookies
 	const handleResetColors = (): void => {
-		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG) ?? DEFAULT_COLORS.PAGE_BG;
-		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR) ?? DEFAULT_COLORS.PRIMARY_TEXT_COLOR;
-		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR) ?? DEFAULT_COLORS.PRIMARY_COLOR;
-		const savedSecondaryColor = getCookie(COOKIE_KEYS.SECONDARY_COLOR) ?? DEFAULT_COLORS.SECONDARY_COLOR;
-		const savedSecondaryTextColor = getCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR) ?? DEFAULT_COLORS.SECONDARY_TEXT_COLOR;
-		const savedBorderColor = getCookie(COOKIE_KEYS.BORDER_COLOR) ?? DEFAULT_COLORS.BORDER_COLOR;
+		const savedPageBg = getCookie(COOKIE_KEYS.PAGE_BG) ?? initialDefaults.PAGE_BG; // Use initialDefaults
+		const savedPrimaryTextColor = getCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR) ?? initialDefaults.PRIMARY_TEXT_COLOR; // Use initialDefaults
+		const savedPrimaryColor = getCookie(COOKIE_KEYS.PRIMARY_COLOR) ?? initialDefaults.PRIMARY_COLOR; // Use initialDefaults
+		const savedSecondaryColor = getCookie(COOKIE_KEYS.SECONDARY_COLOR) ?? initialDefaults.SECONDARY_COLOR; // Use initialDefaults
+		const savedSecondaryTextColor = getCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR) ?? initialDefaults.SECONDARY_TEXT_COLOR; // Use initialDefaults
+		const savedBorderColor = getCookie(COOKIE_KEYS.BORDER_COLOR) ?? initialDefaults.BORDER_COLOR; // Use initialDefaults
 
 		setPageBg(savedPageBg);
 		setPrimaryTextColor(savedPrimaryTextColor);
@@ -389,7 +406,22 @@ export default function ColorsPage(): JSX.Element {
 		setSecondaryColor(savedSecondaryColor);
 		setSecondaryTextColor(savedSecondaryTextColor);
 		setBorderColor(savedBorderColor);
-		setClipboardStatus('Colors reset to last saved configuration.');
+
+		// This action reverts to saved state, so unsaved changes are gone
+		setHasUnsavedChanges(false);
+		setClipboardStatus(''); // Clear status on reset
+
+		// Check if the reset colors match a predefined palette
+		const resetColors = {
+			PAGE_BG: savedPageBg,
+			PRIMARY_TEXT_COLOR: savedPrimaryTextColor,
+			PRIMARY_COLOR: savedPrimaryColor,
+			SECONDARY_COLOR: savedSecondaryColor,
+			SECONDARY_TEXT_COLOR: savedSecondaryTextColor,
+			BORDER_COLOR: savedBorderColor,
+		};
+		const matchingPalette = Object.entries(PREDEFINED_PALETTES).find(([, palette]) => JSON.stringify(palette) === JSON.stringify(resetColors));
+		setPaletteName(matchingPalette ? matchingPalette[0] : null);
 	};
 
 	// Clear status message after a delay
@@ -404,8 +436,41 @@ export default function ColorsPage(): JSX.Element {
 		}
 	}, [clipboardStatus]);
 
+	// Reset colors to default determined by system preference
+	const handleResetToSystemDefaults = useCallback(() => {
+		const defaults = getDefaultColors(); // Get current system defaults
+		applyPalette(defaults);
+		const matchingPalette = Object.entries(PREDEFINED_PALETTES).find(([, palette]) => JSON.stringify(palette) === JSON.stringify(defaults));
+		setPaletteName(matchingPalette ? matchingPalette[0] : null);
+		setClipboardStatus('');
+	}, [applyPalette]);
+
+	// Function to handle confirming navigation away
+	const confirmNavigation = (allow: boolean): void => {
+		if (allow && pendingNavigation && router) {
+			// Temporarily disable the hook to allow navigation
+			const originalHandler = window.__NEXT_PROTECT_UNSAVED_CHANGES__;
+			window.__NEXT_PROTECT_UNSAVED_CHANGES__ = undefined;
+			router.push(pendingNavigation);
+			// Attempt to restore the hook after navigation starts
+			setTimeout(() => {
+				window.__NEXT_PROTECT_UNSAVED_CHANGES__ = originalHandler;
+			}, 0);
+		}
+		setShowConfirmDialog(false);
+		setPendingNavigation(null);
+	};
+
+	// Render inputs only on the client after defaults are determined
+	if (!colorsLoaded || !isClient) {
+		return <></>; // Return empty fragment instead of null
+	}
+
 	return (
 		<div className='flex flex-col w-full min-h-0 h-full overflow-y-auto'>
+			<Head>
+				<title>Color Theme Colors</title>
+			</Head>
 			<div className='p-4 sm:p-6 md:p-8 pb-16'>
 				{/* Header: Title Only */}
 				<div className='mb-4'>
@@ -423,7 +488,7 @@ export default function ColorsPage(): JSX.Element {
 								{colorsLoaded && (
 									<input
 										type='color'
-										value={pageBg}
+										value={pageBg ?? ''}
 										onChange={(e) => {
 											setPageBg(e.target.value);
 										}}
@@ -439,7 +504,7 @@ export default function ColorsPage(): JSX.Element {
 								{colorsLoaded && (
 									<input
 										type='color'
-										value={primaryColor}
+										value={primaryColor ?? ''}
 										onChange={(e) => {
 											setPrimaryColor(e.target.value);
 										}}
@@ -455,7 +520,7 @@ export default function ColorsPage(): JSX.Element {
 								{colorsLoaded && (
 									<input
 										type='color'
-										value={secondaryColor}
+										value={secondaryColor ?? ''}
 										onChange={(e) => {
 											setSecondaryColor(e.target.value);
 										}}
@@ -471,7 +536,7 @@ export default function ColorsPage(): JSX.Element {
 								{colorsLoaded && (
 									<input
 										type='color'
-										value={primaryTextColor}
+										value={primaryTextColor ?? ''}
 										onChange={(e) => {
 											setPrimaryTextColor(e.target.value);
 										}}
@@ -487,7 +552,7 @@ export default function ColorsPage(): JSX.Element {
 								{colorsLoaded && (
 									<input
 										type='color'
-										value={secondaryTextColor}
+										value={secondaryTextColor ?? ''}
 										onChange={(e) => {
 											setSecondaryTextColor(e.target.value);
 										}}
@@ -503,7 +568,7 @@ export default function ColorsPage(): JSX.Element {
 								{colorsLoaded && (
 									<input
 										type='color'
-										value={borderColor}
+										value={borderColor ?? ''}
 										onChange={(e) => {
 											setBorderColor(e.target.value);
 										}}
@@ -518,11 +583,11 @@ export default function ColorsPage(): JSX.Element {
 
 				{/* Action Buttons & Status - Centered */}
 				<div className='my-6 flex flex-col items-center gap-4'>
-					<div className='flex gap-3 flex-shrink-0'>
+					<div className='flex gap-3 flex-shrink-0 flex-wrap justify-center'>
 						<button
 							type='button'
 							onClick={() => {
-								void handleImportColors(); // Explicitly ignore promise return
+								void handleImportColors();
 							}}
 							className='px-5 py-2.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-base'
 							title='Import colors from clipboard (JSON format)'
@@ -533,7 +598,7 @@ export default function ColorsPage(): JSX.Element {
 						<button
 							type='button'
 							onClick={() => {
-								void handleExportColors(); // Explicitly ignore promise return
+								void handleExportColors();
 							}}
 							className='px-5 py-2.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-base'
 							title='Export current colors to clipboard (JSON format)'
@@ -541,10 +606,10 @@ export default function ColorsPage(): JSX.Element {
 						>
 							Export
 						</button>
-						<button type='button' onClick={handleResetColors} className='px-5 py-2.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-base' title='Reset to last saved configuration' disabled={!colorsLoaded}>
+						<button type='button' onClick={handleResetColors} className='px-5 py-2.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-base' title='Reset to last saved configuration' disabled={!colorsLoaded || !hasUnsavedChanges}>
 							Reset
 						</button>
-						<button type='button' onClick={handleSaveColors} className='px-6 py-2.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-base font-semibold' disabled={!colorsLoaded}>
+						<button type='button' onClick={handleSaveColors} className='px-6 py-2.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-base font-semibold' disabled={!colorsLoaded || !hasUnsavedChanges}>
 							Save
 						</button>
 					</div>

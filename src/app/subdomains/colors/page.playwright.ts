@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import { testPageBasics } from '@testUtils/playwright/utils';
 import { pathToURLTestsOnly } from '~/lib/utils';
-import { COOKIE_KEYS, DEFAULT_COLORS, PREDEFINED_PALETTES } from '~/lib/palette';
+import { COOKIE_KEYS, LIGHT_MODE_COLORS, PREDEFINED_PALETTES } from '~/lib/palette';
 import { metadata as expectedMetadata } from './layout';
 
 const pathToThisFile = import.meta.url;
@@ -78,15 +78,19 @@ test.describe('Colors Page E2E Tests', () => {
 		const inputs = getColorInputs(page);
 
 		// Checking each input's value
-		await expect(inputs.pageBg).toHaveValue(DEFAULT_COLORS.PAGE_BG);
-		await expect(inputs.primaryColor).toHaveValue(DEFAULT_COLORS.PRIMARY_COLOR);
-		await expect(inputs.secondaryColor).toHaveValue(DEFAULT_COLORS.SECONDARY_COLOR);
-		await expect(inputs.primaryTextColor).toHaveValue(DEFAULT_COLORS.PRIMARY_TEXT_COLOR);
-		await expect(inputs.secondaryTextColor).toHaveValue(DEFAULT_COLORS.SECONDARY_TEXT_COLOR);
-		await expect(inputs.borderColor).toHaveValue(DEFAULT_COLORS.BORDER_COLOR);
+		await expect(inputs.pageBg).toHaveValue(LIGHT_MODE_COLORS.PAGE_BG);
+		await expect(inputs.primaryColor).toHaveValue(LIGHT_MODE_COLORS.PRIMARY_COLOR);
+		await expect(inputs.secondaryColor).toHaveValue(LIGHT_MODE_COLORS.SECONDARY_COLOR);
+		await expect(inputs.primaryTextColor).toHaveValue(LIGHT_MODE_COLORS.PRIMARY_TEXT_COLOR);
+		await expect(inputs.secondaryTextColor).toHaveValue(LIGHT_MODE_COLORS.SECONDARY_TEXT_COLOR);
+		await expect(inputs.borderColor).toHaveValue(LIGHT_MODE_COLORS.BORDER_COLOR);
 
 		// Check if body background matches
-		await checkElementStyle(page, 'body', 'background-color', DEFAULT_COLORS.PAGE_BG);
+		await checkElementStyle(page, 'body', 'background-color', LIGHT_MODE_COLORS.PAGE_BG);
+
+		// Verify initial CSS variables are set correctly
+		await checkElementStyle(page, 'html', '--page-background', LIGHT_MODE_COLORS.PAGE_BG);
+		await checkElementStyle(page, 'html', '--primary-color', LIGHT_MODE_COLORS.PRIMARY_COLOR);
 	});
 
 	test('should update color input value and page style on change', async ({ page }) => {

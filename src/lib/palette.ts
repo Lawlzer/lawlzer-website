@@ -14,83 +14,6 @@ export const COOKIE_KEYS = {
 	BORDER_COLOR: 'theme_border_color',
 };
 
-// Define default colors
-export const DEFAULT_COLORS = {
-	PAGE_BG: '#640175',
-	PRIMARY_TEXT_COLOR: '#f0e0f8',
-	PRIMARY_COLOR: '#bb0fd9',
-	SECONDARY_COLOR: '#3b0047',
-	SECONDARY_TEXT_COLOR: '#c0a0c8',
-	BORDER_COLOR: '#450052',
-};
-
-// Helper function to get the base domain (e.g., example.com) from hostname
-function getBaseDomain(): string | null {
-	if (typeof window === 'undefined') return null; // Not in browser
-
-	const hostname = window.location.hostname;
-	if (hostname === 'localhost') {
-		return null; // No domain for localhost
-	}
-
-	// Simple logic to get the last two parts (e.g., example.com from sub.example.com)
-	// Might need adjustment for complex TLDs (e.g., .co.uk)
-	const parts = hostname.split('.');
-	if (parts.length < 2) {
-		return hostname; // Handle cases like single-word domains if necessary
-	}
-	// Return the parent domain (e.g., example.com) - a leading dot is often implied by browsers
-	return parts.slice(-2).join('.');
-}
-
-// Helper function to set cookies client-side, scoped to the base domain
-export function setCookie(name: string, value: string, days: number = 365): void {
-	if (typeof document === 'undefined') {
-		console.warn('Cannot set cookie outside browser environment');
-		return;
-	}
-	try {
-		let expires = '';
-		if (days) {
-			const date = new Date();
-			date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
-			expires = '; expires=' + date.toUTCString();
-		}
-		// Add domain based on current hostname for client-side setting
-		const domain = getBaseDomain();
-		// Setting domain=example.com makes it available to sub.example.com
-		const domainAttribute = domain ? `; domain=${domain}` : '';
-		document.cookie = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
-	} catch (error) {
-		console.error('Failed to set cookie:', name, error);
-	}
-}
-
-// Helper function to get cookies client-side
-export function getCookie(name: string): string | null {
-	if (typeof document === 'undefined') {
-		return null; // document is not available (e.g., server-side rendering)
-	}
-	try {
-		const nameEQ = name + '=';
-		const ca = document.cookie.split(';');
-		for (let c of ca) {
-			c = c.trimStart();
-			if (c.startsWith(nameEQ)) {
-				return c.substring(nameEQ.length);
-			}
-		}
-		return null;
-	} catch (error) {
-		console.error('Failed to get cookie:', name, error);
-		return null;
-	}
-}
-
-// REMOVED: LocalStorage functions
-// export function setLocalStorageItem(...) { ... }
-// export function getLocalStorageItem(...) { ... }
-
 // Define Predefined Color Palettes
 export const PREDEFINED_PALETTES = {
 	'Light Mode': {
@@ -158,3 +81,84 @@ export const PREDEFINED_PALETTES = {
 		BORDER_COLOR: '#ffffff',
 	},
 };
+
+// Define default colors (Fallback)
+export const LIGHT_MODE_COLORS = PREDEFINED_PALETTES['Light Mode'];
+export const DARK_MODE_COLORS = PREDEFINED_PALETTES['Dark Mode'];
+
+// Function to get default colors based on system preference
+export function getDefaultColors(): typeof LIGHT_MODE_COLORS {
+	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+	if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+		return DARK_MODE_COLORS;
+	}
+	// Default to light mode if preference cannot be determined or is light
+	return LIGHT_MODE_COLORS;
+}
+
+// Helper function to get the base domain (e.g., example.com) from hostname
+function getBaseDomain(): string | null {
+	if (typeof window === 'undefined') return null; // Not in browser
+
+	const hostname = window.location.hostname;
+	if (hostname === 'localhost') {
+		return null; // No domain for localhost
+	}
+
+	// Simple logic to get the last two parts (e.g., example.com from sub.example.com)
+	// Might need adjustment for complex TLDs (e.g., .co.uk)
+	const parts = hostname.split('.');
+	if (parts.length < 2) {
+		return hostname; // Handle cases like single-word domains if necessary
+	}
+	// Return the parent domain (e.g., example.com) - a leading dot is often implied by browsers
+	return parts.slice(-2).join('.');
+}
+
+// Helper function to set cookies client-side, scoped to the base domain
+export function setCookie(name: string, value: string, days: number = 365): void {
+	if (typeof document === 'undefined') {
+		console.warn('Cannot set cookie outside browser environment');
+		return;
+	}
+	try {
+		let expires = '';
+		if (days) {
+			const date = new Date();
+			date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+			expires = '; expires=' + date.toUTCString();
+		}
+		// Add domain based on current hostname for client-side setting
+		const domain = getBaseDomain();
+		// Setting domain=example.com makes it available to sub.example.com
+		const domainAttribute = domain ? `; domain=${domain}` : '';
+		document.cookie = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
+	} catch (error) {
+		console.error('Failed to set cookie:', name, error);
+	}
+}
+
+// Helper function to get cookies client-side
+export function getCookie(name: string): string | null {
+	if (typeof document === 'undefined') {
+		return null; // document is not available (e.g., server-side rendering)
+	}
+	try {
+		const nameEQ = name + '=';
+		const ca = document.cookie.split(';');
+		for (let c of ca) {
+			c = c.trimStart();
+			if (c.startsWith(nameEQ)) {
+				return c.substring(nameEQ.length);
+			}
+		}
+		return null;
+	} catch (error) {
+		console.error('Failed to get cookie:', name, error);
+		return null;
+	}
+}
+
+// REMOVED: LocalStorage functions
+// export function setLocalStorageItem(...) { ... }
+// export function getLocalStorageItem(...) { ... }
