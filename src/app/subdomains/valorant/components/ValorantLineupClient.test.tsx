@@ -142,10 +142,10 @@ describe('ValorantLineupClient', () => {
 	it('renders lineup direction buttons', () => {
 		render(<ValorantLineupClient />);
 
-		const startToDestButton = screen.getByText('Start ➔ Destination');
+		const startToDestButton = screen.getByText('Agent ➔ Utility');
 		expect(startToDestButton).toBeInTheDocument();
 
-		const destToStartButton = screen.getByText('Destination ➔ Start');
+		const destToStartButton = screen.getByText('Utility ➔ Agent');
 		expect(destToStartButton).toBeInTheDocument();
 	});
 
@@ -178,12 +178,12 @@ describe('ValorantLineupClient', () => {
 		render(<ValorantLineupClient />);
 
 		// Default direction is 'destinationToStart'
-		const destToStartButton = screen.getByText('Destination ➔ Start');
+		const destToStartButton = screen.getByText('Utility ➔ Agent');
 		// Check for inline style with backgroundColor instead of className
 		expect(destToStartButton).toHaveStyle({ backgroundColor: 'var(--primary)' });
 
 		// Change direction
-		const startToDestButton = screen.getByText('Start ➔ Destination');
+		const startToDestButton = screen.getByText('Agent ➔ Utility');
 		fireEvent.click(startToDestButton);
 
 		// Check that button state changed using inline styles
