@@ -462,9 +462,9 @@ export default function ColorsPage(): JSX.Element {
 	};
 
 	// Render inputs only on the client after defaults are determined
-	if (!colorsLoaded || !isClient) {
-		return <></>; // Return empty fragment instead of null
-	}
+	// if (!colorsLoaded || !isClient) {
+	// 	return <></>; // Return empty fragment instead of null
+	// }
 
 	return (
 		<div className='flex flex-col w-full min-h-0 h-full overflow-y-auto'>
