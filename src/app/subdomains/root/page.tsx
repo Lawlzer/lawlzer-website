@@ -8,14 +8,8 @@ import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl
 
 export default function MainPage(): JSX.Element {
 	// Get the base URL and extract the hostname
-	let hostname = 'dev.lawlzer'; // Default fallback
-	try {
-		const fullUrl = getBaseUrl();
-		hostname = new URL(fullUrl).hostname;
-	} catch (error) {
-		console.error('Failed to get base URL hostname:', error);
-		// Keep the default hostname if getBaseUrl fails or URL parsing fails
-	}
+	const fullUrl = getBaseUrl();
+	const hostname = new URL(fullUrl).hostname;
 
 	return (
 		<div className='flex flex-col flex-grow w-full p-4 sm:p-6 md:p-8 text-primary-text overflow-y-auto'>
