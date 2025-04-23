@@ -1,7 +1,8 @@
 'use client'; // Need this for document.cookie
 
-// import { env } from '~/env.mjs'; // REMOVED: Cannot use server env vars on client
-// import { getCookieDomain } from './auth'; // REMOVED: Cannot use server env vars on client
+// REMOVED: Cannot use server env vars on client
+// import { env } from '~/env.mjs';
+// import { getCookieDomain } from './auth';
 
 // Define COOKIE keys
 export const COOKIE_KEYS = {
@@ -38,11 +39,16 @@ function getBaseDomain(): string | null {
 	if (parts.length < 2) {
 		return hostname; // Handle cases like single-word domains if necessary
 	}
+	// Return the parent domain (e.g., example.com) - a leading dot is often implied by browsers
 	return parts.slice(-2).join('.');
 }
 
-// Helper function to set cookies client-side
+// Helper function to set cookies client-side, scoped to the base domain
 export function setCookie(name: string, value: string, days: number = 365): void {
+	if (typeof document === 'undefined') {
+		console.warn('Cannot set cookie outside browser environment');
+		return;
+	}
 	try {
 		let expires = '';
 		if (days) {
@@ -52,8 +58,9 @@ export function setCookie(name: string, value: string, days: number = 365): void
 		}
 		// Add domain based on current hostname for client-side setting
 		const domain = getBaseDomain();
-		const domainAttribute = domain ? `; domain=${domain}` : ''; // Add dot prefix if needed based on browser behavior
-		document.cookie = name + '=' + (value || '') + expires + '; path=/; SameSite=Lax' + domainAttribute;
+		// Setting domain=example.com makes it available to sub.example.com
+		const domainAttribute = domain ? `; domain=${domain}` : '';
+		document.cookie = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
 	} catch (error) {
 		console.error('Failed to set cookie:', name, error);
 	}
@@ -61,16 +68,13 @@ export function setCookie(name: string, value: string, days: number = 365): void
 
 // Helper function to get cookies client-side
 export function getCookie(name: string): string | null {
-	// Check if running in a browser environment
 	if (typeof document === 'undefined') {
 		return null; // document is not available (e.g., server-side rendering)
 	}
 	try {
 		const nameEQ = name + '=';
 		const ca = document.cookie.split(';');
-		// Use for-of loop for cleaner iteration
 		for (let c of ca) {
-			// Trim leading spaces
 			c = c.trimStart();
 			if (c.startsWith(nameEQ)) {
 				return c.substring(nameEQ.length);
@@ -82,6 +86,10 @@ export function getCookie(name: string): string | null {
 		return null;
 	}
 }
+
+// REMOVED: LocalStorage functions
+// export function setLocalStorageItem(...) { ... }
+// export function getLocalStorageItem(...) { ... }
 
 // Define Predefined Color Palettes
 export const PREDEFINED_PALETTES = {
