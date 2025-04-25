@@ -48,6 +48,7 @@
 		"@trpc/client": "^11.1.0",
 		"@trpc/react-query": "^11.1.0",
 		"@trpc/server": "^11.1.0",
+		"@visx/visx": "^3.12.0",
 		"chart.js": "^4.4.9",
 		"chartjs-adapter-date-fns": "^3.0.0",
 		"date-fns": "^4.1.0",
