@@ -2,13 +2,19 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { JSX } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale } from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import 'chartjs-adapter-date-fns'; // Import date adapter
 import { getYear, getDayOfYear as dfnsGetDayOfYear, format as formatDateFns, addDays, startOfYear } from 'date-fns';
-
-// Register Chart.js components including TimeScale
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale);
+import { Group } from '@visx/group';
+import { AreaClosed, LinePath, Bar } from '@visx/shape';
+import { scaleLinear, scaleTime } from '@visx/scale';
+import type { TickFormatter } from '@visx/axis';
+import { AxisLeft, AxisBottom, SharedAxisProps } from '@visx/axis';
+import { GridRows, GridColumns } from '@visx/grid';
+import { curveLinear, curveMonotoneX } from '@visx/curve';
+import { useTooltip, useTooltipInPortal, defaultStyles as defaultTooltipStyles, TooltipWithBounds } from '@visx/tooltip';
+import { localPoint } from '@visx/event';
+import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend';
+import ParentSize from '@visx/responsive/lib/components/ParentSize';
+import type { NumberValue } from '@visx/vendor/d3-scale';
 
 // REMOVED MAX_DOCUMENTS constant, limit now handled by backend
 // export const MAX_DOCUMENTS = 300;
@@ -41,10 +47,53 @@ export type ChartDataApiResponse = {
 // Define the structure for filters state
 type Filters = Record<string, string[]>;
 
+// --- Type Definitions ---
+// MOVE type definitions here
+type ChartPoint = { x: number; y: number };
+type RangePoint = { x: number; yMin: number; yMax: number };
+type TooltipPointData = ChartPoint & { year: number };
+type CombinedTooltipData = {
+	day: number;
+	points: TooltipPointData[];
+	// Allow range to be RangePoint or null/undefined
+	range?: RangePoint | null;
+};
+
 // --- Component Props ---
 interface DataPlatformPreviewProps {
 	onClose: () => void;
 }
+
+// --- Helper Functions ---
+
+// FIX: Add explicit return types
+// FIX: Simplify signature - index is not used
+const formatDayOfYearForAxis: TickFormatter<NumberValue> = (dayValue: NumberValue): string => {
+	const day = typeof dayValue === 'number' ? dayValue : dayValue.valueOf();
+	// Use a non-leap year like 2001 as a reference for formatting
+	const referenceDate = new Date(2001, 0, 1);
+	const dateToShow = addDays(referenceDate, day - 1);
+	return formatDateFns(dateToShow, 'MMM d');
+};
+
+// Define accessor functions for visx - types added
+const getX = (d: ChartPoint | RangePoint): number => d.x;
+const getY = (d: ChartPoint): number => d.y;
+const getMinY = (d: RangePoint): number => d.yMin;
+const getMaxY = (d: RangePoint): number => d.yMax;
+
+// Tooltip styles - can be outside
+const tooltipStyles = {
+	...defaultTooltipStyles,
+	backgroundColor: 'rgba(50,50,50,0.8)',
+	color: 'white',
+	padding: '0.5rem',
+	borderRadius: '4px',
+	fontSize: '12px',
+};
+
+// Define margin for the chart - can be outside
+const chartMargin = { top: 40, right: 30, bottom: 50, left: 60 };
 
 // --- Component Logic ---
 export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProps): JSX.Element {
@@ -62,14 +111,17 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	const [error, setError] = useState<string | null>(null);
 	const [activeChartTab, setActiveChartTab] = useState<string | null>(null);
 	const [lastFetchTime, setLastFetchTime] = useState<Record<string, number>>({});
+	// NEW: State to track hidden datasets (using the label as the key)
+	const [hiddenDatasets, setHiddenDatasets] = useState<Set<string>>(new Set());
 
-	// Helper to format day of year for axis label
-	const formatDayOfYearForAxis = (day: number): string => {
-		// Use a non-leap year like 2001 as a reference for formatting
-		const referenceDate = new Date(2001, 0, 1);
-		const dateToShow = addDays(referenceDate, day - 1);
-		return formatDateFns(dateToShow, 'MMM d');
-	};
+	// REMOVED: Helper functions moved outside component scope
+	// const formatDayOfYearForAxis = ...
+	// const getX = ...
+	// const getY = ...
+	// const getMinY = ...
+	// const getMaxY = ...
+	// const tooltipStyles = ...
+	// const chartMargin = ...
 
 	// Generate cache key based on active filters (time range no longer needed for data fetch)
 	const getCacheKey = useCallback(
@@ -313,10 +365,24 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		if (tabKey !== activeChartTab) {
 			setChangingChartTabVisual(true);
 			setActiveChartTab(tabKey);
+			setHiddenDatasets(new Set()); // Reset hidden datasets when tab changes
 			setTimeout(() => {
 				setChangingChartTabVisual(false);
 			}, 300);
 		}
+	};
+
+	// NEW: Handler for legend item click
+	const handleLegendClick = (label: string): void => {
+		setHiddenDatasets((prevHidden) => {
+			const newHidden = new Set(prevHidden);
+			if (newHidden.has(label)) {
+				newHidden.delete(label);
+			} else {
+				newHidden.add(label);
+			}
+			return newHidden;
+		});
 	};
 
 	// Format raw data points for Chart.js, grouping by year, adding min/max overlay
@@ -367,6 +433,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			'rgba(255, 159, 64, 0.8)', // Orange
 		];
 		const currentYearColor = 'rgba(255, 99, 132, 0.8)'; // Red
+		const rangeFillColor = 'rgba(173, 216, 230, 0.4)'; // Light Blue fill for range
 
 		const yearColors: Record<number, string> = {};
 		let colorIndex = 0;
@@ -380,87 +447,55 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			}
 		});
 
-		// Calculate Min/Max for previous years
-		const minMaxData: { x: number; yMin: number; yMax: number }[] = [];
+		// Calculate Min/Max for previous years THAT ARE NOT HIDDEN
+		const minMaxData: RangePoint[] = [];
 		const previousYears = sortedYears.filter((y) => y < currentYear);
+		const rangeLabel = `Range (${previousYears.join(', ')})`; // Calculate range label once
 
-		if (previousYears.length > 0) {
-			// Group data by day of year across previous years
-			const dayValues: Record<number, number[]> = {};
-			previousYears.forEach((year) => {
-				dataByYear[year]?.forEach((point) => {
-					dayValues[point.x] ??= [];
-					dayValues[point.x].push(point.y);
-				});
-			});
+		// Only calculate range if there are previous years and the range itself isn't hidden
+		if (previousYears.length > 0 && !hiddenDatasets.has(rangeLabel)) {
+			// Consider only non-hidden previous years for min/max calculation
+			const visiblePreviousYears = previousYears.filter((year) => !hiddenDatasets.has(String(year)));
 
-			// Calculate min/max for each day
-			for (let day = 1; day <= 366; day++) {
-				const valuesForDay = dayValues[day]; // Explicitly get the array
-				// Explicitly check if the array is defined and not empty
-				if (typeof valuesForDay !== 'undefined' && valuesForDay.length > 0) {
-					minMaxData.push({
-						x: day,
-						yMin: Math.min(...valuesForDay),
-						yMax: Math.max(...valuesForDay),
+			if (visiblePreviousYears.length > 0) {
+				const dayValues: Record<number, number[]> = {};
+				visiblePreviousYears.forEach((year) => {
+					dataByYear[year]?.forEach((point) => {
+						dayValues[point.x] ??= [];
+						dayValues[point.x].push(point.y);
 					});
+				});
+
+				// Calculate min/max for each day using only visible previous years
+				for (let day = 1; day <= 366; day++) {
+					const valuesForDay = dayValues[day];
+					if (typeof valuesForDay !== 'undefined' && valuesForDay.length > 0) {
+						minMaxData.push({
+							x: day,
+							yMin: Math.min(...valuesForDay),
+							yMax: Math.max(...valuesForDay),
+						});
+					}
 				}
+				minMaxData.sort((a, b) => a.x - b.x); // Ensure sorted by day
 			}
-			minMaxData.sort((a, b) => a.x - b.x); // Ensure sorted by day
 		}
 
-		const datasets: any[] = sortedYears.map((year) => ({
-			label: String(year) + (year === currentYear ? ' (Current)' : ''),
-			data: dataByYear[year],
-			borderColor: yearColors[year],
-			backgroundColor: yearColors[year].replace('0.8', '0.2'),
-			tension: 0.1,
-			pointRadius: year === currentYear ? 1.5 : 0, // Smaller points for current year, none for past
-			pointHoverRadius: 5,
-			borderWidth: year === currentYear ? 2 : 1.5, // Thicker line for current year
-			order: year === currentYear ? 0 : 1, // Ensure current year renders on top
-		}));
+		// Create datasets for yearly lines
+		const datasets = sortedYears.map((year) => {
+			const yearLabel = String(year) + (year === currentYear ? ' (Current)' : '');
+			return {
+				label: yearLabel,
+				// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+				data: dataByYear[year] || [], // Ensure data is an empty array if year has no data
+				color: yearColors[year],
+				isCurrentYear: year === currentYear,
+			};
+		});
 
-		// Add Min/Max Range datasets if data exists
-		if (minMaxData.length > 0) {
-			// Create separate datasets for min and max points
-			const minDataPoints = minMaxData.map((d) => ({ x: d.x, y: d.yMin }));
-			const maxDataPoints = minMaxData.map((d) => ({ x: d.x, y: d.yMax }));
-
-			// Add invisible dataset for the minimum boundary
-			datasets.push({
-				label: 'Min Boundary', // Internal label, won't show
-				data: minDataPoints,
-				borderColor: 'transparent',
-				backgroundColor: 'transparent',
-				pointRadius: 0,
-				pointHoverRadius: 0,
-				borderWidth: 0,
-				tension: 0.1,
-				fill: false, // Don't fill this line itself
-				showInLegend: false, // Hide from legend
-				order: 3, // Render behind everything else relevant
-			});
-
-			const minDatasetIndex = datasets.length - 1; // Get index of the min dataset just added
-
-			// Add the visible dataset for the maximum boundary, filling down to the min dataset
-			datasets.push({
-				label: `Range (${previousYears.join(', ')})`, // Visible label
-				data: maxDataPoints,
-				borderColor: 'transparent', // No border for the fill area itself
-				backgroundColor: 'rgba(173, 216, 230, 0.4)', // Light Blue fill
-				pointRadius: 0,
-				pointHoverRadius: 0,
-				borderWidth: 0,
-				tension: 0.1,
-				fill: minDatasetIndex, // Fill to the index of the min dataset
-				order: 2, // Render behind main lines but above min boundary if needed
-			});
-		}
-
-		return { datasets, labels: Array.from({ length: 366 }, (_, i) => i + 1) }; // Add labels for the x-axis (days 1-366)
-	}, [rawDataPoints, activeChartTab]);
+		// Return datasets and the calculated min/max range data
+		return { datasets, minMaxData, rangeLabel, rangeFillColor, hasPreviousYears: previousYears.length > 0 };
+	}, [rawDataPoints, activeChartTab, hiddenDatasets]); // Add hiddenDatasets dependency
 
 	const getYAxisLabel = (dataType: string): string => {
 		const formattedName = dataType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
@@ -470,6 +505,100 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		if (/size|weight|height|width|length|duration|age/i.test(dataType)) return formattedName;
 		return formattedName; // Default fallback
 	};
+
+	// --- Tooltip Hook ---
+	const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<CombinedTooltipData>();
+	const { containerRef, TooltipInPortal } = useTooltipInPortal({
+		// use TooltipInPortal for better positioning at edges
+		scroll: true, // enable scroll tracking
+	});
+
+	// --- Handle Tooltip ---
+	const handleTooltip = useCallback(
+		(event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>, chartWidth: number, chartHeight: number, xScale: any, yScale: any) => {
+			const { x } = localPoint(event) ?? { x: 0 }; // FIX: Use nullish coalescing
+			const x0 = xScale.invert(x - chartMargin.left); // Get the day of year from the mouse position
+			const dayOfYear = Math.round(x0); // Round to nearest day
+
+			// Use optional chaining for safety
+			const formattedData = getFormattedChartData;
+			if (dayOfYear < 1 || dayOfYear > 366 || !formattedData?.datasets || !rawDataPoints) {
+				hideTooltip();
+				return;
+			}
+
+			// Find the closest data points across all VISIBLE years for this day
+			const closestPoints: TooltipPointData[] = [];
+			formattedData.datasets
+				.filter((ds) => !hiddenDatasets.has(ds.label)) // Exclude hidden datasets
+				.forEach((dataset) => {
+					const year = parseInt(dataset.label.split(' ')[0], 10); // Extract year from label
+					if (isNaN(year)) return;
+
+					let minDist = Infinity;
+					let closestPointForYear: TooltipPointData | null = null;
+
+					dataset.data.forEach((point: ChartPoint) => {
+						const dist = Math.abs(point.x - dayOfYear);
+						if (dist < minDist) {
+							minDist = dist;
+							closestPointForYear = { ...point, year };
+						}
+					});
+
+					// Only show tooltip if the closest point is reasonably close (e.g., within 1 day)
+					// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+					if (closestPointForYear && minDist <= 1) {
+						closestPoints.push(closestPointForYear);
+					}
+				});
+
+			// Check if the mouse is over the VISIBLE min/max range area
+			let rangeData: RangePoint | null = null;
+			// Check if range should be displayed and data exists
+			if (!hiddenDatasets.has(formattedData.rangeLabel) && formattedData.minMaxData.length > 0) {
+				const closestRangePoint = formattedData.minMaxData.find((d) => Math.abs(d.x - dayOfYear) <= 0.5); // Find range data for the day
+				if (closestRangePoint) {
+					const { y } = localPoint(event) ?? { y: 0 }; // FIX: Use nullish coalescing
+					const yValue = yScale.invert(y - chartMargin.top);
+					// Check if pointer y is within the min/max range for that day
+					if (yValue >= closestRangePoint.yMin && yValue <= closestRangePoint.yMax) {
+						rangeData = closestRangePoint; // Store the range data if hovered
+					}
+				}
+			}
+
+			if (closestPoints.length > 0 || rangeData) {
+				// Combine point data and range data for tooltip
+				const combinedTooltipData: CombinedTooltipData = {
+					day: dayOfYear,
+					points: closestPoints.sort((a, b) => b.year - a.year), // Sort points by year desc
+					range: rangeData, // Add range data if available
+				};
+
+				// Determine tooltip position based on available data
+				let tooltipYValue: number;
+				if (rangeData) {
+					tooltipYValue = rangeData.yMax; // Position near the top of the range if hovering range
+				} else if (closestPoints.length > 0) {
+					// Find the highest Y value among the closest points for positioning
+					tooltipYValue = Math.max(...closestPoints.map((p) => p.y));
+				} else {
+					// Fallback position (should ideally not be reached if hideTooltip logic is correct)
+					tooltipYValue = 0;
+				}
+
+				showTooltip({
+					tooltipData: combinedTooltipData,
+					tooltipLeft: x,
+					tooltipTop: yScale(tooltipYValue), // Use calculated Y value
+				});
+			} else {
+				hideTooltip();
+			}
+		},
+		[getFormattedChartData, rawDataPoints, showTooltip, hideTooltip, hiddenDatasets] // Add hiddenDatasets dependency
+	);
 
 	const isLoading = loadingFilters || loadingChartData;
 
@@ -640,86 +769,285 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 							) : activeChartTab && getFormattedChartData ? (
 								// Active Chart Rendering
 								<div className='flex-grow h-[400px] relative'>
-									<Line
-										data={getFormattedChartData}
-										options={{
-											responsive: true,
-											maintainAspectRatio: false,
-											plugins: {
-												legend: { position: 'top' as const },
-												title: {
-													display: true,
-													text: activeChartTab ? getYAxisLabel(activeChartTab) : 'Raw Data Over Time', // Use helper for dynamic title
-													font: { size: 16, weight: 'bold' },
-												},
-												tooltip: {
-													// Customize tooltips
-													callbacks: {
-														title: (tooltipItems) => {
-															// Show Month Day in tooltip title
-															if (tooltipItems.length > 0) {
-																const day = tooltipItems[0].parsed.x;
-																return formatDayOfYearForAxis(day);
-															}
-															return '';
-														},
-														label: (context) => {
-															// Show Year, Value in tooltip body
-															const label = context.dataset.label ?? '';
-															const value = context.parsed.y;
-															// Exclude min/max range datasets from regular label display
-															if (label.startsWith('Range (') || label === 'Min Boundary') return; // Return undefined (void)
-															return `${label}: ${value}`;
-														},
-													},
-													mode: 'index', // Show tooltip for all datasets at that index
-													intersect: false, // Trigger tooltip even when not hovering directly over point
-												},
-											},
-											scales: {
-												x: {
-													type: 'linear', // Change to linear scale for Day of Year
-													min: 1,
-													max: 366,
-													ticks: {
-														font: { size: 12 },
-														maxRotation: 45,
-														minRotation: 0,
-														// Show Month Day on ticks using the helper
-														callback: (value) => formatDayOfYearForAxis(Number(value)),
-														stepSize: 30, // Adjust step size for readability (approx monthly)
-													},
-													title: {
-														display: true,
-														text: 'Day of Year', // Updated X-Axis Title
-														font: { size: 14, weight: 'bold' },
-													},
-												},
-												y: {
-													ticks: { font: { size: 12 } },
-													title: {
-														display: true,
-														text: 'Value', // Simple Y-Axis Title
-														font: { size: 14, weight: 'bold' },
-													},
-												},
-											},
-											// Disable animations for potentially large datasets
-											animations: {} as any,
-											// Add interaction modes
-											interaction: {
-												mode: 'index',
-												intersect: false,
-											},
-											hover: {
-												mode: 'index',
-												intersect: false,
-											},
+									<ParentSize>
+										{({ width, height }) => {
+											// Use optional chaining and nullish coalescing
+											const formattedData = getFormattedChartData;
+											// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+											if (width === 0 || height === 0 || !formattedData || !activeChartTab) {
+												return <div className='w-full h-full flex items-center justify-center text-muted-foreground'>Initializing chart...</div>;
+											}
+
+											// Adjust dimensions for margins
+											const innerWidth = width - chartMargin.left - chartMargin.right;
+											const innerHeight = height - chartMargin.top - chartMargin.bottom;
+
+											if (innerWidth <= 0 || innerHeight <= 0) {
+												return <div className='w-full h-full flex items-center justify-center text-muted-foreground'>Chart area too small.</div>;
+											}
+
+											// Define Scales
+											const xScale = scaleLinear<number>({
+												domain: [1, 366], // Day of Year 1 to 366
+												range: [0, innerWidth],
+											});
+
+											// FIX: Find min/max Y ONLY from VISIBLE yearly data and VISIBLE range data
+											let minY = Infinity;
+											let maxY = -Infinity;
+
+											// Include visible yearly datasets
+											const visibleYearlyDatasets = formattedData.datasets.filter((ds) => !hiddenDatasets.has(ds.label));
+											visibleYearlyDatasets.forEach((dataset) => {
+												dataset.data.forEach((d: ChartPoint) => {
+													const yVal = getY(d);
+													if (yVal < minY) minY = yVal;
+													if (yVal > maxY) maxY = yVal;
+												});
+											});
+
+											// Include visible range data if it exists
+											if (!hiddenDatasets.has(formattedData.rangeLabel) && formattedData.minMaxData.length > 0) {
+												formattedData.minMaxData.forEach((d) => {
+													if (d.yMin < minY) minY = d.yMin;
+													if (d.yMax > maxY) maxY = d.yMax;
+												});
+											}
+
+											// Refined check: if after all checks, minY is still Infinity, there's truly no data.
+											if (minY === Infinity) {
+												minY = 0;
+												maxY = 1; // Default scale if absolutely no data points found
+											}
+
+											// Add padding to y-axis scale based on actual data range
+											const yPadding = (maxY - minY) * 0.1 || 1; // Add 10% padding, or 1 if range is 0
+											// Ensure minY doesn't go below 0 unless data is negative, but allow calculated min if it's already negative
+											minY = minY < 0 ? minY - yPadding : Math.max(0, minY - yPadding);
+											maxY = maxY + yPadding;
+
+											const yScale = scaleLinear<number>({
+												domain: [minY, maxY],
+												range: [innerHeight, 0], // Flipped for SVG coordinates
+												nice: true, // Adjust scale to nice round numbers
+											});
+
+											// Prepare legend items (include range if it exists)
+											const legendItems = formattedData.datasets
+												.map((ds) => ({
+													label: ds.label,
+													color: ds.color,
+												}))
+												.sort((a, b) => {
+													// Sort legend: Current year first, then others descending
+													const yearA = a.label.includes('Current') ? Infinity : parseInt(a.label.split(' ')[0], 10);
+													const yearB = b.label.includes('Current') ? Infinity : parseInt(b.label.split(' ')[0], 10);
+													return yearB - yearA;
+												});
+
+											// Add range item if it exists
+											const showRange = formattedData.hasPreviousYears;
+
+											return (
+												<>
+													{/* Legend */}
+													<div className='absolute top-0 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-x-4 gap-y-1 p-1 text-xs'>
+														{legendItems.map((item) => {
+															const isHidden = hiddenDatasets.has(item.label);
+															return (
+																<LegendItem
+																	key={`legend-${item.label}`}
+																	className={`flex items-center cursor-pointer ${isHidden ? 'opacity-50' : ''}`}
+																	onClick={() => {
+																		handleLegendClick(item.label);
+																	}}
+																>
+																	<svg width={14} height={14} className='mr-1'>
+																		<rect width={14} height={14} fill={item.color} />
+																		{isHidden && <line x1='0' y1='7' x2='14' y2='7' stroke='black' strokeWidth='2' />}
+																	</svg>
+																	<LegendLabel style={{ textDecoration: isHidden ? 'line-through' : 'none' }}>{item.label}</LegendLabel>
+																</LegendItem>
+															);
+														})}
+														{/* Range Legend Item */}
+														{
+															showRange &&
+																(() => {
+																	// IIFE to handle isHidden logic cleanly
+																	const isHidden = hiddenDatasets.has(formattedData.rangeLabel);
+																	return (
+																		<LegendItem
+																			key={`legend-range`}
+																			className={`flex items-center cursor-pointer ${isHidden ? 'opacity-50' : ''}`}
+																			onClick={() => {
+																				handleLegendClick(formattedData.rangeLabel);
+																			}}
+																		>
+																			<svg width={14} height={14} className='mr-1'>
+																				<rect width={14} height={14} fill={formattedData.rangeFillColor} stroke='rgba(0,0,0,0.2)' strokeWidth={1} />
+																				{isHidden && <line x1='0' y1='7' x2='14' y2='7' stroke='black' strokeWidth='2' />}
+																			</svg>
+																			<LegendLabel style={{ textDecoration: isHidden ? 'line-through' : 'none' }}>{formattedData.rangeLabel}</LegendLabel>
+																		</LegendItem>
+																	);
+																})() // Immediately invoke the function expression
+														}
+													</div>
+
+													<svg ref={containerRef} width={width} height={height}>
+														<Group left={chartMargin.left} top={chartMargin.top}>
+															{/* Grid */}
+															<GridRows scale={yScale} width={innerWidth} stroke='#e0e0e0' strokeOpacity={0.3} pointerEvents='none' />
+															<GridColumns scale={xScale} height={innerHeight} stroke='#e0e0e0' strokeOpacity={0.3} pointerEvents='none' />
+
+															{/* Axes */}
+															<AxisBottom
+																top={innerHeight}
+																scale={xScale}
+																numTicks={innerWidth > 520 ? 12 : 6} // Adjust ticks based on width
+																tickFormat={formatDayOfYearForAxis}
+																label='Day of Year'
+																labelProps={{
+																	fontSize: 14,
+																	fill: '#333',
+																	textAnchor: 'middle',
+																	dy: '2.5em', // Adjust vertical position
+																}}
+																tickLabelProps={(value, index) => ({
+																	fontSize: 11,
+																	textAnchor: 'middle',
+																	dy: '0.25em',
+																	angle: innerWidth < 400 ? 45 : 0, // Angle ticks on small screens
+																})}
+																stroke='#333'
+																tickStroke='#333'
+															/>
+															<AxisLeft
+																scale={yScale}
+																numTicks={5}
+																label={getYAxisLabel(activeChartTab)}
+																labelProps={{
+																	fontSize: 14,
+																	fill: '#333',
+																	textAnchor: 'middle',
+																	dy: '-3em', // Adjust vertical position
+																	dx: '-3em', // Adjust horizontal position
+																	angle: -90, // Rotate label
+																}}
+																tickLabelProps={() => ({
+																	fontSize: 11,
+																	textAnchor: 'end',
+																	dx: '-0.25em',
+																	dy: '0.25em',
+																})}
+																stroke='#333'
+																tickStroke='#333'
+															/>
+
+															{/* Data Lines and Area */}
+															{/* Render Area for Min/Max Range first if visible */}
+															{showRange && !hiddenDatasets.has(formattedData.rangeLabel) && (
+																<AreaClosed<RangePoint>
+																	key={`area-range`}
+																	data={formattedData.minMaxData}
+																	yScale={yScale}
+																	x={(d) => xScale(getX(d)) ?? 0}
+																	y0={(d) => yScale(getMinY(d)) ?? 0}
+																	y1={(d) => yScale(getMaxY(d)) ?? 0}
+																	fill={formattedData.rangeFillColor}
+																	curve={curveLinear} // Use linear curve for range
+																	opacity={0.7}
+																/>
+															)}
+
+															{/* Render Line Paths for visible yearly data */}
+															{formattedData.datasets
+																.filter((ds) => !hiddenDatasets.has(ds.label)) // Filter hidden datasets
+																.map((dataset) => {
+																	return <LinePath<ChartPoint> key={`line-${dataset.label}`} data={dataset.data} x={(d) => xScale(getX(d)) ?? 0} y={(d) => yScale(getY(d)) ?? 0} stroke={dataset.color} strokeWidth={dataset.isCurrentYear ? 2 : 1.5} strokeOpacity={0.9} curve={curveMonotoneX} shapeRendering='geometricPrecision' />;
+																})}
+
+															{/* Tooltip Trigger Area */}
+															<Bar
+																x={0}
+																y={0}
+																width={innerWidth}
+																height={innerHeight}
+																fill='transparent'
+																rx={14}
+																onTouchStart={(event) => {
+																	handleTooltip(event, width, height, xScale, yScale);
+																}}
+																onTouchMove={(event) => {
+																	handleTooltip(event, width, height, xScale, yScale);
+																}}
+																onMouseMove={(event) => {
+																	handleTooltip(event, width, height, xScale, yScale);
+																}}
+																onMouseLeave={() => {
+																	hideTooltip();
+																}}
+															/>
+
+															{/* Optional: Circle marker for hovered points */}
+															{tooltipOpen && tooltipData?.points && tooltipData.points.length > 0 && (
+																<Group>
+																	{/* Only render markers for visible points in the tooltip */}
+																	{tooltipData.points.map((point: TooltipPointData) => (
+																		<circle
+																			key={`marker-${point.year}`}
+																			cx={xScale(point.x)}
+																			cy={yScale(point.y)}
+																			r={4}
+																			// FIX: Use nullish coalescing and lookup color from formattedData
+																			fill={formattedData.datasets.find((ds) => ds.label.startsWith(String(point.year)))?.color ?? 'black'}
+																			stroke='white'
+																			strokeWidth={1}
+																			pointerEvents='none'
+																		/>
+																	))}
+																</Group>
+															)}
+														</Group>
+													</svg>
+
+													{/* Tooltip */}
+													{tooltipOpen && tooltipData && (
+														<TooltipInPortal top={tooltipTop} left={tooltipLeft} style={tooltipStyles}>
+															{/* FIX: Simplify conditional checks for tooltip data */}
+															{/* FIX: Add missing index argument to formatDayOfYearForAxis - Fixed by simplifying function */}
+															{/* FIX: Pass dummy args to satisfy TickFormatter type signature */}
+															<div style={{ marginBottom: '5px', fontWeight: 'bold' }}>{formatDayOfYearForAxis(tooltipData.day, 0, [])}</div>
+															{tooltipData.range && ( // Show range first if it exists
+																<div>
+																	{/* Find range label dynamically */}
+																	Range ({/\(([^)]+)\)/.exec(formattedData?.rangeLabel)?.[1] ?? ''}):{' '}
+																	<strong>
+																		{tooltipData.range.yMin.toFixed(2)} - {tooltipData.range.yMax.toFixed(2)}
+																	</strong>
+																</div>
+															)}
+															{tooltipData.points.map((point: TooltipPointData) => (
+																<div key={point.year}>
+																	{point.year}: <strong>{point.y.toFixed(2)}</strong>
+																</div>
+															))}
+														</TooltipInPortal>
+													)}
+												</>
+											);
 										}}
-									/>
-									{/* Overlay for chart tab switching indicator */}
+									</ParentSize>
+									{/* REMOVE: Chart.js options and overlay */}
+									{/* <Line
+										data={getFormattedChartData}
+										options={{ ... }}
+									/> */}
 									{changingChartTabVisual ? (
-										<div className='absolute inset-0 bg-background/40 flex items-center justify-center'>
+										<div className='absolute inset-0 bg-background/40 flex items-center justify-center z-20'>
+											{' '}
+											{/* Ensure overlay is on top */}
 											<p className='text-muted-foreground text-lg'>Switching chart...</p>
 										</div>
 									) : null}
@@ -739,6 +1067,12 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 						<p>
 							Filters show distinct values from the {totalDocuments} matching documents.
 							{chartLimitExceeded ? ' Charts disabled due to dataset size.' : canShowChartBasedOnFilters ? ` Charts display raw data points over time (${rawDataPoints ? rawDataPoints.length : 0} points shown).` : ' Apply all available filters to enable charts.'}
+							{/* Add note about hidden datasets */}
+							{getFormattedChartData && hiddenDatasets.size > 0 && (
+								<span className='ml-1 text-muted-foreground/80'>
+									({hiddenDatasets.size} dataset{hiddenDatasets.size > 1 ? 's' : ''} hidden via legend)
+								</span>
+							)}
 						</p>
 					</div>
 				</div>
