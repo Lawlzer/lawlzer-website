@@ -75,10 +75,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 	if (filtersParam) {
 		try {
 			inputFilters = JSON.parse(filtersParam);
+			console.log('[Filters API] Received filters param:', filtersParam);
+			console.log('[Filters API] Parsed inputFilters:', JSON.stringify(inputFilters));
+			console.log('[Filters API] Parsed inputFilter Keys:', Object.keys(inputFilters));
 		} catch (error) {
 			console.error('Failed to parse filters:', error);
 			return NextResponse.json({ error: 'Invalid filters format' }, { status: 400 });
 		}
+	} else {
+		console.log('[Filters API] No filters param received.');
 	}
 
 	try {

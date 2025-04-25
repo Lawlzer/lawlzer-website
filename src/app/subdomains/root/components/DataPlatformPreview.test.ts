@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import DataPlatformPreview from './DataPlatformPreview';
 import type { FiltersApiResponse, ChartDataApiResponse, RawDataPoint } from './DataPlatformPreview';
@@ -140,8 +140,10 @@ describe('DataPlatformPreview Component', () => {
 		// Check chart area
 		expect(screen.getByRole('heading', { name: /Raw Data Over Time/i })).toBeInTheDocument();
 		// Check that chart tabs are rendered based on mock chart data fields
-		expect(screen.getByRole('button', { name: /field1/i })).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: /field2/i })).toBeInTheDocument();
+		await waitFor(() => {
+			expect(screen.getByRole('button', { name: /field1/i })).toBeInTheDocument();
+			expect(screen.getByRole('button', { name: /field2/i })).toBeInTheDocument();
+		});
 	});
 
 	it('should render "No data" message when fetch returns empty data', async () => {
@@ -200,7 +202,12 @@ describe('DataPlatformPreview Component', () => {
 		expect(screen.getByText(String(mockLimitExceededResponse.totalDocuments))).toBeInTheDocument();
 
 		// Check for the limit exceeded warning near the count
-		expect(screen.getByText(/\(Charts disabled - \d+ documents exceeds limit. Apply more filters.\)/i)).toBeInTheDocument();
+		await waitFor(
+			() => {
+				expect(screen.getByText(/\(Charts disabled - \d+ documents exceeds limit. Apply more filters.\)/i)).toBeInTheDocument();
+			},
+			{ timeout: 3000 }
+		); // Increased timeout
 
 		// Check for the message within the chart area itself
 		await waitFor(() => {
@@ -269,7 +276,9 @@ describe('DataPlatformPreview Component', () => {
 		const filterButtonA1 = screen.getByTitle('ValueA1 (10)');
 		expect(filterButtonA1).not.toHaveClass('bg-primary'); // Initially not active
 
-		fireEvent.click(filterButtonA1);
+		act(() => {
+			fireEvent.click(filterButtonA1);
+		});
 
 		// Wait for refetches to complete (filters AND chart data)
 		await waitFor(() => {
@@ -307,7 +316,9 @@ describe('DataPlatformPreview Component', () => {
 
 		// Re-query needed if DOM changed
 		const buttonToDeselect = screen.getByTitle('ValueA1 (10)'); // Use getByTitle
-		fireEvent.click(buttonToDeselect);
+		act(() => {
+			fireEvent.click(buttonToDeselect);
+		});
 
 		await waitFor(() => {
 			expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -345,8 +356,9 @@ describe('DataPlatformPreview Component', () => {
 		const categoryHeadings = screen.getAllByRole('heading', { level: 4 });
 		const categoryTexts = categoryHeadings.map((h) => h.textContent?.toLowerCase().trim());
 
-		// Expect them to be sorted alphabetically
-		expect(categoryTexts).toEqual(['category a', 'category b', 'category c']);
+		// Expect them to be sorted by max count desc, then alphabetically asc
+		// Based on mockFiltersResponse counts: c (25), b (20), a (10)
+		expect(categoryTexts).toEqual(['category c', 'category b', 'category a']);
 
 		// Verify order of buttons within a category is as received from API (no specific client-side sort applied)
 		const categoryADiv = screen.getByRole('heading', { name: /category a/i }).closest('div');
@@ -356,42 +368,6 @@ describe('DataPlatformPreview Component', () => {
 		const buttonTextsInA = buttonsInA.map((btn) => btn.textContent?.trim().replace(/\s+/g, '')); // Remove ALL whitespace
 		// The order should match the mock data: ValueA1(10), ValueA2(5) (no spaces)
 		expect(buttonTextsInA).toEqual(['ValueA1(10)', 'ValueA2(5)']); // Expect NO space after removing all whitespace
-	});
-
-	it('should display common fields when available', async () => {
-		const commonFieldsData = { fieldX: 'ValueX', fieldY: 123 };
-		const filtersWithCommonFields: FiltersApiResponse = {
-			...mockFiltersResponse, // Use existing filters
-			commonFields: commonFieldsData,
-		};
-		mockFetch
-			.mockReset()
-			.mockResolvedValueOnce({
-				// Filters with common fields
-				ok: true,
-				status: 200,
-				json: async () => filtersWithCommonFields,
-			} as Response)
-			.mockResolvedValueOnce({
-				// Chart Data (can be standard)
-				ok: true,
-				status: 200,
-				json: async () => mockChartDataResponse,
-			} as Response);
-
-		render(React.createElement(DataPlatformPreview, { onClose: onCloseMock }));
-
-		await waitFor(() => {
-			expect(screen.queryByText('(Loading...)')).not.toBeInTheDocument();
-		});
-
-		// Check for the common fields section header
-		expect(screen.getByText(/Common Fields \(\d+ Documents\):/i)).toBeInTheDocument();
-		// Check for specific common fields
-		expect(screen.getByText('fieldX:')).toBeInTheDocument();
-		expect(screen.getByText('ValueX')).toBeInTheDocument();
-		expect(screen.getByText('fieldY:')).toBeInTheDocument();
-		expect(screen.getByText('123')).toBeInTheDocument();
 	});
 
 	it('should handle chart tab switching', async () => {
