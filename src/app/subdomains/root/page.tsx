@@ -9,12 +9,14 @@ import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl
 import DataPlatformPreview from './components/DataPlatformPreview'; // Import the new component
 
 export default function MainPage(): JSX.Element {
-	// State for controlling the overlay
-	const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+	// State for controlling the overlay and selected card ID
+	const [selectedId, setSelectedId] = useState<string | null>(null); // Changed state
 
 	// Get the base URL and extract the hostname
 	const fullUrl = getBaseUrl();
 	const hostname = new URL(fullUrl).hostname;
+
+	const dataPlatformCardId = 'data-platform-card'; // Define layout ID
 
 	return (
 		<div className='flex flex-col flex-grow w-full p-4 sm:p-6 md:p-8 text-primary-text overflow-y-auto'>
@@ -82,14 +84,15 @@ export default function MainPage(): JSX.Element {
 
 					{/* Project 2: Data Platform */}
 					<motion.div
+						layoutId={dataPlatformCardId} // Add layoutId
 						initial={{ opacity: 0, x: -100 }}
 						whileInView={{ opacity: 1, x: 0 }}
 						viewport={{ once: true, amount: 0.2 }}
-						transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }} // Added slight delay
-						className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col cursor-pointer hover:shadow-xl transition-shadow' // Added cursor-pointer and hover effect
+						transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }} // Kept original in-view transition
+						className='bg-secondary rounded-lg shadow-lg p-6 border border-border flex flex-col cursor-pointer hover:shadow-xl transition-shadow'
 						onClick={() => {
-							setIsOverlayOpen(true);
-						}} // Add onClick handler
+							setSelectedId(dataPlatformCardId);
+						}} // Set selected ID on click
 					>
 						<Image
 							src='/placeholder.png'
@@ -169,24 +172,59 @@ export default function MainPage(): JSX.Element {
 
 			{/* Data Platform Overlay */}
 			<AnimatePresence>
-				{isOverlayOpen && (
+				{selectedId === dataPlatformCardId && ( // Check if the data platform card is selected
 					<motion.div
+						// Overlay background fades in
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.3 }}
 						className='fixed inset-0 bg-black/70 flex items-center justify-center p-0 sm:p-4 z-50'
 						onClick={() => {
-							setIsOverlayOpen(false);
+							setSelectedId(null);
 						}} // Close on background click
 					>
-						{/* Prevent content click from closing overlay */}
-						<motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ duration: 0.2, delay: 0.1 }} className='w-full h-full max-h-screen flex items-center justify-center'>
-							<DataPlatformPreview
-								onClose={() => {
-									setIsOverlayOpen(false);
+						{/* This motion.div is the expanding element linked by layoutId */}
+						<motion.div
+							layoutId={dataPlatformCardId} // Use the same layoutId
+							// Prevent content click from closing overlay by stopping propagation
+							onClick={(e) => {
+								e.stopPropagation();
+							}}
+							// Apply styles similar to the card but allow it to expand, constrained size (even larger)
+							className='relative bg-secondary rounded-lg shadow-xl border border-border max-w-[90vw] w-11/12 max-h-[98vh] overflow-hidden flex flex-col' // Increased size again
+							// Add transition for the layout animation itself
+							transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }} // Example cubic bezier for smooth expand/collapse
+						>
+							{/* Close Button */}
+							<button
+								type='button'
+								onClick={(e) => {
+									e.stopPropagation(); // Prevent background click
+									setSelectedId(null);
 								}}
-							/>
+								className='absolute top-3 right-3 z-10 p-2 rounded-full bg-background/60 text-foreground hover:bg-background/80 focus:outline-none focus:ring-2 focus:ring-ring transition-colors'
+								aria-label='Close data platform details'
+							>
+								<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor' className='w-5 h-5'>
+									<path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
+								</svg>
+							</button>
+
+							{/* Wrap content to manage internal layout and potentially fade in */}
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.2, delay: 0.15 }} // Content fades in slightly after expansion
+								className='w-full h-full overflow-y-auto' // Allow internal scrolling if needed
+							>
+								<DataPlatformPreview
+									onClose={() => {
+										setSelectedId(null);
+									}}
+								/>
+							</motion.div>
 						</motion.div>
 					</motion.div>
 				)}
