@@ -74,21 +74,26 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
-model DataDocument {
-    id        String      @id @default(auto()) @map("_id") @db.ObjectId
-    entries   DataEntry[]
-    createdAt DateTime    @default(now())
-}
+model CommodityData {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    unixDate    Int      // Store timestamp as milliseconds since epoch (using Int)
+    type        String   // e.g., "Cattle", "Hogs", "Barley"
+    category    String   // e.g., "Livestock", "Crop", "Produce"
+    country     String
+    state       String?  // Optional, only for USA relevant types
+    // Specific numerical fields - adjust based on all possible fields in dataTypeConfigs
+    exports     Float?
+    price       Float?
+    head        Int?
+    totalVolume Float?   @map("total volume") // Map field name with space
 
-model DataEntry {
-    id         String       @id @default(auto()) @map("_id") @db.ObjectId
-    key        String
-    value      String
-    document   DataDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-    documentId String       @db.ObjectId
+    // Specific categorical fields - adjust based on all possible fields
+    cattleType  String? @map("Cattle Type") // Map field name with space
+    choiceGrade String? @map("Choice Grade") // Map field name with space
 
-    @@index([documentId])
-    @@index([key, value])
-    // If a key should be unique *within* a specific document, uncomment the next line
-    // @@unique([documentId, key])
+    // Add indexes for common query patterns
+    @@index([unixDate])
+    @@index([type])
+    @@index([country, state])
+    @@index([type, country, state, unixDate])
 }
