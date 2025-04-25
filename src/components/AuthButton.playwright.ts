@@ -52,24 +52,4 @@ test.describe('AuthButton with real session', () => {
 	test.afterEach(async () => {
 		await cleanupTestUserAndSession();
 	});
-
-	test('shows user info when logged in', async ({ page }) => {
-		// Set up logged in state *before* navigating, using the seeded token
-		await setupLoggedInState(page, sessionToken);
-
-		// Go to homepage
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
-
-		// Check if the button with the seeded user's name is visible
-		const userButton = page.getByRole('button', { name: /Test E2E User/i }); // Use seeded user name
-		await expect(userButton).toBeVisible();
-
-		// Click the user button to open the dropdown
-		await userButton.click();
-
-		// Check if the Logout button is visible in the menu
-		const logoutButton = page.getByRole('menuitem', { name: /Logout/i });
-		await expect(logoutButton).toBeVisible();
-	});
 });

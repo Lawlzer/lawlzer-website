@@ -175,13 +175,13 @@ export default function MainPage(): JSX.Element {
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.3 }}
-						className='fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50'
+						className='fixed inset-0 bg-black/70 flex items-center justify-center p-0 sm:p-4 z-50'
 						onClick={() => {
 							setIsOverlayOpen(false);
 						}} // Close on background click
 					>
 						{/* Prevent content click from closing overlay */}
-						<motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ duration: 0.2, delay: 0.1 }}>
+						<motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ duration: 0.2, delay: 0.1 }} className='w-full h-full max-h-screen flex items-center justify-center'>
 							<DataPlatformPreview
 								onClose={() => {
 									setIsOverlayOpen(false);

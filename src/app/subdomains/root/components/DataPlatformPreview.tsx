@@ -1,143 +1,399 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { JSX } from 'react';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale } from 'chart.js';
+import { Line } from 'react-chartjs-2';
+import 'chartjs-adapter-date-fns'; // Import date adapter
+import { getYear, getDayOfYear as dfnsGetDayOfYear, format as formatDateFns, addDays, startOfYear } from 'date-fns';
 
-// Define the structure for the API response
-export type AggregationResult = Record<string, Record<string, number>>;
+// Register Chart.js components including TimeScale
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale);
+
+// REMOVED MAX_DOCUMENTS constant, limit now handled by backend
+// export const MAX_DOCUMENTS = 300;
+
+// --- Data Structures for API Responses and State ---
+
+// Structure for the response from /api/data-platform/filters
+export type FiltersApiResponse = {
+	filters: Record<string, { value: string; count: number }[]>;
+	totalDocuments: number;
+	commonFields?: Record<string, any>;
+};
+
+// Structure for individual data points from the API
+export type RawDataPoint = {
+	timestamp: number; // unixDate in milliseconds
+	values: Record<string, number>; // { fieldName: value }
+};
+
+// Structure for the response from /api/data-platform/getChartData
+export type ChartDataApiResponse = {
+	rawData: RawDataPoint[] | null; // Array of raw data points
+	limitExceeded?: boolean;
+	documentCount?: number;
+	error?: string;
+};
+
+// REMOVED TimeSeriesData & TimeSeriesChartData types - data is now aggregatedFields
+
 // Define the structure for filters state
 type Filters = Record<string, string[]>;
 
+// --- Component Props ---
 interface DataPlatformPreviewProps {
-	onClose: () => void; // Function to close the overlay
+	onClose: () => void;
 }
 
+// --- Component Logic ---
 export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProps): JSX.Element {
-	const [data, setData] = useState<AggregationResult | null>(null);
-	const [filters, setFilters] = useState<Filters>({});
-	const [loading, setLoading] = useState<boolean>(true);
+	// State
+	const [availableFilters, setAvailableFilters] = useState<Record<string, { value: string; count: number }[]> | null>(null);
+	const [rawDataPoints, setRawDataPoints] = useState<RawDataPoint[] | null | undefined>(undefined); // Store raw data points
+	const [totalDocuments, setTotalDocuments] = useState<number>(0);
+	const [chartDocumentCount, setChartDocumentCount] = useState<number>(0);
+	const [chartLimitExceeded, setChartLimitExceeded] = useState<boolean>(false);
+	const [activeFilters, setActiveFilters] = useState<Filters>({});
+	const [loadingFilters, setLoadingFilters] = useState<boolean>(true);
+	const [loadingChartData, setLoadingChartData] = useState<boolean>(false);
+	const [changingChartTabVisual, setChangingChartTabVisual] = useState<boolean>(false);
+	const [commonFields, setCommonFields] = useState<Record<string, any> | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [activeChartTab, setActiveChartTab] = useState<string | null>(null);
+	const [lastFetchTime, setLastFetchTime] = useState<Record<string, number>>({});
 
-	// Function to fetch data based on current filters
-	const fetchData = useCallback(async () => {
-		setLoading(true);
+	// Helper to format day of year for axis label
+	const formatDayOfYearForAxis = (day: number): string => {
+		// Use a non-leap year like 2001 as a reference for formatting
+		const referenceDate = new Date(2001, 0, 1);
+		const dateToShow = addDays(referenceDate, day - 1);
+		return formatDateFns(dateToShow, 'MMM d');
+	};
+
+	// Generate cache key based on active filters (time range no longer needed for data fetch)
+	const getCacheKey = useCallback(
+		(type: 'chartData' | 'filters') => {
+			return JSON.stringify({ type, filters: activeFilters });
+		},
+		[activeFilters]
+	);
+
+	// Check if data needs refresh (simplified)
+	const isDataStale = useCallback(
+		(cacheKey: string) => {
+			const lastFetch = lastFetchTime[cacheKey] || 0;
+			return Date.now() - lastFetch > 3600000; // 1 hour cache
+		},
+		[lastFetchTime]
+	);
+
+	// Function to fetch raw data points
+	const fetchChartData = useCallback(async () => {
+		if (loadingFilters) {
+			console.log('[fetchChartData] Skipped - Filters are loading');
+			return;
+		}
+		console.log('[fetchChartData] Triggering fetch for raw data');
+		setLoadingChartData(true);
 		setError(null);
+		setChartLimitExceeded(false);
+
 		try {
 			const params = new URLSearchParams();
-			// Only add filters param if filters object is not empty
-			if (Object.keys(filters).length > 0) {
-				params.append('filters', JSON.stringify(filters));
+			if (Object.keys(activeFilters).length > 0) {
+				params.append('filters', JSON.stringify(activeFilters));
 			}
-			const response = await fetch(`/api/data-platform/aggregate?${params.toString()}`);
+
+			const response = await fetch(`/api/data-platform/getChartData?${params.toString()}`);
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error ?? `HTTP error! status: ${response.status}`);
 			}
-			const result: AggregationResult = await response.json();
-			setData(result);
+			const result: ChartDataApiResponse = await response.json();
+
+			if (result.error) {
+				throw new Error(result.error);
+			}
+
+			setRawDataPoints(result.rawData); // Store raw data
+			setChartDocumentCount(result.documentCount ?? 0);
+
+			if (result.limitExceeded) {
+				setChartLimitExceeded(true);
+				setRawDataPoints(null);
+			} else {
+				setChartLimitExceeded(false);
+			}
+
+			// Determine available numeric fields from the first few data points (if available)
+			const availableChartKeys: string[] = [];
+			if (result.rawData && result.rawData.length > 0) {
+				const fields = new Set<string>();
+				// Check first 10 points for available fields
+				for (let i = 0; i < Math.min(result.rawData.length, 10); i++) {
+					Object.keys(result.rawData[i].values).forEach((key) => fields.add(key));
+				}
+				availableChartKeys.push(...Array.from(fields).sort());
+			}
+
+			if (availableChartKeys.length === 1) {
+				setActiveChartTab(availableChartKeys[0]);
+			} else if (availableChartKeys.length > 0) {
+				setActiveChartTab((currentTab) => {
+					if (!currentTab || !availableChartKeys.includes(currentTab)) {
+						return availableChartKeys[0];
+					}
+					return currentTab;
+				});
+			} else {
+				setActiveChartTab(null);
+			}
+
+			setLastFetchTime((prev) => ({ ...prev, [getCacheKey('chartData')]: Date.now() }));
 		} catch (e) {
-			console.error('Failed to fetch data platform aggregations:', e);
-			setError(e instanceof Error ? e.message : 'An unknown error occurred');
-			setData(null); // Clear data on error
+			console.error('Failed to fetch chart data:', e);
+			setError(e instanceof Error ? e.message : 'An unknown error occurred fetching chart data');
+			setRawDataPoints(undefined);
+			setChartLimitExceeded(false);
 		} finally {
-			setLoading(false);
+			setLoadingChartData(false);
 		}
-	}, [filters]); // Dependency: re-fetch when filters change
+	}, [activeFilters, loadingFilters, getCacheKey]);
 
-	// Fetch data on component mount and when filters change
+	// Function to fetch filters and total count
+	const fetchFiltersAndCount = useCallback(async () => {
+		console.log('[fetchFiltersAndCount] Triggered');
+		setLoadingFilters(true);
+		setError(null);
+		setRawDataPoints(undefined); // Clear raw data when filters change
+		setChartLimitExceeded(false);
+		setActiveChartTab(null);
+
+		try {
+			const params = new URLSearchParams();
+			if (Object.keys(activeFilters).length > 0) {
+				params.append('filters', JSON.stringify(activeFilters));
+			}
+
+			const response = await fetch(`/api/data-platform/filters?${params.toString()}`);
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error ?? `HTTP error! status: ${response.status}`);
+			}
+			const result: FiltersApiResponse = await response.json();
+
+			setAvailableFilters(result.filters);
+			setTotalDocuments(result.totalDocuments);
+			setCommonFields(result.commonFields ?? null);
+
+			setLastFetchTime((prev) => ({ ...prev, [getCacheKey('filters')]: Date.now() }));
+		} catch (e) {
+			console.error('Failed to fetch filters and count:', e);
+			setError(e instanceof Error ? e.message : 'An unknown error occurred fetching filters');
+			setAvailableFilters(null);
+			setTotalDocuments(0);
+			setCommonFields(null);
+			setRawDataPoints(undefined);
+			setChartLimitExceeded(false);
+		} finally {
+			setLoadingFilters(false);
+		}
+	}, [activeFilters, getCacheKey]);
+
+	// Fetch filters when activeFilters change
 	useEffect(() => {
-		void fetchData();
-	}, [fetchData]);
+		console.log('Effect 1: Filters');
+		void fetchFiltersAndCount();
+	}, [fetchFiltersAndCount]);
 
-	// Handler for toggling filters
+	// Fetch chart data when activeFilters change or when filters finish loading
+	useEffect(() => {
+		console.log('Effect 2: Chart Data - Triggered by filter change or loading state');
+		if (!loadingFilters) {
+			void fetchChartData();
+		}
+	}, [activeFilters, loadingFilters, fetchChartData]); // Triggered by activeFilters (via fetchChartData dep) or loadingFilters change
+
+	// --- Memoized Values for Rendering ---
+
+	// Calculate chartable fields from the first few data points (more robustly)
+	const chartableFields = useMemo(() => {
+		if (!rawDataPoints || rawDataPoints.length === 0) return [];
+		const fields = new Set<string>();
+		for (const point of rawDataPoints) {
+			Object.keys(point.values).forEach((key) => fields.add(key));
+		}
+		return Array.from(fields).sort((a, b) => a.localeCompare(b));
+	}, [rawDataPoints]);
+
+	// Check if there's filter data to display
+	const hasFilterData = useMemo(() => {
+		return availableFilters && Object.keys(availableFilters).length > 0;
+	}, [availableFilters]);
+
+	// Determine if charts should be shown
+	const showCharts = useMemo(() => {
+		return !chartLimitExceeded && totalDocuments > 0 && rawDataPoints && rawDataPoints.length > 0;
+	}, [chartLimitExceeded, totalDocuments, rawDataPoints]);
+
+	// --- Event Handlers ---
+
 	const handleFilterToggle = (key: string, value: string): void => {
-		setFilters((prevFilters) => {
-			const newFilters = { ...prevFilters };
-			const currentKeyFilters = newFilters[key] ?? [];
+		setActiveFilters((prevFilters) => {
+			const currentKeyFilters = prevFilters[key] ?? [];
 			const valueIndex = currentKeyFilters.indexOf(value);
 
 			if (valueIndex > -1) {
-				// Value exists, remove it
 				const updatedKeyFilters = currentKeyFilters.filter((v) => v !== value);
 				if (updatedKeyFilters.length === 0) {
-					// If no values left for this key, remove the key by creating a new object without it
-					const { [key]: _, ...rest } = newFilters; // Destructure to omit the key
-					return rest; // Return the object without the key
+					const { [key]: _, ...rest } = prevFilters;
+					return rest;
 				} else {
-					newFilters[key] = updatedKeyFilters;
+					return { ...prevFilters, [key]: updatedKeyFilters };
 				}
 			} else {
-				// Value doesn't exist, add it
-				newFilters[key] = [...currentKeyFilters, value];
+				return { ...prevFilters, [key]: [...currentKeyFilters, value] };
 			}
-			return newFilters;
 		});
 	};
 
-	// Helper to check if a specific filter is active
 	const isFilterActive = (key: string, value: string): boolean => {
-		return filters[key]?.includes(value) ?? false;
+		return activeFilters[key]?.includes(value) ?? false;
 	};
 
-	// Calculate max counts and sort keys for rendering
-	const sortedDataEntries = data
-		? Object.entries(data)
-				.map(([key, valueCounts]) => {
-					// Find the maximum count for the current key
-					const maxCount = Object.values(valueCounts).reduce((max, count) => Math.max(max, count), 0);
-					return { key, valueCounts, maxCount }; // Return an object containing key, values, and max count
-				})
-				.sort((a, b) => b.maxCount - a.maxCount) // Sort by maxCount descending
-		: [];
+	const sortedFilterEntries = useMemo(() => {
+		if (!availableFilters) return [];
+		return (
+			Object.entries(availableFilters)
+				.map(([key, valueCounts]) => ({
+					key,
+					valueCounts: valueCounts,
+					// Calculate the max count for this filter category
+					maxCount: Math.max(...valueCounts.map((vc) => vc.count), 0),
+				}))
+				// Sort by the calculated maxCount in descending order
+				.sort((a, b) => a.key.localeCompare(b.key))
+		);
+	}, [availableFilters]);
+
+	const chartColors = useMemo(() => ['rgba(54, 162, 235, 0.8)', 'rgba(255, 99, 132, 0.8)', 'rgba(75, 192, 192, 0.8)', 'rgba(255, 206, 86, 0.8)', 'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)', 'rgba(201, 203, 207, 0.8)', 'rgba(255, 159, 243, 0.8)', 'rgba(164, 255, 164, 0.8)', 'rgba(162, 210, 255, 0.8)'], []);
+
+	const handleChartTabChange = (tabKey: string): void => {
+		if (tabKey !== activeChartTab) {
+			setChangingChartTabVisual(true);
+			setActiveChartTab(tabKey);
+			setTimeout(() => {
+				setChangingChartTabVisual(false);
+			}, 300);
+		}
+	};
+
+	// Format raw data points for Chart.js, grouping by year
+	const getFormattedChartData = useMemo(() => {
+		if (!rawDataPoints || rawDataPoints.length === 0 || !activeChartTab) {
+			return null;
+		}
+
+		const dataByYear: Record<number, { x: number; y: number }[]> = {};
+
+		// Filter points that have the active field and group by year
+		rawDataPoints
+			.filter((point) => point.values[activeChartTab] !== undefined)
+			.forEach((point) => {
+				const date = new Date(point.timestamp);
+				const year = getYear(date);
+				const dayOfYear = dfnsGetDayOfYear(date); // 1-366
+
+				dataByYear[year] ??= []; // Use nullish coalescing assignment
+				dataByYear[year].push({ x: dayOfYear, y: point.values[activeChartTab] });
+			});
+
+		// Sort data within each year by dayOfYear
+		Object.values(dataByYear).forEach((yearData) => {
+			yearData.sort((a, b) => a.x - b.x);
+		});
+
+		const sortedYears = Object.keys(dataByYear)
+			.map(Number)
+			.sort((a, b) => a - b);
+
+		if (sortedYears.length === 0) {
+			return null; // No valid data found after filtering and grouping
+		}
+
+		return {
+			datasets: sortedYears.map((year, index) => ({
+				label: String(year),
+				data: dataByYear[year],
+				borderColor: chartColors[index % chartColors.length],
+				backgroundColor: chartColors[index % chartColors.length].replace('0.8', '0.2'),
+				tension: 0.1,
+				pointRadius: 0,
+				pointHoverRadius: 5,
+			})),
+		};
+	}, [rawDataPoints, activeChartTab, chartColors]);
+
+	const getYAxisLabel = (dataType: string): string => {
+		const formattedName = dataType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+		if (/price|cost|value|revenue|salary/i.test(dataType)) return `${formattedName} (USD)`;
+		if (/count|number|quantity|total|frequency/i.test(dataType)) return formattedName;
+		if (/percentage|ratio|rate|share/i.test(dataType)) return `${formattedName} (%)`;
+		if (/size|weight|height|width|length|duration|age/i.test(dataType)) return formattedName;
+		return formattedName; // Default fallback
+	};
+
+	const isLoading = loadingFilters || loadingChartData;
+
+	// --- Render Logic ---
 
 	return (
 		<div
-			className='bg-secondary p-8 rounded-lg shadow-2xl max-w-4xl w-full border border-border overflow-hidden flex flex-col' // Increased max-width, added flex
-			style={{ maxHeight: '80vh' }} // Limit height
+			className='bg-secondary p-6 rounded-lg shadow-2xl w-[95vw] max-w-[1600px] h-[92vh] border border-border overflow-hidden flex flex-col'
 			onClick={(e) => {
 				e.stopPropagation();
 			}}
 		>
+			{/* Header */}
 			<h2 className='text-2xl font-bold mb-4 text-primary flex-shrink-0'>
-				Data Platform - Filters
-				{loading && <span className='text-lg font-normal text-muted-foreground ml-2'>(Loading...)</span>}
+				Data Platform - Analytics
+				{isLoading && <span className='text-lg font-normal text-muted-foreground ml-2'>(Loading...)</span>}
 			</h2>
 
-			{/* Make this div scrollable and position relative for overlay */}
-			<div className='text-primary-text flex-grow overflow-y-auto pr-2 relative'>
-				{/* Loading Overlay */}
-				{loading && <div className='absolute inset-0 bg-background/80 flex items-center justify-center z-10 rounded'>{/* Text removed from overlay */}</div>}
+			{/* Controls: Count - REMOVED Time Range */}
+			<div className='mb-4 flex-shrink-0 flex flex-wrap items-center justify-between gap-4'>
+				<div>
+					<p className='text-sm text-muted-foreground'>
+						Total documents matching filters: <span className='font-medium'>{totalDocuments}</span>
+						{chartLimitExceeded && <span className='ml-2 text-destructive'>(Charts disabled - {chartDocumentCount} documents exceeds limit. Apply more filters.)</span>}
+					</p>
+				</div>
+				{/* REMOVED Time Range Selector */}
+			</div>
 
-				{/* Error Message */}
-				{error && <p className='text-destructive'>Error loading data: {error}</p>}
+			{/* Main Layout: Filters | Charts */}
+			<div className='grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow overflow-hidden'>
+				{/* Filters Panel */}
+				<div className='lg:col-span-1 overflow-y-auto relative bg-background p-4 rounded border border-border flex flex-col'>
+					<h3 className='text-lg font-semibold mb-3 text-primary flex-shrink-0'>Filters</h3>
 
-				{/* Grid Content - Show grid if not error and data exists */}
-				{!error && sortedDataEntries.length > 0 && (
-					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-						{sortedDataEntries.map(({ key, valueCounts }) => {
-							// Sort values first to calculate max length based on the sorted list
-							const sortedValues = Object.entries(valueCounts).sort(([valueA, countA], [valueB, countB]) => {
-								if (countB !== countA) {
-									return countB - countA;
-								}
-								return valueA.localeCompare(valueB);
-							});
+					{/* Loading Overlay for Filters */}
+					{loadingFilters ? <div className='absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded text-muted-foreground'>Loading filters...</div> : null}
 
-							// Calculate the maximum length of the button text "value (count)" for this key
-							const maxLength = sortedValues.reduce((maxLen, [value, count]) => {
-								const textLength = `${value} (${count})`.length;
-								return Math.max(maxLen, textLength);
-							}, 0);
+					{/* Error Message */}
+					{error && !isLoading ? <p className='text-destructive p-4 bg-destructive/10 rounded mb-4'>Error: {error}</p> : null}
 
-							// Determine the min-width class using arbitrary values + ch units (character width) + padding
-							// Add extra characters for padding and variance. Adjust the '+ 3' if needed.
-							const minWidthClass = `min-w-[${maxLength + 3}ch]`;
-
-							return (
-								<div key={key} className='bg-background p-4 rounded border border-border'>
-									<h3 className='text-lg font-semibold mb-3 capitalize text-primary'>{key.replace(/_/g, ' ')}</h3>
-									<div className='flex flex-wrap gap-2'>
-										{/* Map over the pre-sorted values */}
-										{sortedValues.map(([value, count]) => (
+					{/* Filters Content */}
+					{!loadingFilters && !error && hasFilterData ? (
+						<div className='space-y-4 overflow-y-auto flex-grow'>
+							{sortedFilterEntries.map(({ key, valueCounts }) => (
+								<div key={key} className='bg-muted/30 p-3 rounded border border-border/50'>
+									<h4 className='text-base font-medium mb-2 capitalize text-primary truncate' title={key.replace(/_/g, ' ')}>
+										{key.replace(/_/g, ' ')}
+									</h4>
+									<div className='flex flex-wrap gap-1.5'>
+										{valueCounts.map(({ value, count }) => (
 											<button
 												type='button'
 												key={value}
@@ -145,33 +401,188 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 													handleFilterToggle(key, value);
 												}}
 												className={`
-												px-3 py-1 rounded text-sm transition-colors duration-150
-												border text-center ${minWidthClass} {/* Apply calculated min-width and center text */}
-												${isFilterActive(key, value) ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground'}
-											`}
+													px-2.5 py-0.5 rounded text-xs transition-colors duration-150 border flex items-center gap-1
+													${isFilterActive(key, value) || valueCounts.length === 1 ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : 'bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground'}
+												`}
+												title={`${value} (${count})`}
 											>
-												{value} ({count})
+												<span className='truncate max-w-[180px] inline-block align-bottom'>{value}</span>
+												<span className='text-[10px] opacity-70'>({count})</span>
 											</button>
 										))}
 									</div>
 								</div>
-							);
-						})}
-					</div>
-				)}
+							))}
+						</div>
+					) : null}
 
-				{/* No Data Message - Show only when not loading, no error, and no data */}
-				{!loading && !error && sortedDataEntries.length === 0 && <p>No data available or matching the current filters.</p>}
+					{/* No Filters Available Message */}
+					{!loadingFilters && !error && !hasFilterData ? <div className='flex-grow flex items-center justify-center p-4 bg-muted/20 rounded border border-border text-center text-muted-foreground'>{totalDocuments === 0 ? 'No documents match the current filters.' : 'No filter options available for the current data.'}</div> : null}
+
+					{/* Common Fields Display */}
+					{commonFields && Object.keys(commonFields).length > 0 && totalDocuments > 0 && (
+						<div className='mt-4 pt-3 border-t border-border flex-shrink-0'>
+							<h4 className='text-sm font-semibold mb-2 text-muted-foreground'>Common Fields ({totalDocuments} Documents):</h4>
+							<div className='space-y-1 text-sm bg-background p-2 rounded border border-border/50'>
+								{Object.entries(commonFields).map(([key, value]) => (
+									<div key={key} className='flex justify-between items-center'>
+										<span className='text-primary font-medium mr-2'>{key}:</span>
+										<span className='text-foreground truncate' title={String(value)}>
+											{String(value)}
+										</span>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
+
+					{/* Clear Filters Button */}
+					{Object.keys(activeFilters).length > 0 ? (
+						<button
+							className='mt-4 w-full px-3 py-1.5 rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm flex-shrink-0'
+							onClick={() => {
+								setActiveFilters({});
+							}}
+							disabled={isLoading}
+						>
+							Clear All Filters
+						</button>
+					) : null}
+				</div>
+
+				{/* Charts Panel */}
+				<div className='lg:col-span-3 bg-background p-4 rounded border border-border overflow-y-auto flex flex-col'>
+					<h3 className='text-lg font-semibold mb-3 text-primary flex-shrink-0'>Raw Data Over Time</h3>
+
+					{/* Chart Area */}
+					{showCharts || loadingChartData || chartLimitExceeded ? (
+						<div className='flex-grow flex flex-col min-h-[400px]'>
+							{/* Chart Tabs (Only show if not loading and have data) */}
+							{!loadingChartData && chartableFields.length > 0 ? (
+								<div className='flex space-x-2 mb-4 border-b border-border pb-2 overflow-x-auto flex-shrink-0'>
+									{chartableFields.map((key) => (
+										<button
+											key={key}
+											onClick={() => {
+												handleChartTabChange(key);
+											}}
+											className={`px-3 py-1 text-sm rounded transition-colors whitespace-nowrap ${activeChartTab === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
+										>
+											{key.replace(/_/g, ' ')}
+										</button>
+									))}
+								</div>
+							) : null}
+
+							{/* Message Area for Loading/No Data/Limit Exceeded */}
+							{loadingChartData ? (
+								<div className='flex-grow flex items-center justify-center text-muted-foreground'>Loading chart data...</div>
+							) : chartLimitExceeded ? (
+								<div className='flex-grow flex items-center justify-center min-h-[400px] bg-muted/20 rounded border border-border text-center text-muted-foreground p-4'>
+									<div>
+										<p className='mb-2 text-lg font-medium'>Chart generation disabled</p>
+										<p>Dataset size ({chartDocumentCount} documents) exceeds the limit.</p>
+										<p className='mt-1'>Apply more specific filters to enable charts.</p>
+									</div>
+								</div>
+							) : chartableFields.length === 0 ? (
+								<div className='flex-grow flex items-center justify-center text-muted-foreground'>No suitable numeric fields found for charting in the current data.</div>
+							) : activeChartTab && getFormattedChartData ? (
+								// Active Chart Rendering
+								<div className='flex-grow h-[400px] relative'>
+									<Line
+										data={getFormattedChartData}
+										options={{
+											responsive: true,
+											maintainAspectRatio: false,
+											plugins: {
+												legend: { position: 'top' as const },
+												title: {
+													display: true,
+													text: activeChartTab ? getYAxisLabel(activeChartTab) : 'Raw Data Over Time', // Use helper for dynamic title
+													font: { size: 16, weight: 'bold' },
+												},
+												tooltip: {
+													// Customize tooltips
+													callbacks: {
+														title: (tooltipItems) => {
+															// Show Month Day in tooltip title
+															if (tooltipItems.length > 0) {
+																const day = tooltipItems[0].parsed.x;
+																return formatDayOfYearForAxis(day);
+															}
+															return '';
+														},
+														label: (context) => {
+															// Show Year, Value in tooltip body
+															const label = context.dataset.label ?? '';
+															const value = context.parsed.y;
+															return `${label}: ${value}`;
+														},
+													},
+												},
+											},
+											scales: {
+												x: {
+													type: 'linear', // Change to linear scale for Day of Year
+													min: 1,
+													max: 366,
+													ticks: {
+														font: { size: 12 },
+														maxRotation: 45,
+														minRotation: 0,
+														// Show Month Day on ticks using the helper
+														callback: (value) => formatDayOfYearForAxis(Number(value)),
+														stepSize: 30, // Adjust step size for readability (approx monthly)
+													},
+													title: {
+														display: true,
+														text: 'Day of Year', // Updated X-Axis Title
+														font: { size: 14, weight: 'bold' },
+													},
+												},
+												y: {
+													ticks: { font: { size: 12 } },
+													title: {
+														display: true,
+														text: 'Value', // Simple Y-Axis Title
+														font: { size: 14, weight: 'bold' },
+													},
+												},
+											},
+											// Disable animations for potentially large datasets
+											animations: {} as any,
+										}}
+									/>
+									{/* Overlay for chart tab switching indicator */}
+									{changingChartTabVisual ? (
+										<div className='absolute inset-0 bg-background/40 flex items-center justify-center'>
+											<p className='text-muted-foreground text-lg'>Switching chart...</p>
+										</div>
+									) : null}
+								</div>
+							) : (
+								<div className='flex-grow flex items-center justify-center text-muted-foreground'>Select a field above to view chart.</div>
+							)}
+						</div>
+					) : (
+						// Fallback message
+						<div className='flex-grow flex items-center justify-center min-h-[400px] bg-muted/20 rounded border border-border text-center text-muted-foreground p-4'>{totalDocuments === 0 ? 'No documents match the current filters.' : 'Chart data not available.'}</div>
+					)}
+
+					{/* Data source disclaimer */}
+					<div className='mt-4 text-xs text-muted-foreground flex-shrink-0 border-t border-border pt-2'>
+						<p>
+							Filters show distinct values from the {totalDocuments} matching documents.
+							{chartLimitExceeded ? ' Charts disabled due to dataset size.' : ` Charts display raw data points over time (${rawDataPoints ? rawDataPoints.length : 0} points shown).`}
+						</p>
+					</div>
+				</div>
 			</div>
 
-			<div className='mt-6 flex-shrink-0'>
-				{' '}
-				{/* Keep button at bottom */}
-				<button
-					type='button'
-					className='px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
-					onClick={onClose} // Use the passed onClose function
-				>
+			{/* Close Button */}
+			<div className='mt-6 flex-shrink-0 border-t border-border pt-4'>
+				<button type='button' className='px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50' onClick={onClose} disabled={isLoading}>
 					Close
 				</button>
 			</div>
