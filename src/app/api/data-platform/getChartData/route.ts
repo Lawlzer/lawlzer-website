@@ -2,6 +2,7 @@ import { MongoClient } from 'mongodb';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import type { Document as MongoDocument, WithId, ObjectId } from 'mongodb';
+import { startOfYear } from 'date-fns'; // Import date-fns function
 
 // --- Type Definitions ---
 
@@ -72,14 +73,27 @@ async function getMongoClient(): Promise<MongoClient> {
 // Function to build MongoDB query from input filters
 function buildMongoQuery(inputFilters: InputFilters): MongoDocument {
 	const query: MongoDocument = {};
+
+	// Calculate the start date for the filter (start of year, 3 years ago)
+	const now = new Date();
+	const threeYearsAgoStartOfYear = startOfYear(new Date(now.getFullYear() - 2, 0, 1)); // Get start of the year 3 years ago (e.g., 2024 -> 2022-01-01, 2025 -> 2023-01-01)
+	const startTimestamp = threeYearsAgoStartOfYear.getTime();
+
+	// Add the date filter to the query
+	query.unixDate = { $gte: startTimestamp };
+
 	for (const [key, value] of Object.entries(inputFilters)) {
-		const mappedKey = key;
+		// Skip processing 'unixDate' if it somehow came from inputFilters
+		if (key === 'unixDate') continue;
+
+		const mappedKey = key; // Assuming direct mapping for now
 		if (Array.isArray(value)) {
 			query[mappedKey] = { $in: value };
 		} else {
 			query[mappedKey] = value;
 		}
 	}
+	console.log('Constructed Mongo Query:', JSON.stringify(query)); // Log the final query
 	return query;
 }
 
@@ -96,10 +110,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 	if (filtersParam) {
 		try {
 			inputFilters = JSON.parse(filtersParam);
+			// --- BEGIN ADDED LOGGING ---
+			console.log('[ChartData API] Received filters param:', filtersParam);
+			console.log('[ChartData API] Parsed inputFilters:', JSON.stringify(inputFilters));
+			// Log keys specifically to check for encoding issues
+			console.log('[ChartData API] Parsed inputFilter Keys:', Object.keys(inputFilters));
+			// --- END ADDED LOGGING ---
 		} catch (error) {
 			console.error('Failed to parse filters:', error);
 			return NextResponse.json({ error: 'Invalid filters format' }, { status: 400 });
 		}
+	} else {
+		console.log('[ChartData API] No filters param received.');
 	}
 
 	try {

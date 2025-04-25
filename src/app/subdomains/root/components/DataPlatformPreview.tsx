@@ -273,11 +273,16 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 					maxCount: Math.max(...valueCounts.map((vc) => vc.count), 0),
 				}))
 				// Sort by the calculated maxCount in descending order
-				.sort((a, b) => a.key.localeCompare(b.key))
+				.sort((a, b) => {
+					// Primary sort: descending by maxCount
+					if (b.maxCount !== a.maxCount) {
+						return b.maxCount - a.maxCount;
+					}
+					// Secondary sort: ascending by key name
+					return a.key.localeCompare(b.key);
+				})
 		);
 	}, [availableFilters]);
-
-	const chartColors = useMemo(() => ['rgba(54, 162, 235, 0.8)', 'rgba(255, 99, 132, 0.8)', 'rgba(75, 192, 192, 0.8)', 'rgba(255, 206, 86, 0.8)', 'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)', 'rgba(201, 203, 207, 0.8)', 'rgba(255, 159, 243, 0.8)', 'rgba(164, 255, 164, 0.8)', 'rgba(162, 210, 255, 0.8)'], []);
 
 	const handleChartTabChange = (tabKey: string): void => {
 		if (tabKey !== activeChartTab) {
@@ -289,15 +294,17 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		}
 	};
 
-	// Format raw data points for Chart.js, grouping by year
+	// Format raw data points for Chart.js, grouping by year, adding min/max overlay
 	const getFormattedChartData = useMemo(() => {
 		if (!rawDataPoints || rawDataPoints.length === 0 || !activeChartTab) {
 			return null;
 		}
 
 		const dataByYear: Record<number, { x: number; y: number }[]> = {};
+		const currentYear = getYear(new Date());
+		const startYear = currentYear - 2; // We only care about the last 3 years (current + previous 2)
 
-		// Filter points that have the active field and group by year
+		// Filter points for the active field and within the last 3 years, then group by year
 		rawDataPoints
 			.filter((point) => point.values[activeChartTab] !== undefined)
 			.forEach((point) => {
@@ -305,8 +312,12 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 				const year = getYear(date);
 				const dayOfYear = dfnsGetDayOfYear(date); // 1-366
 
-				dataByYear[year] ??= []; // Use nullish coalescing assignment
-				dataByYear[year].push({ x: dayOfYear, y: point.values[activeChartTab] });
+				// Only include data from the last 3 years (current and previous two)
+				// Backend should already filter, but belt-and-suspenders approach
+				if (year >= startYear) {
+					dataByYear[year] ??= []; // Use nullish coalescing assignment
+					dataByYear[year].push({ x: dayOfYear, y: point.values[activeChartTab] });
+				}
 			});
 
 		// Sort data within each year by dayOfYear
@@ -322,18 +333,109 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			return null; // No valid data found after filtering and grouping
 		}
 
-		return {
-			datasets: sortedYears.map((year, index) => ({
-				label: String(year),
-				data: dataByYear[year],
-				borderColor: chartColors[index % chartColors.length],
-				backgroundColor: chartColors[index % chartColors.length].replace('0.8', '0.2'),
-				tension: 0.1,
+		// Define colors - Current Year Red, others cycle
+		const baseColors = [
+			'rgba(54, 162, 235, 0.8)', // Blue
+			'rgba(75, 192, 192, 0.8)', // Teal
+			'rgba(255, 206, 86, 0.8)', // Yellow
+			'rgba(153, 102, 255, 0.8)', // Purple
+			'rgba(255, 159, 64, 0.8)', // Orange
+		];
+		const currentYearColor = 'rgba(255, 99, 132, 0.8)'; // Red
+
+		const yearColors: Record<number, string> = {};
+		let colorIndex = 0;
+		sortedYears.forEach((year) => {
+			if (year === currentYear) {
+				yearColors[year] = currentYearColor;
+			} else {
+				// Cycle through base colors for older years
+				yearColors[year] = baseColors[colorIndex % baseColors.length];
+				colorIndex++;
+			}
+		});
+
+		// Calculate Min/Max for previous years
+		const minMaxData: { x: number; yMin: number; yMax: number }[] = [];
+		const previousYears = sortedYears.filter((y) => y < currentYear);
+
+		if (previousYears.length > 0) {
+			// Group data by day of year across previous years
+			const dayValues: Record<number, number[]> = {};
+			previousYears.forEach((year) => {
+				dataByYear[year]?.forEach((point) => {
+					dayValues[point.x] ??= [];
+					dayValues[point.x].push(point.y);
+				});
+			});
+
+			// Calculate min/max for each day
+			for (let day = 1; day <= 366; day++) {
+				const valuesForDay = dayValues[day]; // Explicitly get the array
+				// Explicitly check if the array is defined and not empty
+				if (typeof valuesForDay !== 'undefined' && valuesForDay.length > 0) {
+					minMaxData.push({
+						x: day,
+						yMin: Math.min(...valuesForDay),
+						yMax: Math.max(...valuesForDay),
+					});
+				}
+			}
+			minMaxData.sort((a, b) => a.x - b.x); // Ensure sorted by day
+		}
+
+		const datasets: any[] = sortedYears.map((year) => ({
+			label: String(year) + (year === currentYear ? ' (Current)' : ''),
+			data: dataByYear[year],
+			borderColor: yearColors[year],
+			backgroundColor: yearColors[year].replace('0.8', '0.2'),
+			tension: 0.1,
+			pointRadius: year === currentYear ? 1.5 : 0, // Smaller points for current year, none for past
+			pointHoverRadius: 5,
+			borderWidth: year === currentYear ? 2 : 1.5, // Thicker line for current year
+			order: year === currentYear ? 0 : 1, // Ensure current year renders on top
+		}));
+
+		// Add Min/Max Range datasets if data exists
+		if (minMaxData.length > 0) {
+			// Create separate datasets for min and max points
+			const minDataPoints = minMaxData.map((d) => ({ x: d.x, y: d.yMin }));
+			const maxDataPoints = minMaxData.map((d) => ({ x: d.x, y: d.yMax }));
+
+			// Add invisible dataset for the minimum boundary
+			datasets.push({
+				label: 'Min Boundary', // Internal label, won't show
+				data: minDataPoints,
+				borderColor: 'transparent',
+				backgroundColor: 'transparent',
 				pointRadius: 0,
-				pointHoverRadius: 5,
-			})),
-		};
-	}, [rawDataPoints, activeChartTab, chartColors]);
+				pointHoverRadius: 0,
+				borderWidth: 0,
+				tension: 0.1,
+				fill: false, // Don't fill this line itself
+				showInLegend: false, // Hide from legend
+				order: 3, // Render behind everything else relevant
+			});
+
+			const minDatasetIndex = datasets.length - 1; // Get index of the min dataset just added
+
+			// Add the visible dataset for the maximum boundary, filling down to the min dataset
+			datasets.push({
+				label: `Range (${previousYears.join(', ')})`, // Visible label
+				data: maxDataPoints,
+				borderColor: 'transparent', // No border for the fill area itself
+				backgroundColor: 'rgba(173, 216, 230, 0.4)', // Light Blue fill
+				pointRadius: 0,
+				pointHoverRadius: 0,
+				borderWidth: 0,
+				tension: 0.1,
+				fill: minDatasetIndex, // Fill to the index of the min dataset
+				order: 2, // Render behind main lines but above min boundary if needed
+			});
+		}
+
+		return { datasets, labels: Array.from({ length: 366 }, (_, i) => i + 1) }; // Add labels for the x-axis (days 1-366)
+	}, [rawDataPoints, activeChartTab]);
 
 	const getYAxisLabel = (dataType: string): string => {
 		const formattedName = dataType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
@@ -420,7 +522,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 					{!loadingFilters && !error && !hasFilterData ? <div className='flex-grow flex items-center justify-center p-4 bg-muted/20 rounded border border-border text-center text-muted-foreground'>{totalDocuments === 0 ? 'No documents match the current filters.' : 'No filter options available for the current data.'}</div> : null}
 
 					{/* Common Fields Display */}
-					{commonFields && Object.keys(commonFields).length > 0 && totalDocuments > 0 && (
+					{commonFields && Object.keys(commonFields).length > 0 && availableFilters && Object.keys(availableFilters).length > 0 && Object.keys(availableFilters).length === Object.keys(activeFilters).length && (
 						<div className='mt-4 pt-3 border-t border-border flex-shrink-0'>
 							<h4 className='text-sm font-semibold mb-2 text-muted-foreground'>Common Fields ({totalDocuments} Documents):</h4>
 							<div className='space-y-1 text-sm bg-background p-2 rounded border border-border/50'>
@@ -517,9 +619,13 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 															// Show Year, Value in tooltip body
 															const label = context.dataset.label ?? '';
 															const value = context.parsed.y;
+															// Exclude min/max range datasets from regular label display
+															if (label.startsWith('Range (') || label === 'Min Boundary') return; // Return undefined (void)
 															return `${label}: ${value}`;
 														},
 													},
+													mode: 'index', // Show tooltip for all datasets at that index
+													intersect: false, // Trigger tooltip even when not hovering directly over point
 												},
 											},
 											scales: {
@@ -552,6 +658,15 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 											},
 											// Disable animations for potentially large datasets
 											animations: {} as any,
+											// Add interaction modes
+											interaction: {
+												mode: 'index',
+												intersect: false,
+											},
+											hover: {
+												mode: 'index',
+												intersect: false,
+											},
 										}}
 									/>
 									{/* Overlay for chart tab switching indicator */}
