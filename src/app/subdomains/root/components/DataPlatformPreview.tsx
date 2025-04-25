@@ -262,6 +262,31 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		return activeFilters[key]?.includes(value) ?? false;
 	};
 
+	// Determine if the user has applied filters for all available filter options
+	const canShowChartBasedOnFilters = useMemo(() => {
+		// Block chart if filters are loading or not yet available
+		if (loadingFilters || availableFilters === null) {
+			return false;
+		}
+
+		const availableFilterEntries = Object.entries(availableFilters);
+
+		// If the API returns no filter options, the user cannot filter further, so allow charting.
+		if (availableFilterEntries.length === 0) {
+			return true;
+		}
+
+		// If filter options ARE available, check if the user has handled ALL of them.
+		// A filter category is considered 'handled' if EITHER:
+		// 1. The user has actively selected a value within that category (key exists in activeFilters).
+		// 2. The category only ever presented a single option (valueCounts.length === 1).
+		return availableFilterEntries.every(([key, valueCounts]) => {
+			const isKeyActive = activeFilters[key] !== undefined && activeFilters[key].length > 0;
+			const hasOnlyOneOption = valueCounts.length === 1;
+			return isKeyActive || hasOnlyOneOption;
+		});
+	}, [availableFilters, activeFilters, loadingFilters]);
+
 	const sortedFilterEntries = useMemo(() => {
 		if (!availableFilters) return [];
 		return (
@@ -448,6 +473,27 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 
 	const isLoading = loadingFilters || loadingChartData;
 
+	// Determine the message to show in the chart area based on current state
+	const chartMessage = useMemo(() => {
+		if (loadingChartData) return 'Loading chart data...';
+		if (chartLimitExceeded)
+			// Keep specific message for limit exceeded
+			return `Chart generation disabled. Dataset size (${chartDocumentCount} documents) exceeds the limit. Apply more specific filters to reduce the count.`;
+		if (!canShowChartBasedOnFilters)
+			// New message if not all filters are applied
+			return 'Apply all available filters to view the chart.';
+		if (chartableFields.length === 0)
+			// Existing message if no chartable fields
+			return 'No suitable numeric fields found for charting in the current data.';
+		if (!activeChartTab)
+			// Existing message if no tab is selected (only possible if chartableFields > 0)
+			return 'Select a field above to view chart.';
+		if (!getFormattedChartData)
+			// Fallback if data formatting fails
+			return 'Could not generate chart data.';
+		return null; // Null indicates the chart should render
+	}, [loadingChartData, chartLimitExceeded, chartDocumentCount, canShowChartBasedOnFilters, chartableFields.length, activeChartTab, getFormattedChartData]);
+
 	// --- Render Logic ---
 
 	return (
@@ -559,8 +605,8 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 					{/* Chart Area */}
 					{showCharts || loadingChartData || chartLimitExceeded ? (
 						<div className='flex-grow flex flex-col min-h-[400px]'>
-							{/* Chart Tabs (Only show if not loading and have data) */}
-							{!loadingChartData && chartableFields.length > 0 ? (
+							{/* Chart Tabs (Only show if chart *could* be shown and fields exist) */}
+							{!loadingChartData && !chartLimitExceeded && canShowChartBasedOnFilters && chartableFields.length > 0 ? (
 								<div className='flex space-x-2 mb-4 border-b border-border pb-2 overflow-x-auto flex-shrink-0'>
 									{chartableFields.map((key) => (
 										<button
@@ -576,19 +622,21 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 								</div>
 							) : null}
 
-							{/* Message Area for Loading/No Data/Limit Exceeded */}
-							{loadingChartData ? (
-								<div className='flex-grow flex items-center justify-center text-muted-foreground'>Loading chart data...</div>
-							) : chartLimitExceeded ? (
+							{/* Message Area or Chart */}
+							{chartMessage ? (
+								// Display message if chart cannot be shown
 								<div className='flex-grow flex items-center justify-center min-h-[400px] bg-muted/20 rounded border border-border text-center text-muted-foreground p-4'>
-									<div>
-										<p className='mb-2 text-lg font-medium'>Chart generation disabled</p>
-										<p>Dataset size ({chartDocumentCount} documents) exceeds the limit.</p>
-										<p className='mt-1'>Apply more specific filters to enable charts.</p>
-									</div>
+									{/* Special formatting for limit exceeded */}
+									{chartLimitExceeded ? (
+										<div>
+											<p className='mb-2 text-lg font-medium'>Chart generation disabled</p>
+											<p>Dataset size ({chartDocumentCount} documents) exceeds the limit.</p>
+											<p className='mt-1'>Apply more specific filters to reduce the count.</p>
+										</div>
+									) : (
+										<p>{chartMessage}</p>
+									)}
 								</div>
-							) : chartableFields.length === 0 ? (
-								<div className='flex-grow flex items-center justify-center text-muted-foreground'>No suitable numeric fields found for charting in the current data.</div>
 							) : activeChartTab && getFormattedChartData ? (
 								// Active Chart Rendering
 								<div className='flex-grow h-[400px] relative'>
@@ -677,7 +725,8 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 									) : null}
 								</div>
 							) : (
-								<div className='flex-grow flex items-center justify-center text-muted-foreground'>Select a field above to view chart.</div>
+								// Fallback if chartMessage is null but chart can't render (should not happen with current logic)
+								<div className='flex-grow flex items-center justify-center text-muted-foreground'>Chart data not available.</div>
 							)}
 						</div>
 					) : (
@@ -689,7 +738,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 					<div className='mt-4 text-xs text-muted-foreground flex-shrink-0 border-t border-border pt-2'>
 						<p>
 							Filters show distinct values from the {totalDocuments} matching documents.
-							{chartLimitExceeded ? ' Charts disabled due to dataset size.' : ` Charts display raw data points over time (${rawDataPoints ? rawDataPoints.length : 0} points shown).`}
+							{chartLimitExceeded ? ' Charts disabled due to dataset size.' : canShowChartBasedOnFilters ? ` Charts display raw data points over time (${rawDataPoints ? rawDataPoints.length : 0} points shown).` : ' Apply all available filters to enable charts.'}
 						</p>
 					</div>
 				</div>
