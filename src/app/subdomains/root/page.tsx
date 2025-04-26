@@ -35,8 +35,8 @@ export default function MainPage(): JSX.Element {
 					).
 				</p>
 				<p className='text-md sm:text-lg text-secondary-text mb-2'>A fully self-taught Senior Software Engineer with 7 years of experience, focused on backend development and deployment.</p>
-				<p className='text-md sm:text-lg text-secondary-text mb-2'>Launched 30+ projects securely and reliably, prioritizing minimal downtime.</p>
-				<p className='text-md sm:text-lg text-secondary-text mb-6'>Enjoys collaborating, championing best practices in security and performance, and developing backend solutions.</p>
+				<p className='text-md sm:text-lg text-secondary-text mb-2'>Launched 50+ projects securely and reliably, prioritizing efficiency and performance.</p>
+				<p className='text-md sm:text-lg text-secondary-text mb-6'>Experienced in best practices in security and performance, and developing backend solutions to solve any task in an efficient manner.</p>
 				<a href='https://github.com/Lawlzer/lawlzer-website' target='_blank' rel='noopener noreferrer' className='inline-block px-6 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-base font-semibold transition-colors duration-200'>
 					View Source Code on GitHub
 				</a>
