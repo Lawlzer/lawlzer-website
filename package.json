@@ -82,6 +82,7 @@
 		"eslint-config-next": "^15.3.1",
 		"eslint-plugin-import": "^2.31.0",
 		"husky": "^9.1.7",
+		"jsdom": "^26.1.0",
 		"lint-staged": "^15.5.1",
 		"next-test-api-route-handler": "^4.0.16",
 		"nodemon": "^3.1.9",

@@ -17,18 +17,14 @@ export interface FiltersResponse {
 }
 
 // Define the structure for filters passed in the query string
-type InputFilters = Record<string, string[]>;
+type InputFilters = Record<string, string[]>; // Assuming values are always arrays from FE
 
-// Type for the raw aggregation result from MongoDB for filter counts
-type AggregationResult = {
-	_id: string; // Field key
-	values: { k: string; v: number }[]; // k: value, v: count
-}[];
+// Type for the aggregation result from MongoDB for filter counts using $facet
+type FacetResult = Record<string, { _id: string | null; count: number }[]>;
 
-// Document structure for projection
-interface DocumentIdOnly extends MongoDocument {
-	_id: ObjectId;
-}
+// List of fields in CommodityData to be used as filters
+// TODO: Adjust this list based on actual desired filterable fields
+const FILTERABLE_FIELDS: string[] = ['type', 'category', 'country', 'state', 'Cattle Type', 'Choice Grade'];
 
 // Ensure DATABASE_URL is set in your environment variables
 const uri = process.env.DATABASE_URL;
@@ -67,6 +63,31 @@ async function getMongoClient(): Promise<MongoClient> {
 	return clientPromise;
 }
 
+// Helper to build the $match stage from input filters
+function buildMatchStage(inputFilters: InputFilters): MongoDocument {
+	const matchQuery: MongoDocument = {};
+	for (const [key, values] of Object.entries(inputFilters)) {
+		// Ensure field is considered filterable
+		if (FILTERABLE_FIELDS.includes(key) && values.length > 0) {
+			matchQuery[key] = { $in: values };
+		}
+	}
+	return { $match: matchQuery };
+}
+
+// Helper to build the $facet stage for filterable fields
+function buildFacetStage(): MongoDocument {
+	const facet: MongoDocument = {};
+	for (const field of FILTERABLE_FIELDS) {
+		facet[field] = [
+			{ $match: { [field]: { $ne: null, $exists: true } } }, // Exclude null/missing values for this field
+			{ $group: { _id: `$${field}`, count: { $sum: 1 } } },
+			{ $sort: { count: -1 } }, // Sort by count descending within the facet
+		];
+	}
+	return { $facet: facet };
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
 	const url = new URL(req.url);
 	const filtersParam = url.searchParams.get('filters');
@@ -75,174 +96,100 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 	if (filtersParam) {
 		try {
 			inputFilters = JSON.parse(filtersParam);
-			console.log('[Filters API] Received filters param:', filtersParam);
 			console.log('[Filters API] Parsed inputFilters:', JSON.stringify(inputFilters));
-			console.log('[Filters API] Parsed inputFilter Keys:', Object.keys(inputFilters));
 		} catch (error) {
 			console.error('Failed to parse filters:', error);
 			return NextResponse.json({ error: 'Invalid filters format' }, { status: 400 });
 		}
-	} else {
-		console.log('[Filters API] No filters param received.');
 	}
 
 	try {
 		const mongoClient = await getMongoClient();
-		const db = mongoClient.db(); // Use default DB from connection string
-		const dataDocumentCollection = db.collection('DataDocument');
-		const dataEntryCollection = db.collection('DataEntry');
+		const db = mongoClient.db();
+		// --- Use CommodityData Collection Directly ---
+		const commodityCollection = db.collection('CommodityData');
+		console.log(`[Filters API] Using DB: ${db.databaseName}, Collection: ${commodityCollection.collectionName}`);
 
-		let matchingDocumentIds: ObjectId[] | null = null; // Null signifies 'all documents' initially
-		// Initialize commonFields at the start of the try block
+		let totalDocuments: number;
+		const aggregationPipeline: MongoDocument[] = [];
+		const hasInputFilters = Object.keys(inputFilters).length > 0;
+
+		// 1. Build $match stage if filters are present
+		if (hasInputFilters) {
+			const matchStage = buildMatchStage(inputFilters);
+			console.log('[Filters API] Filters applied. Match stage:', JSON.stringify(matchStage));
+			aggregationPipeline.push(matchStage);
+			// Recalculate totalDocuments based on the filter match
+			totalDocuments = await commodityCollection.countDocuments(matchStage.$match);
+			console.log(`[Filters API] Filtered document count: ${totalDocuments}`);
+		} else {
+			console.log('[Filters API] No input filters. Counting all documents.');
+			// Count all documents if no filters are applied
+			totalDocuments = await commodityCollection.countDocuments({});
+			console.log(`[Filters API] Total document count: ${totalDocuments}`);
+		}
+
+		// 2. Build $facet stage
+		const facetStage = buildFacetStage();
+		aggregationPipeline.push(facetStage);
+
+		// 3. Execute aggregation
+		console.log('[Filters API] Executing aggregation pipeline...');
+		const aggregationResult = await commodityCollection.aggregate(aggregationPipeline).toArray();
+
+		const formattedFilters: Record<string, FilterValueCount[]> = {};
 		const commonFields: Record<string, any> = {};
 
-		// 1. Find matching document IDs based on input filters by querying DataEntry
-		if (Object.keys(inputFilters).length > 0) {
-			try {
-				const documentIdsPerFilter: ObjectId[][] = [];
+		// Check if aggregation returned any result (it should return one document with facets)
+		if (aggregationResult.length > 0) {
+			const facetResult = aggregationResult[0] as FacetResult;
+			console.log(`[Filters API] Aggregation returned ${Object.keys(facetResult).length} facets.`);
 
-				// Find document IDs matching each filter criterion
-				for (const [key, values] of Object.entries(inputFilters)) {
-					// Find entries matching the key and any of the values
-					const entryQuery = { key: key, value: { $in: values } };
-					// Get distinct documentIds associated with these entries
-					// Explicitly type the result of distinct using a cast
-					const idsForKey = (await dataEntryCollection.distinct('documentId', entryQuery)) as ObjectId[];
-					// Assuming 'documentId' field in DataEntry stores actual ObjectId instances
-					documentIdsPerFilter.push(idsForKey);
-				}
+			// 4. Process facet results
+			for (const [field, values] of Object.entries(facetResult)) {
+				if (values.length === 0) continue; // Skip empty facets
 
-				// Calculate the intersection of document IDs from all filters
-				if (documentIdsPerFilter.length > 0) {
-					// Check if any filter returned zero results, meaning the intersection is empty
-					if (documentIdsPerFilter.some((ids) => ids.length === 0)) {
-						matchingDocumentIds = [];
-					} else {
-						// Use Set for efficient intersection calculation
-						const idSets = documentIdsPerFilter.map((ids) => new Set(ids.map((id) => id.toHexString())));
-						let intersection = new Set(idSets[0]);
+				// Map to desired format { value: string, count: number }
+				const mappedValues: FilterValueCount[] = values
+					.filter((v) => v._id !== null) // Filter out potential null grouping
+					.map((v) => ({ value: String(v._id), count: v.count }));
 
-						for (let i = 1; i < idSets.length; i++) {
-							const currentIntersection = intersection; // Capture current value for filter closure
-							intersection = new Set([...idSets[i]].filter((idStr: string) => currentIntersection.has(idStr))); // Add type to filter param
-						}
+				if (mappedValues.length === 0) continue; // Skip if only null values existed
 
-						// Explicitly map string IDs back to ObjectIds
-						matchingDocumentIds = Array.from(intersection).map((idStr: string): ObjectId => new ObjectId(idStr));
+				// Check for common field (only one value for this field in the *current* result set)
+				if (mappedValues.length === 1) {
+					// Check if the single value's count matches the relevant total
+					const totalCountForSingleValue = mappedValues[0].count;
+					if (totalCountForSingleValue === totalDocuments && totalDocuments > 0) {
+						commonFields[field] = mappedValues[0].value;
 					}
-				} else {
-					// This case should technically not be reached if inputFilters has keys,
-					// but handle defensively.
-					matchingDocumentIds = [];
-				}
-			} catch (filterError) {
-				console.error('[Filters API] Error processing filters:', filterError);
-				const errorMessage = filterError instanceof Error ? filterError.message : 'Internal server error during filter processing';
-				return NextResponse.json({ error: errorMessage }, { status: 500 });
-			}
-		}
-
-		// 2. Determine total documents and final list of IDs for aggregation
-		let totalDocuments: number;
-		let idsForAggregation: ObjectId[];
-
-		if (matchingDocumentIds === null) {
-			// No filters were applied, count all documents and use all IDs
-			totalDocuments = await dataDocumentCollection.estimatedDocumentCount();
-			const allDocsCursor = dataDocumentCollection.find<DocumentIdOnly>({}, { projection: { _id: 1 } });
-			const allDocsArray: DocumentIdOnly[] = await allDocsCursor.toArray();
-			// Explicitly type the result of map
-			idsForAggregation = allDocsArray.map((doc: DocumentIdOnly): ObjectId => doc._id);
-		} else {
-			// Filters were applied, use the calculated intersection
-			totalDocuments = matchingDocumentIds.length;
-			idsForAggregation = matchingDocumentIds;
-		}
-
-		// If filters were applied and the result is zero documents, return early
-		if (totalDocuments === 0 && Object.keys(inputFilters).length > 0) {
-			console.log('[Filters API] No matching documents found with active filters.');
-			return NextResponse.json({ filters: {}, totalDocuments: 0 });
-		}
-
-		// 3. Aggregate distinct key-value pairs WITH counts from the final set of documents
-		const formattedFilters: Record<string, FilterValueCount[]> = {};
-		if (idsForAggregation.length > 0) {
-			// MongoDB Aggregation Pipeline (using native driver syntax)
-			const aggregationPipeline = [
-				{
-					$match: {
-						// Ensure we are matching against ObjectId instances
-						documentId: { $in: idsForAggregation },
-						// Exclude the 'unixDate' key from the aggregation results
-						key: { $ne: 'unixDate' },
-					},
-				},
-				{
-					$group: {
-						_id: { key: '$key', value: '$value' },
-						count: { $sum: 1 },
-					},
-				},
-				{
-					$group: {
-						_id: '$_id.key',
-						values: { $push: { k: '$_id.value', v: '$count' } },
-					},
-				},
-			];
-
-			const results = (await dataEntryCollection.aggregate(aggregationPipeline).toArray()) as AggregationResult;
-
-			// 4. Format the results and identify common fields
-			for (const item of results) {
-				const key = item._id;
-				const totalCountForKey = item.values.reduce((sum, curr) => sum + curr.v, 0);
-
-				// Check for common field: only one value and count matches total documents
-				// Ensure totalDocuments is greater than 0 to make this meaningful
-				if (item.values.length === 1 && totalCountForKey === totalDocuments && totalDocuments > 0) {
-					commonFields[key] = item.values[0].k; // Store the single value
 				}
 
-				// Find the maximum count for any value within this key
-				const maxCount = item.values.reduce((max, curr) => Math.max(max, curr.v), 0);
-				// Check if the key has only one distinct value
-				const hasOnlyOneValue = item.values.length === 1;
+				// Apply the filter inclusion logic (maxCount > 15 or only one value)
+				const maxCount = mappedValues.reduce((max, curr) => Math.max(max, curr.count), 0);
+				const hasOnlyOneValue = mappedValues.length === 1;
 
-				// Include the filter key if its most frequent value appears > 15 times
-				// OR if it only has one distinct value (regardless of count)
 				if (maxCount > 15 || hasOnlyOneValue) {
-					formattedFilters[key] = item.values
-						.map((v) => ({ value: v.k, count: v.v }))
-						// Sort values primarily by count (desc), then by value (asc)
-						.sort((a, b) => {
-							if (b.count !== a.count) {
-								return b.count - a.count;
-							}
-							return a.value.localeCompare(b.value);
-						});
+					// Already sorted by count descending from facet stage
+					// Add secondary sort by value ascending
+					formattedFilters[field] = mappedValues.sort((a, b) => {
+						if (a.count !== b.count) return 0; // Primary sort already done
+						return a.value.localeCompare(b.value);
+					});
 				} else {
-					// console.log(`[Filters API] Excluding filter key "${key}" because max count (${maxCount}) is not > 15 and it has multiple values.`);
+					// console.log(`[Filters API] Excluding filter key "${field}" because max count (${maxCount}) <= 15 and it has multiple values.`);
 				}
 			}
-		} else if (totalDocuments > 0 && Object.keys(inputFilters).length === 0) {
-			// Case: No filters applied, but aggregation still needs to run on all docs
-			// This case might be redundant if idsForAggregation is populated correctly when matchingDocumentIds is null
-			// console.log('[Filters API] No filters applied, but found documents. Aggregation should have run.');
-			// The logic above should handle this, but adding a log just in case.
-			// If this log appears, review the idsForAggregation logic when no filters are applied.
 		} else {
-			// console.log('[Filters API] Skipping aggregation as there are no document IDs to aggregate.');
+			console.log('[Filters API] Aggregation returned no results.');
 		}
 
-		// Return filters with counts, total document count, and common fields
+		// Return results
+		console.log(`[Filters API] Successfully processed. Returning totalDocuments: ${totalDocuments}, Filter keys: ${Object.keys(formattedFilters).join(', ')}`);
 		return NextResponse.json({ filters: formattedFilters, totalDocuments, commonFields });
 	} catch (error) {
 		console.error('Failed to fetch filters:', error);
-		// Ensure error is an instance of Error for consistent handling
 		const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-		// Ensure we return a consistent structure even on error, without commonFields
 		return NextResponse.json({ error: errorMessage, filters: {}, totalDocuments: 0 }, { status: 500 });
 	} finally {
 		// No explicit disconnect needed if using the connection pattern above for serverless
