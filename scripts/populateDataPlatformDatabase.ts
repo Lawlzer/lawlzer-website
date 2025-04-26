@@ -21,11 +21,10 @@ const getRandomNumber = (min: number, max: number, decimals = 2): number => {
 };
 
 // Moved definition up to fix linter error
-const getMsPerFrequency = (frequency: 'daily' | 'quarterly' | 'yearly'): number => {
+const getMsPerFrequency = (frequency: 'daily'): number => {
 	const msInDay = 24 * 60 * 60 * 1000;
-	if (frequency === 'daily') return msInDay;
-	if (frequency === 'quarterly') return Math.floor((365.25 / 4) * msInDay);
-	return Math.floor(365.25 * msInDay); // yearly
+	// Only daily frequency is needed now
+	return msInDay;
 };
 
 // Generates the next value considering step variation, YoY trend, and previous year's value
@@ -92,14 +91,15 @@ const US_STATES = ['Texas', 'California', 'Iowa', 'Nebraska', 'Kansas', 'Oklahom
 const CATTLE_TYPES = ['Heifers', 'Mixed', 'Steers'];
 const CATTLE_CHOICE_GRADES = ['0-35%', '35-65%', '65-80%', '80-100%'];
 
-// Generates timestamps FORWARD in time (oldest first)
-const createTimestampSequence = (count: number, frequency: 'daily' | 'quarterly' | 'yearly'): number[] => {
+// Generates timestamps FORWARD in time (oldest first) for daily frequency
+const createDailyTimestampSequence = (count: number): number[] => {
 	const timestamps: number[] = [];
-	let startingDate = Date.now() - (count - 1) * getMsPerFrequency(frequency); // Start in the past
+	const msInDay = getMsPerFrequency('daily');
+	let startingDate = Date.now() - (count - 1) * msInDay; // Start in the past
 
 	for (let i = 0; i < count; i++) {
 		timestamps.push(startingDate);
-		startingDate += getMsPerFrequency(frequency);
+		startingDate += msInDay;
 	}
 	return timestamps; // Oldest first
 };
@@ -129,7 +129,7 @@ interface CategoricalValues {
 
 interface DataTypeConfig {
 	category: 'Crop' | 'Livestock' | 'Produce';
-	frequency: 'daily' | 'quarterly' | 'yearly';
+	frequency: 'daily'; // All frequencies are now daily
 	numericalFields: {
 		[configKey: string]: NumericalRange; // e.g., 'Exports': { min: ..., max: ..., schemaFieldName: 'exports' }
 	};
@@ -175,7 +175,7 @@ const dataTypeConfigs: Record<string, DataTypeConfig> = {
 	},
 	Sheep: {
 		category: 'Livestock',
-		frequency: 'quarterly',
+		frequency: 'daily',
 		numericalFields: {
 			Exports: { min: 10000, max: 50000, decimals: 0, schemaFieldName: 'exports' },
 			Price: { min: 2.0, max: 4.0, decimals: 4, schemaFieldName: 'price' },
@@ -184,7 +184,7 @@ const dataTypeConfigs: Record<string, DataTypeConfig> = {
 	},
 	Barley: {
 		category: 'Crop',
-		frequency: 'yearly',
+		frequency: 'daily',
 		numericalFields: {
 			Exports: { min: 1000000, max: 10000000, decimals: 0, schemaFieldName: 'exports' },
 			'Total Volume': { min: 5000000, max: 20000000, decimals: 0, schemaFieldName: 'totalVolume' },
@@ -209,23 +209,13 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 	const annualTrendsCache = new Map<string, Trend>(); // Key: seriesKey-year
 
 	// Calculate number of points based on GENERATE_YEARS_BACK
-	const numYearlyPoints = GENERATE_YEARS_BACK;
-	const numQuarterlyPoints = GENERATE_YEARS_BACK * 4;
-	const numDailyPoints = GENERATE_YEARS_BACK * 365; // More realistic daily points
+	const numDailyPoints = GENERATE_YEARS_BACK * 365; // All data is daily now
 
-	const dailyTimestamps = createTimestampSequence(numDailyPoints, 'daily');
-	const quarterlyTimestamps = createTimestampSequence(numQuarterlyPoints, 'quarterly');
-	const yearlyTimestamps = createTimestampSequence(numYearlyPoints, 'yearly');
-
-	const timestampMap = {
-		daily: dailyTimestamps,
-		quarterly: quarterlyTimestamps,
-		yearly: yearlyTimestamps,
-	};
+	const dailyTimestamps = createDailyTimestampSequence(numDailyPoints);
 
 	// Iterate through each data type configuration
 	for (const [type, config] of Object.entries(dataTypeConfigs)) {
-		const timestamps = timestampMap[config.frequency];
+		const timestamps = dailyTimestamps;
 
 		// Iterate through countries
 		for (const country of COUNTRIES) {

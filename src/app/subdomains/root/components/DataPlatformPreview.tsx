@@ -15,6 +15,9 @@ import { localPoint } from '@visx/event';
 import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend';
 import ParentSize from '@visx/responsive/lib/components/ParentSize';
 import type { NumberValue } from '@visx/vendor/d3-scale';
+import { useMediaQuery } from '~/hooks/useMediaQuery'; // Import the hook
+import { FilterPanel } from './FilterPanel'; // Import the new component
+import { ChartPanel } from './ChartPanel'; // Import the chart panel
 
 // REMOVED MAX_DOCUMENTS constant, limit now handled by backend
 // export const MAX_DOCUMENTS = 300;
@@ -68,7 +71,12 @@ interface DataPlatformPreviewProps {
 
 // FIX: Add explicit return types
 // FIX: Simplify signature - index is not used
-const formatDayOfYearForAxis: TickFormatter<NumberValue> = (dayValue: NumberValue): string => {
+const getMinY = (d: RangePoint): number => d.yMin;
+const getMaxY = (d: RangePoint): number => d.yMax;
+
+// FIX: Add explicit return types
+// FIX: Simplify signature - index is not used
+const formatDayOfYearForAxis: TickFormatter<NumberValue> = (dayValue: NumberValue /*, index?: number, ticks?: any[] */): string => {
 	const day = typeof dayValue === 'number' ? dayValue : dayValue.valueOf();
 	// Use a non-leap year like 2001 as a reference for formatting
 	const referenceDate = new Date(2001, 0, 1);
@@ -79,8 +87,6 @@ const formatDayOfYearForAxis: TickFormatter<NumberValue> = (dayValue: NumberValu
 // Define accessor functions for visx - types added
 const getX = (d: ChartPoint | RangePoint): number => d.x;
 const getY = (d: ChartPoint): number => d.y;
-const getMinY = (d: RangePoint): number => d.yMin;
-const getMaxY = (d: RangePoint): number => d.yMax;
 
 // Tooltip styles - can be outside
 const tooltipStyles = {
@@ -113,15 +119,11 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	const [lastFetchTime, setLastFetchTime] = useState<Record<string, number>>({});
 	// NEW: State to track hidden datasets (using the label as the key)
 	const [hiddenDatasets, setHiddenDatasets] = useState<Set<string>>(new Set());
+	// NEW: State for mobile view
+	const [mobileViewMode, setMobileViewMode] = useState<'chart' | 'filters'>('filters');
 
-	// REMOVED: Helper functions moved outside component scope
-	// const formatDayOfYearForAxis = ...
-	// const getX = ...
-	// const getY = ...
-	// const getMinY = ...
-	// const getMaxY = ...
-	// const tooltipStyles = ...
-	// const chartMargin = ...
+	// --- Hooks ---
+	const isMobile = useMediaQuery('(max-width: 1023px)'); // Tailwind's lg breakpoint
 
 	// Generate cache key based on active filters (time range no longer needed for data fetch)
 	const getCacheKey = useCallback(
@@ -253,22 +255,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		}
 	}, [activeFilters, getCacheKey]);
 
-	// Fetch filters when activeFilters change
-	useEffect(() => {
-		console.log('Effect 1: Filters');
-		void fetchFiltersAndCount();
-	}, [fetchFiltersAndCount]);
-
-	// Fetch chart data when activeFilters change or when filters finish loading
-	useEffect(() => {
-		console.log('Effect 2: Chart Data - Triggered by filter change or loading state');
-		if (!loadingFilters) {
-			void fetchChartData();
-		}
-	}, [activeFilters, loadingFilters, fetchChartData]); // Triggered by activeFilters (via fetchChartData dep) or loadingFilters change
-
-	// --- Memoized Values for Rendering ---
-
+	// --- Memoized Values for Rendering (Moved up) ---
 	// Calculate chartable fields from the first few data points (more robustly)
 	const chartableFields = useMemo(() => {
 		if (!rawDataPoints || rawDataPoints.length === 0) return [];
@@ -278,41 +265,6 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		}
 		return Array.from(fields).sort((a, b) => a.localeCompare(b));
 	}, [rawDataPoints]);
-
-	// Check if there's filter data to display
-	const hasFilterData = useMemo(() => {
-		return availableFilters && Object.keys(availableFilters).length > 0;
-	}, [availableFilters]);
-
-	// Determine if charts should be shown
-	const showCharts = useMemo(() => {
-		return !chartLimitExceeded && totalDocuments > 0 && rawDataPoints && rawDataPoints.length > 0;
-	}, [chartLimitExceeded, totalDocuments, rawDataPoints]);
-
-	// --- Event Handlers ---
-
-	const handleFilterToggle = (key: string, value: string): void => {
-		setActiveFilters((prevFilters) => {
-			const currentKeyFilters = prevFilters[key] ?? [];
-			const valueIndex = currentKeyFilters.indexOf(value);
-
-			if (valueIndex > -1) {
-				const updatedKeyFilters = currentKeyFilters.filter((v) => v !== value);
-				if (updatedKeyFilters.length === 0) {
-					const { [key]: _, ...rest } = prevFilters;
-					return rest;
-				} else {
-					return { ...prevFilters, [key]: updatedKeyFilters };
-				}
-			} else {
-				return { ...prevFilters, [key]: [...currentKeyFilters, value] };
-			}
-		});
-	};
-
-	const isFilterActive = (key: string, value: string): boolean => {
-		return activeFilters[key]?.includes(value) ?? false;
-	};
 
 	// Determine if the user has applied filters for all available filter options
 	const canShowChartBasedOnFilters = useMemo(() => {
@@ -339,27 +291,72 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		});
 	}, [availableFilters, activeFilters, loadingFilters]);
 
-	const sortedFilterEntries = useMemo(() => {
-		if (!availableFilters) return [];
-		return (
-			Object.entries(availableFilters)
-				.map(([key, valueCounts]) => ({
-					key,
-					valueCounts: valueCounts,
-					// Calculate the max count for this filter category
-					maxCount: Math.max(...valueCounts.map((vc) => vc.count), 0),
-				}))
-				// Sort by the calculated maxCount in descending order
-				.sort((a, b) => {
-					// Primary sort: descending by maxCount
-					if (b.maxCount !== a.maxCount) {
-						return b.maxCount - a.maxCount;
-					}
-					// Secondary sort: ascending by key name
-					return a.key.localeCompare(b.key);
-				})
-		);
-	}, [availableFilters]);
+	// --- Effects ---
+	// Fetch filters when activeFilters change
+	useEffect(() => {
+		console.log('Effect 1: Filters');
+		// Reset mobile view to filters when filters change significantly
+		if (isMobile) {
+			setMobileViewMode('filters');
+		}
+		void fetchFiltersAndCount();
+	}, [fetchFiltersAndCount, isMobile]); // Add isMobile dependency
+
+	// Fetch chart data when activeFilters change or when filters finish loading
+	useEffect(() => {
+		console.log('Effect 2: Chart Data - Triggered by filter change or loading state');
+		if (!loadingFilters) {
+			void fetchChartData();
+		}
+	}, [activeFilters, loadingFilters, fetchChartData]); // Triggered by activeFilters (via fetchChartData dep) or loadingFilters change
+
+	// NEW Effect: Switch to chart view on mobile when ready
+	useEffect(() => {
+		if (isMobile && canShowChartBasedOnFilters && !loadingFilters && !loadingChartData && !chartLimitExceeded && chartableFields.length > 0) {
+			// Only switch if we can actually show *something* in the chart panel
+			console.log('[Mobile View] Switching to Chart View');
+			setMobileViewMode('chart');
+		}
+		// Intentionally don't switch back automatically if filters become incomplete
+		// User must use the button or clear filters to go back
+	}, [isMobile, canShowChartBasedOnFilters, loadingFilters, loadingChartData, chartLimitExceeded, chartableFields.length]); // Add dependencies
+
+	// --- Event Handlers ---
+
+	const handleFilterToggle = (key: string, value: string): void => {
+		setActiveFilters((prevFilters) => {
+			const currentKeyFilters = prevFilters[key] ?? [];
+			const valueIndex = currentKeyFilters.indexOf(value);
+
+			if (valueIndex > -1) {
+				const updatedKeyFilters = currentKeyFilters.filter((v) => v !== value);
+				if (updatedKeyFilters.length === 0) {
+					const { [key]: _, ...rest } = prevFilters;
+					return rest;
+				} else {
+					return { ...prevFilters, [key]: updatedKeyFilters };
+				}
+			} else {
+				return { ...prevFilters, [key]: [...currentKeyFilters, value] };
+			}
+		});
+	};
+
+	const isFilterActive = (key: string, value: string): boolean => {
+		return activeFilters[key]?.includes(value) ?? false;
+	};
+
+	// Clear Filters Button Handler (Modified for mobile)
+	const handleClearFilters = (): void => {
+		setActiveFilters({});
+		// No need to explicitly reset mobile view here,
+		// the main filter fetch effect will handle it.
+	};
+
+	// NEW: Handler to toggle mobile view manually
+	const handleToggleMobileView = (): void => {
+		setMobileViewMode((prevMode) => (prevMode === 'filters' ? 'chart' : 'filters'));
+	};
 
 	const handleChartTabChange = (tabKey: string): void => {
 		if (tabKey !== activeChartTab) {
@@ -384,6 +381,42 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			return newHidden;
 		});
 	};
+
+	// --- Memoized Values for Rendering (Restored) ---
+
+	// Check if there's filter data to display
+	const hasFilterData = useMemo(() => {
+		// Explicitly return boolean
+		return !!(availableFilters && Object.keys(availableFilters).length > 0);
+	}, [availableFilters]);
+
+	// Determine if charts should be shown
+	const showCharts = useMemo(() => {
+		// Explicitly return boolean
+		return !!(!chartLimitExceeded && totalDocuments > 0 && rawDataPoints && rawDataPoints.length > 0);
+	}, [chartLimitExceeded, totalDocuments, rawDataPoints]);
+
+	const sortedFilterEntries = useMemo(() => {
+		if (!availableFilters) return [];
+		return (
+			Object.entries(availableFilters)
+				.map(([key, valueCounts]) => ({
+					key,
+					valueCounts: valueCounts,
+					// Calculate the max count for this filter category
+					maxCount: Math.max(...valueCounts.map((vc) => vc.count), 0),
+				}))
+				// Sort by the calculated maxCount in descending order
+				.sort((a, b) => {
+					// Primary sort: descending by maxCount
+					if (b.maxCount !== a.maxCount) {
+						return b.maxCount - a.maxCount;
+					}
+					// Secondary sort: ascending by key name
+					return a.key.localeCompare(b.key);
+				})
+		);
+	}, [availableFilters]);
 
 	// Format raw data points for Chart.js, grouping by year, adding min/max overlay
 	const getFormattedChartData = useMemo(() => {
@@ -513,26 +546,32 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		scroll: true, // enable scroll tracking
 	});
 
-	// --- Handle Tooltip ---
+	// --- Handle Tooltip (Restored Original Logic) ---
 	const handleTooltip = useCallback(
-		(event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>, chartWidth: number, chartHeight: number, xScale: any, yScale: any) => {
-			const { x } = localPoint(event) ?? { x: 0 }; // FIX: Use nullish coalescing
-			const x0 = xScale.invert(x - chartMargin.left); // Get the day of year from the mouse position
-			const dayOfYear = Math.round(x0); // Round to nearest day
+		(
+			event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>,
+			chartWidth: number,
+			chartHeight: number,
+			xScale: any, // Consider more specific scale types if possible
+			yScale: any // Consider more specific scale types if possible
+		) => {
+			const { x } = localPoint(event) ?? { x: 0 };
+			const x0 = xScale.invert(x - chartMargin.left);
+			const dayOfYear = Math.round(x0);
+			console.log('[handleTooltip] Hover event - Day:', dayOfYear); // LOG 1
 
-			// Use optional chaining for safety
 			const formattedData = getFormattedChartData;
 			if (dayOfYear < 1 || dayOfYear > 366 || !formattedData?.datasets || !rawDataPoints) {
+				console.log('[handleTooltip] Aborting: Invalid day, no data, or no raw points.'); // LOG 2
 				hideTooltip();
 				return;
 			}
 
-			// Find the closest data points across all VISIBLE years for this day
 			const closestPoints: TooltipPointData[] = [];
 			formattedData.datasets
-				.filter((ds) => !hiddenDatasets.has(ds.label)) // Exclude hidden datasets
+				.filter((ds) => !hiddenDatasets.has(ds.label))
 				.forEach((dataset) => {
-					const year = parseInt(dataset.label.split(' ')[0], 10); // Extract year from label
+					const year = parseInt(dataset.label.split(' ')[0], 10);
 					if (isNaN(year)) return;
 
 					let minDist = Infinity;
@@ -545,59 +584,62 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 							closestPointForYear = { ...point, year };
 						}
 					});
+					// LOG 3: Log details for each year's check
+					console.log(`[handleTooltip] Year ${year}: Closest Point=`, closestPointForYear, `Min Dist=`, minDist);
 
-					// Only show tooltip if the closest point is reasonably close (e.g., within 1 day)
-					// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-					if (closestPointForYear && minDist <= 1) {
-						closestPoints.push(closestPointForYear);
+					// Only add the point if it exists, is close enough, and has a valid numeric y-value
+					if (closestPointForYear !== null && minDist <= 1) {
+						// Assert type after null check
+						const validPoint = closestPointForYear as TooltipPointData;
+						if (typeof validPoint.y === 'number' && Number.isFinite(validPoint.y)) {
+							closestPoints.push(validPoint);
+						}
 					}
 				});
 
-			// Check if the mouse is over the VISIBLE min/max range area
 			let rangeData: RangePoint | null = null;
-			// Check if range should be displayed and data exists
 			if (!hiddenDatasets.has(formattedData.rangeLabel) && formattedData.minMaxData.length > 0) {
-				const closestRangePoint = formattedData.minMaxData.find((d) => Math.abs(d.x - dayOfYear) <= 0.5); // Find range data for the day
+				const closestRangePoint = formattedData.minMaxData.find((d) => Math.abs(d.x - dayOfYear) <= 0.5);
+				console.log('[handleTooltip] Range Check: Closest Range Point=', closestRangePoint); // LOG 4
 				if (closestRangePoint) {
-					const { y } = localPoint(event) ?? { y: 0 }; // FIX: Use nullish coalescing
+					const { y } = localPoint(event) ?? { y: 0 };
 					const yValue = yScale.invert(y - chartMargin.top);
-					// Check if pointer y is within the min/max range for that day
+					console.log('[handleTooltip] Range Check: Hover Y Value=', yValue, `Range Y Min/Max=`, closestRangePoint.yMin, '/', closestRangePoint.yMax); // LOG 5
 					if (yValue >= closestRangePoint.yMin && yValue <= closestRangePoint.yMax) {
-						rangeData = closestRangePoint; // Store the range data if hovered
+						rangeData = closestRangePoint;
 					}
 				}
 			}
+			console.log('[handleTooltip] Final Closest Points for Tooltip:', closestPoints); // LOG 6
+			console.log('[handleTooltip] Final Range Data for Tooltip:', rangeData); // LOG 7
 
 			if (closestPoints.length > 0 || rangeData) {
-				// Combine point data and range data for tooltip
 				const combinedTooltipData: CombinedTooltipData = {
 					day: dayOfYear,
-					points: closestPoints.sort((a, b) => b.year - a.year), // Sort points by year desc
-					range: rangeData, // Add range data if available
+					points: closestPoints.sort((a, b) => b.year - a.year),
+					range: rangeData,
 				};
+				console.log('[handleTooltip] Showing Tooltip with data:', combinedTooltipData); // LOG 8
 
-				// Determine tooltip position based on available data
 				let tooltipYValue: number;
 				if (rangeData) {
-					tooltipYValue = rangeData.yMax; // Position near the top of the range if hovering range
+					tooltipYValue = rangeData.yMax;
 				} else if (closestPoints.length > 0) {
-					// Find the highest Y value among the closest points for positioning
 					tooltipYValue = Math.max(...closestPoints.map((p) => p.y));
 				} else {
-					// Fallback position (should ideally not be reached if hideTooltip logic is correct)
 					tooltipYValue = 0;
 				}
 
 				showTooltip({
 					tooltipData: combinedTooltipData,
 					tooltipLeft: x,
-					tooltipTop: yScale(tooltipYValue), // Use calculated Y value
+					tooltipTop: yScale(tooltipYValue),
 				});
 			} else {
 				hideTooltip();
 			}
 		},
-		[getFormattedChartData, rawDataPoints, showTooltip, hideTooltip, hiddenDatasets] // Add hiddenDatasets dependency
+		[getFormattedChartData, rawDataPoints, showTooltip, hideTooltip, hiddenDatasets] // Original dependencies
 	);
 
 	const isLoading = loadingFilters || loadingChartData;
@@ -605,40 +647,38 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	// Determine the message to show in the chart area based on current state
 	const chartMessage = useMemo(() => {
 		if (loadingChartData) return 'Loading chart data...';
-		if (chartLimitExceeded)
-			// Keep specific message for limit exceeded
-			return `Chart generation disabled. Dataset size (${chartDocumentCount} documents) exceeds the limit. Apply more specific filters to reduce the count.`;
-		if (!canShowChartBasedOnFilters)
-			// New message if not all filters are applied
-			return 'Apply all available filters to view the chart.';
-		if (chartableFields.length === 0)
-			// Existing message if no chartable fields
-			return 'No suitable numeric fields found for charting in the current data.';
-		if (!activeChartTab)
-			// Existing message if no tab is selected (only possible if chartableFields > 0)
-			return 'Select a field above to view chart.';
-		if (!getFormattedChartData)
-			// Fallback if data formatting fails
-			return 'Could not generate chart data.';
-		return null; // Null indicates the chart should render
+		if (chartLimitExceeded) return `Chart generation disabled. Dataset size (${chartDocumentCount} documents) exceeds the limit. Apply more specific filters to reduce the count.`;
+		if (!canShowChartBasedOnFilters) return 'Apply all available filters to view the chart.';
+		if (chartableFields.length === 0) return 'No suitable numeric fields found for charting in the current data.';
+		if (!activeChartTab) return 'Select a field above to view chart.';
+		if (!getFormattedChartData) return 'Could not generate chart data.';
+		return null;
 	}, [loadingChartData, chartLimitExceeded, chartDocumentCount, canShowChartBasedOnFilters, chartableFields.length, activeChartTab, getFormattedChartData]);
 
 	// --- Render Logic ---
 
 	return (
 		<div
-			className='bg-secondary p-6 rounded-lg shadow-2xl w-[95vw] max-w-[1600px] h-[92vh] border border-border overflow-hidden flex flex-col'
+			className='bg-secondary p-6 rounded-lg shadow-2xl w-[95vw] max-w-[1600px] border border-border overflow-hidden flex flex-col'
 			onClick={(e) => {
 				e.stopPropagation();
 			}}
 		>
 			{/* Header */}
-			<h2 className='text-2xl font-bold mb-4 text-primary flex-shrink-0'>
-				Data Platform - Analytics
-				{isLoading && <span className='text-lg font-normal text-muted-foreground ml-2'>(Loading...)</span>}
-			</h2>
+			<div className='flex justify-between items-center flex-shrink-0 mb-4 flex-wrap gap-y-2'>
+				<h2 className='text-2xl font-bold text-primary'>
+					Data Platform - Analytics
+					{isLoading && <span className='text-lg font-normal text-muted-foreground ml-2'>(Loading...)</span>}
+				</h2>
+				{/* NEW: Mobile View Toggle Button */}
+				{isMobile && canShowChartBasedOnFilters && !isLoading && (
+					<button onClick={handleToggleMobileView} className='px-3 py-1 rounded bg-accent text-accent-foreground hover:bg-accent/90 text-sm mr-2'>
+						{mobileViewMode === 'filters' ? 'View Chart' : 'View Filters'}
+					</button>
+				)}
+			</div>
 
-			{/* Controls: Count - REMOVED Time Range */}
+			{/* Controls: Count */}
 			<div className='mb-4 flex-shrink-0 flex flex-wrap items-center justify-between gap-4'>
 				<div>
 					<p className='text-sm text-muted-foreground'>
@@ -649,433 +689,101 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 				{/* REMOVED Time Range Selector */}
 			</div>
 
-			{/* Main Layout: Filters | Charts */}
-			<div className='grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow overflow-hidden'>
-				{/* Filters Panel */}
-				<div className='lg:col-span-1 overflow-y-auto relative bg-background p-4 rounded border border-border flex flex-col'>
-					<h3 className='text-lg font-semibold mb-3 text-primary flex-shrink-0'>Filters</h3>
-
-					{/* Loading Overlay for Filters */}
-					{loadingFilters ? <div className='absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded text-muted-foreground'>Loading filters...</div> : null}
-
-					{/* Error Message */}
-					{error && !isLoading ? <p className='text-destructive p-4 bg-destructive/10 rounded mb-4'>Error: {error}</p> : null}
-
-					{/* Filters Content */}
-					{!loadingFilters && !error && hasFilterData ? (
-						<div className='space-y-4 overflow-y-auto flex-grow'>
-							{sortedFilterEntries.map(({ key, valueCounts }) => (
-								<div key={key} className='bg-muted/30 p-3 rounded border border-border/50'>
-									<h4 className='text-base font-medium mb-2 capitalize text-primary truncate' title={key.replace(/_/g, ' ')}>
-										{key.replace(/_/g, ' ')}
-									</h4>
-									<div className='flex flex-wrap gap-1.5'>
-										{valueCounts.map(({ value, count }) => (
-											<button
-												type='button'
-												key={value}
-												onClick={() => {
-													handleFilterToggle(key, value);
-												}}
-												className={`
-													px-2.5 py-0.5 rounded text-xs transition-colors duration-150 border flex items-center gap-1
-													${isFilterActive(key, value) || valueCounts.length === 1 ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : 'bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground'}
-												`}
-												title={`${value} (${count})`}
-											>
-												<span className='truncate max-w-[180px] inline-block align-bottom'>{value}</span>
-												<span className='text-[10px] opacity-70'>({count})</span>
-											</button>
-										))}
-									</div>
-								</div>
-							))}
-						</div>
-					) : null}
-
-					{/* No Filters Available Message */}
-					{!loadingFilters && !error && !hasFilterData ? <div className='flex-grow flex items-center justify-center p-4 bg-muted/20 rounded border border-border text-center text-muted-foreground'>{totalDocuments === 0 ? 'No documents match the current filters.' : 'No filter options available for the current data.'}</div> : null}
-
-					{/* Common Fields Display */}
-					{commonFields && Object.keys(commonFields).length > 0 && availableFilters && Object.keys(availableFilters).length > 0 && Object.keys(availableFilters).length === Object.keys(activeFilters).length && (
-						<div className='mt-4 pt-3 border-t border-border flex-shrink-0'>
-							<h4 className='text-sm font-semibold mb-2 text-muted-foreground'>Common Fields ({totalDocuments} Documents):</h4>
-							<div className='space-y-1 text-sm bg-background p-2 rounded border border-border/50'>
-								{Object.entries(commonFields).map(([key, value]) => (
-									<div key={key} className='flex justify-between items-center'>
-										<span className='text-primary font-medium mr-2'>{key}:</span>
-										<span className='text-foreground truncate' title={String(value)}>
-											{String(value)}
-										</span>
-									</div>
-								))}
-							</div>
-						</div>
-					)}
-
-					{/* Clear Filters Button */}
-					{Object.keys(activeFilters).length > 0 ? (
-						<button
-							className='mt-4 w-full px-3 py-1.5 rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm flex-shrink-0'
-							onClick={() => {
-								setActiveFilters({});
-							}}
-							disabled={isLoading}
-						>
-							Clear All Filters
-						</button>
-					) : null}
-				</div>
-
-				{/* Charts Panel */}
-				<div className='lg:col-span-3 bg-background p-4 rounded border border-border overflow-y-auto flex flex-col'>
-					<h3 className='text-lg font-semibold mb-3 text-primary flex-shrink-0'>Raw Data Over Time</h3>
-
-					{/* Chart Area */}
-					{showCharts || loadingChartData || chartLimitExceeded ? (
-						<div className='flex-grow flex flex-col min-h-[400px]'>
-							{/* Chart Tabs (Only show if chart *could* be shown and fields exist) */}
-							{!loadingChartData && !chartLimitExceeded && canShowChartBasedOnFilters && chartableFields.length > 0 ? (
-								<div className='flex space-x-2 mb-4 border-b border-border pb-2 overflow-x-auto flex-shrink-0'>
-									{chartableFields.map((key) => (
-										<button
-											key={key}
-											onClick={() => {
-												handleChartTabChange(key);
-											}}
-											className={`px-3 py-1 text-sm rounded transition-colors whitespace-nowrap ${activeChartTab === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
-										>
-											{key.replace(/_/g, ' ')}
-										</button>
-									))}
-								</div>
-							) : null}
-
-							{/* Message Area or Chart */}
-							{chartMessage ? (
-								// Display message if chart cannot be shown
-								<div className='flex-grow flex items-center justify-center min-h-[400px] bg-muted/20 rounded border border-border text-center text-muted-foreground p-4'>
-									{/* Special formatting for limit exceeded */}
-									{chartLimitExceeded ? (
-										<div>
-											<p className='mb-2 text-lg font-medium'>Chart generation disabled</p>
-											<p>Dataset size ({chartDocumentCount} documents) exceeds the limit.</p>
-											<p className='mt-1'>Apply more specific filters to reduce the count.</p>
-										</div>
-									) : (
-										<p>{chartMessage}</p>
-									)}
-								</div>
-							) : activeChartTab && getFormattedChartData ? (
-								// Active Chart Rendering
-								<div className='flex-grow h-[400px] relative'>
-									<ParentSize>
-										{({ width, height }) => {
-											// Use optional chaining and nullish coalescing
-											const formattedData = getFormattedChartData;
-											// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-											if (width === 0 || height === 0 || !formattedData || !activeChartTab) {
-												return <div className='w-full h-full flex items-center justify-center text-muted-foreground'>Initializing chart...</div>;
-											}
-
-											// Adjust dimensions for margins
-											const innerWidth = width - chartMargin.left - chartMargin.right;
-											const innerHeight = height - chartMargin.top - chartMargin.bottom;
-
-											if (innerWidth <= 0 || innerHeight <= 0) {
-												return <div className='w-full h-full flex items-center justify-center text-muted-foreground'>Chart area too small.</div>;
-											}
-
-											// Define Scales
-											const xScale = scaleLinear<number>({
-												domain: [1, 366], // Day of Year 1 to 366
-												range: [0, innerWidth],
-											});
-
-											// FIX: Find min/max Y ONLY from VISIBLE yearly data and VISIBLE range data
-											let minY = Infinity;
-											let maxY = -Infinity;
-
-											// Include visible yearly datasets
-											const visibleYearlyDatasets = formattedData.datasets.filter((ds) => !hiddenDatasets.has(ds.label));
-											visibleYearlyDatasets.forEach((dataset) => {
-												dataset.data.forEach((d: ChartPoint) => {
-													const yVal = getY(d);
-													if (yVal < minY) minY = yVal;
-													if (yVal > maxY) maxY = yVal;
-												});
-											});
-
-											// Include visible range data if it exists
-											if (!hiddenDatasets.has(formattedData.rangeLabel) && formattedData.minMaxData.length > 0) {
-												formattedData.minMaxData.forEach((d) => {
-													if (d.yMin < minY) minY = d.yMin;
-													if (d.yMax > maxY) maxY = d.yMax;
-												});
-											}
-
-											// Refined check: if after all checks, minY is still Infinity, there's truly no data.
-											if (minY === Infinity) {
-												minY = 0;
-												maxY = 1; // Default scale if absolutely no data points found
-											}
-
-											// Add padding to y-axis scale based on actual data range
-											const yPadding = (maxY - minY) * 0.1 || 1; // Add 10% padding, or 1 if range is 0
-											// Ensure minY doesn't go below 0 unless data is negative, but allow calculated min if it's already negative
-											minY = minY < 0 ? minY - yPadding : Math.max(0, minY - yPadding);
-											maxY = maxY + yPadding;
-
-											const yScale = scaleLinear<number>({
-												domain: [minY, maxY],
-												range: [innerHeight, 0], // Flipped for SVG coordinates
-												nice: true, // Adjust scale to nice round numbers
-											});
-
-											// Prepare legend items (include range if it exists)
-											const legendItems = formattedData.datasets
-												.map((ds) => ({
-													label: ds.label,
-													color: ds.color,
-												}))
-												.sort((a, b) => {
-													// Sort legend: Current year first, then others descending
-													const yearA = a.label.includes('Current') ? Infinity : parseInt(a.label.split(' ')[0], 10);
-													const yearB = b.label.includes('Current') ? Infinity : parseInt(b.label.split(' ')[0], 10);
-													return yearB - yearA;
-												});
-
-											// Add range item if it exists
-											const showRange = formattedData.hasPreviousYears;
-
-											return (
-												<>
-													{/* Legend */}
-													<div className='absolute top-0 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-x-4 gap-y-1 p-1 text-xs'>
-														{legendItems.map((item) => {
-															const isHidden = hiddenDatasets.has(item.label);
-															return (
-																<LegendItem
-																	key={`legend-${item.label}`}
-																	className={`flex items-center cursor-pointer ${isHidden ? 'opacity-50' : ''}`}
-																	onClick={() => {
-																		handleLegendClick(item.label);
-																	}}
-																>
-																	<svg width={14} height={14} className='mr-1'>
-																		<rect width={14} height={14} fill={item.color} />
-																		{isHidden && <line x1='0' y1='7' x2='14' y2='7' stroke='black' strokeWidth='2' />}
-																	</svg>
-																	<LegendLabel style={{ textDecoration: isHidden ? 'line-through' : 'none' }}>{item.label}</LegendLabel>
-																</LegendItem>
-															);
-														})}
-														{/* Range Legend Item */}
-														{
-															showRange &&
-																(() => {
-																	// IIFE to handle isHidden logic cleanly
-																	const isHidden = hiddenDatasets.has(formattedData.rangeLabel);
-																	return (
-																		<LegendItem
-																			key={`legend-range`}
-																			className={`flex items-center cursor-pointer ${isHidden ? 'opacity-50' : ''}`}
-																			onClick={() => {
-																				handleLegendClick(formattedData.rangeLabel);
-																			}}
-																		>
-																			<svg width={14} height={14} className='mr-1'>
-																				<rect width={14} height={14} fill={formattedData.rangeFillColor} stroke='rgba(0,0,0,0.2)' strokeWidth={1} />
-																				{isHidden && <line x1='0' y1='7' x2='14' y2='7' stroke='black' strokeWidth='2' />}
-																			</svg>
-																			<LegendLabel style={{ textDecoration: isHidden ? 'line-through' : 'none' }}>{formattedData.rangeLabel}</LegendLabel>
-																		</LegendItem>
-																	);
-																})() // Immediately invoke the function expression
-														}
-													</div>
-
-													<svg ref={containerRef} width={width} height={height}>
-														<Group left={chartMargin.left} top={chartMargin.top}>
-															{/* Grid */}
-															<GridRows scale={yScale} width={innerWidth} stroke='#e0e0e0' strokeOpacity={0.3} pointerEvents='none' />
-															<GridColumns scale={xScale} height={innerHeight} stroke='#e0e0e0' strokeOpacity={0.3} pointerEvents='none' />
-
-															{/* Axes */}
-															<AxisBottom
-																top={innerHeight}
-																scale={xScale}
-																numTicks={innerWidth > 520 ? 12 : 6} // Adjust ticks based on width
-																tickFormat={formatDayOfYearForAxis}
-																label='Day of Year'
-																labelProps={{
-																	fontSize: 14,
-																	fill: '#333',
-																	textAnchor: 'middle',
-																	dy: '2.5em', // Adjust vertical position
-																}}
-																tickLabelProps={(value, index) => ({
-																	fontSize: 11,
-																	textAnchor: 'middle',
-																	dy: '0.25em',
-																	angle: innerWidth < 400 ? 45 : 0, // Angle ticks on small screens
-																})}
-																stroke='#333'
-																tickStroke='#333'
-															/>
-															<AxisLeft
-																scale={yScale}
-																numTicks={5}
-																label={getYAxisLabel(activeChartTab)}
-																labelProps={{
-																	fontSize: 14,
-																	fill: '#333',
-																	textAnchor: 'middle',
-																	dy: '-3em', // Adjust vertical position
-																	dx: '-3em', // Adjust horizontal position
-																	angle: -90, // Rotate label
-																}}
-																tickLabelProps={() => ({
-																	fontSize: 11,
-																	textAnchor: 'end',
-																	dx: '-0.25em',
-																	dy: '0.25em',
-																})}
-																stroke='#333'
-																tickStroke='#333'
-															/>
-
-															{/* Data Lines and Area */}
-															{/* Render Area for Min/Max Range first if visible */}
-															{showRange && !hiddenDatasets.has(formattedData.rangeLabel) && (
-																<AreaClosed<RangePoint>
-																	key={`area-range`}
-																	data={formattedData.minMaxData}
-																	yScale={yScale}
-																	x={(d) => xScale(getX(d)) ?? 0}
-																	y0={(d) => yScale(getMinY(d)) ?? 0}
-																	y1={(d) => yScale(getMaxY(d)) ?? 0}
-																	fill={formattedData.rangeFillColor}
-																	curve={curveLinear} // Use linear curve for range
-																	opacity={0.7}
-																/>
-															)}
-
-															{/* Render Line Paths for visible yearly data */}
-															{formattedData.datasets
-																.filter((ds) => !hiddenDatasets.has(ds.label)) // Filter hidden datasets
-																.map((dataset) => {
-																	return <LinePath<ChartPoint> key={`line-${dataset.label}`} data={dataset.data} x={(d) => xScale(getX(d)) ?? 0} y={(d) => yScale(getY(d)) ?? 0} stroke={dataset.color} strokeWidth={dataset.isCurrentYear ? 2 : 1.5} strokeOpacity={0.9} curve={curveMonotoneX} shapeRendering='geometricPrecision' />;
-																})}
-
-															{/* Tooltip Trigger Area */}
-															<Bar
-																x={0}
-																y={0}
-																width={innerWidth}
-																height={innerHeight}
-																fill='transparent'
-																rx={14}
-																onTouchStart={(event) => {
-																	handleTooltip(event, width, height, xScale, yScale);
-																}}
-																onTouchMove={(event) => {
-																	handleTooltip(event, width, height, xScale, yScale);
-																}}
-																onMouseMove={(event) => {
-																	handleTooltip(event, width, height, xScale, yScale);
-																}}
-																onMouseLeave={() => {
-																	hideTooltip();
-																}}
-															/>
-
-															{/* Optional: Circle marker for hovered points */}
-															{tooltipOpen && tooltipData?.points && tooltipData.points.length > 0 && (
-																<Group>
-																	{/* Only render markers for visible points in the tooltip */}
-																	{tooltipData.points.map((point: TooltipPointData) => (
-																		<circle
-																			key={`marker-${point.year}`}
-																			cx={xScale(point.x)}
-																			cy={yScale(point.y)}
-																			r={4}
-																			// FIX: Use nullish coalescing and lookup color from formattedData
-																			fill={formattedData.datasets.find((ds) => ds.label.startsWith(String(point.year)))?.color ?? 'black'}
-																			stroke='white'
-																			strokeWidth={1}
-																			pointerEvents='none'
-																		/>
-																	))}
-																</Group>
-															)}
-														</Group>
-													</svg>
-
-													{/* Tooltip */}
-													{tooltipOpen && tooltipData && (
-														<TooltipInPortal top={tooltipTop} left={tooltipLeft} style={tooltipStyles}>
-															{/* FIX: Simplify conditional checks for tooltip data */}
-															{/* FIX: Add missing index argument to formatDayOfYearForAxis - Fixed by simplifying function */}
-															{/* FIX: Pass dummy args to satisfy TickFormatter type signature */}
-															<div style={{ marginBottom: '5px', fontWeight: 'bold' }}>{formatDayOfYearForAxis(tooltipData.day, 0, [])}</div>
-															{tooltipData.range && ( // Show range first if it exists
-																<div>
-																	{/* Find range label dynamically */}
-																	Range ({/\(([^)]+)\)/.exec(formattedData?.rangeLabel)?.[1] ?? ''}):{' '}
-																	<strong>
-																		{tooltipData.range.yMin.toFixed(2)} - {tooltipData.range.yMax.toFixed(2)}
-																	</strong>
-																</div>
-															)}
-															{tooltipData.points.map((point: TooltipPointData) => (
-																<div key={point.year}>
-																	{point.year}: <strong>{point.y.toFixed(2)}</strong>
-																</div>
-															))}
-														</TooltipInPortal>
-													)}
-												</>
-											);
-										}}
-									</ParentSize>
-									{/* REMOVE: Chart.js options and overlay */}
-									{/* <Line
-										data={getFormattedChartData}
-										options={{ ... }}
-									/> */}
-									{changingChartTabVisual ? (
-										<div className='absolute inset-0 bg-background/40 flex items-center justify-center z-20'>
-											{' '}
-											{/* Ensure overlay is on top */}
-											<p className='text-muted-foreground text-lg'>Switching chart...</p>
-										</div>
-									) : null}
-								</div>
-							) : (
-								// Fallback if chartMessage is null but chart can't render (should not happen with current logic)
-								<div className='flex-grow flex items-center justify-center text-muted-foreground'>Chart data not available.</div>
-							)}
-						</div>
-					) : (
-						// Fallback message
-						<div className='flex-grow flex items-center justify-center min-h-[400px] bg-muted/20 rounded border border-border text-center text-muted-foreground p-4'>{totalDocuments === 0 ? 'No documents match the current filters.' : 'Chart data not available.'}</div>
-					)}
-
-					{/* Data source disclaimer */}
-					<div className='mt-4 text-xs text-muted-foreground flex-shrink-0 border-t border-border pt-2'>
-						<p>
-							Filters show distinct values from the {totalDocuments} matching documents.
-							{chartLimitExceeded ? ' Charts disabled due to dataset size.' : canShowChartBasedOnFilters ? ` Charts display raw data points over time (${rawDataPoints ? rawDataPoints.length : 0} points shown).` : ' Apply all available filters to enable charts.'}
-							{/* Add note about hidden datasets */}
-							{getFormattedChartData && hiddenDatasets.size > 0 && (
-								<span className='ml-1 text-muted-foreground/80'>
-									({hiddenDatasets.size} dataset{hiddenDatasets.size > 1 ? 's' : ''} hidden via legend)
-								</span>
-							)}
-						</p>
+			{/* Main Layout: Conditional Rendering */}
+			<div className={`flex-grow overflow-hidden min-h-[400px] ${!isMobile ? 'grid grid-cols-1 lg:grid-cols-4 gap-6' : 'flex'}`}>
+				{isMobile ? (
+					// Mobile View: Show one panel at a time
+					<div className='w-full h-full'>
+						{mobileViewMode === 'filters' ? (
+							<FilterPanel
+								isLoading={loadingFilters} // Pass specific loading state
+								error={error}
+								hasFilterData={hasFilterData}
+								sortedFilterEntries={sortedFilterEntries}
+								commonFields={commonFields}
+								totalDocuments={totalDocuments}
+								activeFilters={activeFilters}
+								availableFilters={availableFilters} // Pass needed prop
+								isMobile={isMobile}
+								handleFilterToggle={handleFilterToggle}
+								handleClearFilters={handleClearFilters}
+								isFilterActive={isFilterActive}
+							/>
+						) : (
+							// Pass props needed by ChartPanel
+							<ChartPanel
+								isLoading={loadingChartData} // Use chart loading state
+								error={error}
+								showCharts={showCharts}
+								chartLimitExceeded={chartLimitExceeded}
+								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+								chartableFields={chartableFields}
+								activeChartTab={activeChartTab}
+								handleChartTabChange={handleChartTabChange}
+								chartMessage={chartMessage}
+								getFormattedChartData={getFormattedChartData} // Pass the memoized data
+								isMobile={isMobile}
+								mobileViewMode={mobileViewMode}
+								handleToggleMobileView={handleToggleMobileView}
+								chartDocumentCount={chartDocumentCount}
+								totalDocuments={totalDocuments} // Pass total documents
+								changingChartTabVisual={changingChartTabVisual}
+								hiddenDatasets={hiddenDatasets}
+								handleLegendClick={handleLegendClick}
+								// Pass tooltip props
+								tooltipData={tooltipData}
+								tooltipLeft={tooltipLeft}
+								tooltipTop={tooltipTop}
+								tooltipOpen={tooltipOpen}
+								hideTooltip={hideTooltip}
+								handleTooltip={handleTooltip}
+								containerRef={containerRef}
+								TooltipInPortal={TooltipInPortal}
+							/>
+						)}
 					</div>
-				</div>
+				) : (
+					// Desktop View: Show both panels side-by-side
+					<>
+						{/* WRAPPER DIV for FilterPanel to apply layout classes */}
+						<div className='lg:col-span-1 lg:min-w-[300px]'>
+							<FilterPanel isLoading={loadingFilters} error={error} hasFilterData={hasFilterData} sortedFilterEntries={sortedFilterEntries} commonFields={commonFields} totalDocuments={totalDocuments} activeFilters={activeFilters} availableFilters={availableFilters} isMobile={isMobile} handleFilterToggle={handleFilterToggle} handleClearFilters={handleClearFilters} isFilterActive={isFilterActive} />
+						</div>
+						{/* Pass props needed by ChartPanel */}
+						{/* WRAPPER DIV for ChartPanel to apply layout classes */}
+						<div className='lg:col-span-3'>
+							<ChartPanel
+								isLoading={loadingChartData}
+								error={error}
+								showCharts={showCharts}
+								chartLimitExceeded={chartLimitExceeded}
+								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+								chartableFields={chartableFields}
+								activeChartTab={activeChartTab}
+								handleChartTabChange={handleChartTabChange}
+								chartMessage={chartMessage}
+								getFormattedChartData={getFormattedChartData}
+								isMobile={isMobile}
+								mobileViewMode={mobileViewMode}
+								handleToggleMobileView={handleToggleMobileView}
+								chartDocumentCount={chartDocumentCount}
+								totalDocuments={totalDocuments}
+								changingChartTabVisual={changingChartTabVisual}
+								hiddenDatasets={hiddenDatasets}
+								handleLegendClick={handleLegendClick}
+								// Pass tooltip props
+								tooltipData={tooltipData}
+								tooltipLeft={tooltipLeft}
+								tooltipTop={tooltipTop}
+								tooltipOpen={tooltipOpen}
+								hideTooltip={hideTooltip}
+								handleTooltip={handleTooltip}
+								containerRef={containerRef}
+								TooltipInPortal={TooltipInPortal}
+							/>
+						</div>
+					</>
+				)}
 			</div>
 
 			{/* Close Button */}
