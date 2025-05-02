@@ -113,8 +113,10 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 						Effect: 'Allow',
 						Resource: '*', // Scoping precisely requires knowing ARNs beforehand, '*' is common here, or scope post-creation
 					},
-					// Allow reading the specific secret
+					// Allow reading the specific secret for runtime
 					{ Action: ['secretsmanager:GetSecretValue'], Effect: 'Allow', Resource: mongoSecretArn },
+					// Allow reading the .env file from S3 for build time
+					{ Action: ['s3:GetObject'], Effect: 'Allow', Resource: 'arn:aws:s3:::lawlzer-website-env/.env' },
 					// Allow passing the Task Execution role to ECS tasks
 					{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: taskExecRole.arn },
 				],
