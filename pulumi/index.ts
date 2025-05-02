@@ -35,6 +35,14 @@ const defaultSubnets = defaultVpc.then(async (vpc) => aws.ec2.getSubnets({ filte
 
 // --- IAM ---
 
+// OIDC Provider for GitHub Actions
+const githubOidcProvider = new aws.iam.OpenIdConnectProvider('github-oidc-provider', {
+	url: 'https://token.actions.githubusercontent.com',
+	clientIdLists: ['sts.amazonaws.com'],
+	// Use a common thumbprint for GitHub Actions OIDC. Verify this against AWS docs if needed.
+	thumbprintLists: ['6938fd4d98bab03faadb97b34396831e3780aea1'],
+});
+
 // 1. Task Execution Role: Allows ECS tasks to pull images from ECR and send logs
 const taskExecRole = new aws.iam.Role('task-exec-role', {
 	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'ecs-tasks.amazonaws.com' }),
@@ -66,25 +74,23 @@ new aws.iam.RolePolicyAttachment('task-exec-policy-attachment', {
 // 2. GitHub Actions OIDC Role: Allows GitHub Actions to deploy to AWS
 const githubActionsRole = new aws.iam.Role('github-actions-role', {
 	name: `${appName}-github-actions-role`,
-	assumeRolePolicy: aws.getCallerIdentity().then((identity) =>
-		JSON.stringify({
-			Version: '2012-10-17',
-			Statement: [
-				{
-					Effect: 'Allow',
-					Principal: { Federated: `arn:aws:iam::${identity.accountId}:oidc-provider/token.actions.githubusercontent.com` },
-					Action: 'sts:AssumeRoleWithWebIdentity',
-					Condition: {
-						StringEquals: {
-							'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-							// Scope the role to your specific repository
-							'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:ref:refs/heads/main`, // Restrict to main branch pushes
-						},
+	assumeRolePolicy: pulumi.jsonStringify({
+		Version: '2012-10-17',
+		Statement: [
+			{
+				Effect: 'Allow',
+				Principal: { Federated: githubOidcProvider.arn }, // Reference the provider ARN
+				Action: 'sts:AssumeRoleWithWebIdentity',
+				Condition: {
+					StringEquals: {
+						'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
+						// Scope the role to your specific repository
+						'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:ref:refs/heads/main`, // Restrict to main branch pushes
 					},
 				},
-			],
-		})
-	),
+			},
+		],
+	}),
 	// Define inline policy for necessary permissions
 	inlinePolicies: [
 		{
