@@ -117,7 +117,7 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 
 					// --- Permissions needed for Pulumi Refresh/Up operations ---
 					{
-						Action: ['ecs:DescribeClusters', 'ecs:DescribeServices', 'ecs:DescribeTaskDefinition', 'iam:GetRole', 'iam:ListAttachedRolePolicies', 'iam:GetOpenIDConnectProvider', 'elasticloadbalancing:DescribeListeners', 'elasticloadbalancing:DescribeLoadBalancers', 'elasticloadbalancing:DescribeTargetGroups', 'ecr:DescribeRepositories', 'ecr:GetLifecyclePolicy', 'logs:DescribeLogGroups', 'ec2:DescribeSecurityGroups'],
+						Action: ['ecs:DescribeClusters', 'ecs:DescribeServices', 'ecs:DescribeTaskDefinition', 'iam:GetRole', 'iam:ListAttachedRolePolicies', 'iam:ListRolePolicies', 'iam:GetOpenIDConnectProvider', 'elasticloadbalancing:DescribeListeners', 'elasticloadbalancing:DescribeLoadBalancers', 'elasticloadbalancing:DescribeTargetGroups', 'elasticloadbalancing:DescribeListenerAttributes', 'elasticloadbalancing:DescribeLoadBalancerAttributes', 'elasticloadbalancing:DescribeTargetGroupAttributes', 'ecr:DescribeRepositories', 'ecr:GetLifecyclePolicy', 'ecr:ListTagsForResource', 'logs:DescribeLogGroups', 'logs:ListTagsForResource', 'ec2:DescribeSecurityGroups'],
 						Effect: 'Allow',
 						Resource: '*', // Scoping these broadly is often necessary for Pulumi refresh
 					},
