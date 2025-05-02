@@ -35,14 +35,15 @@ jobs:
 
       # --- Configure AWS Credentials using OIDC ---
       # First, get the Role ARN from Pulumi stack outputs
-      - name: Get GitHub Actions Role ARN from Pulumi Output
-        id: get_role_arn
-        uses: pulumi/actions@v5
-        with:
-          command: stack
-          stack-name: prod # Your stack name (e.g., prod)
-          work-dir: ./pulumi
-          outputs-file: pulumi-outputs.json # Save outputs to a file
+      - name: Get Pulumi Stack Outputs
+        id: get_pulumi_outputs
+        run: |
+          pulumi stack select prod --cwd ./pulumi # Ensure correct stack is selected
+          pulumi stack output --json --cwd ./pulumi > pulumi-outputs.json
+          # Optional: Output the file content for debugging
+          echo "--- Pulumi Outputs (pulumi-outputs.json) ---"
+          cat pulumi-outputs.json
+          echo "-------------------------------------------"
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           AWS_REGION: ${{ secrets.AWS_REGION }} # Region needed for Pulumi stack access
