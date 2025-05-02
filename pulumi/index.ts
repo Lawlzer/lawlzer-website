@@ -117,7 +117,7 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 
 					// --- Permissions needed for Pulumi Refresh/Up operations ---
 					{
-						Action: ['ecs:DescribeClusters', 'ecs:DescribeServices', 'ecs:DescribeTaskDefinition', 'iam:GetRole', 'iam:GetRolePolicy', 'iam:ListAttachedRolePolicies', 'iam:ListRolePolicies', 'iam:GetOpenIDConnectProvider', 'elasticloadbalancing:DescribeListeners', 'elasticloadbalancing:DescribeLoadBalancers', 'elasticloadbalancing:DescribeTargetGroups', 'elasticloadbalancing:DescribeListenerAttributes', 'elasticloadbalancing:DescribeLoadBalancerAttributes', 'elasticloadbalancing:DescribeTargetGroupAttributes', 'elasticloadbalancing:DescribeTags', 'ecr:DescribeRepositories', 'ecr:GetLifecyclePolicy', 'ecr:ListTagsForResource', 'logs:DescribeLogGroups', 'logs:ListTagsForResource', 'ec2:DescribeSecurityGroups'],
+						Action: ['ecs:DescribeClusters', 'ecs:DescribeServices', 'ecs:DescribeTaskDefinition', 'iam:GetRole', 'iam:GetRolePolicy', 'iam:ListAttachedRolePolicies', 'iam:ListRolePolicies', 'iam:GetOpenIDConnectProvider', 'elasticloadbalancing:DescribeListeners', 'elasticloadbalancing:DescribeLoadBalancers', 'elasticloadbalancing:DescribeTargetGroups', 'elasticloadbalancing:DescribeListenerAttributes', 'elasticloadbalancing:DescribeLoadBalancerAttributes', 'elasticloadbalancing:DescribeTargetGroupAttributes', 'elasticloadbalancing:DescribeTags', 'ecr:DescribeRepositories', 'ecr:GetLifecyclePolicy', 'ecr:ListTagsForResource', 'logs:DescribeLogGroups', 'logs:ListTagsForResource', 'ec2:DescribeSecurityGroups', 'ec2:DescribeVpcs', 'ec2:DescribeSubnets'],
 						Effect: 'Allow',
 						Resource: '*', // Scoping these broadly is often necessary for Pulumi refresh
 					},
