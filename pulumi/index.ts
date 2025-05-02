@@ -40,7 +40,8 @@ const githubOidcProvider = new aws.iam.OpenIdConnectProvider('github-oidc-provid
 	url: 'https://token.actions.githubusercontent.com',
 	clientIdLists: ['sts.amazonaws.com'],
 	// Use a common thumbprint for GitHub Actions OIDC. Verify this against AWS docs if needed.
-	thumbprintLists: ['6938fd4d98bab03faadb97b34396831e3780aea1'],
+	// Updated to include both known thumbprints as per GitHub/AWS recommendations (June 2023)
+	thumbprintLists: ['6938fd4d98bab03faadb97b34396831e3780aea1', '1c58a3a8518e8759bf075b76b750d4f2df264fcd'],
 });
 
 // 1. Task Execution Role: Allows ECS tasks to pull images from ECR and send logs
