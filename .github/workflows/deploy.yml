@@ -38,6 +38,8 @@ jobs:
       - name: Get Pulumi Stack Outputs
         id: get_pulumi_outputs
         run: |
+          pulumi login
+          pulumi stack ls --all --cwd ./pulumi
           pulumi stack select Lawlzer/lawlzer-website-pulumi/prod --cwd ./pulumi # Ensure correct stack is selected
           pulumi stack output --json --cwd ./pulumi > pulumi-outputs.json
           # Optional: Output the file content for debugging
