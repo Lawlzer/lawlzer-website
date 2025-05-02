@@ -99,26 +99,28 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 			policy: pulumi.jsonStringify({
 				Version: '2012-10-17',
 				Statement: [
-					// ECR Login
-					{ Action: ['ecr:GetAuthorizationToken'], Effect: 'Allow', Resource: '*' },
-					// ECR Push Image (scoped to the specific repository defined later)
+					// --- Core Deployment Permissions ---
+					{ Action: ['ecr:GetAuthorizationToken'], Effect: 'Allow', Resource: '*' }, // ECR Login
 					{
 						Action: ['ecr:BatchCheckLayerAvailability', 'ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload', 'ecr:PutImage'],
 						Effect: 'Allow',
-						Resource: pulumi.interpolate`arn:aws:ecr:${aws.config.region}:${aws.getCallerIdentityOutput().accountId}:repository/${appName}-repo`, // Reference repo ARN
+						Resource: pulumi.interpolate`arn:aws:ecr:${aws.config.region}:${aws.getCallerIdentityOutput().accountId}:repository/${appName}-repo`, // ECR Push
 					},
-					// ECS Deployment actions (scoped to the cluster/service/task def defined later)
 					{
-						Action: ['ecs:DescribeServices', 'ecs:UpdateService', 'ecs:DescribeTaskDefinition', 'ecs:RegisterTaskDefinition'],
+						Action: ['ecs:UpdateService', 'ecs:RegisterTaskDefinition'], // Core actions to update service and task def
 						Effect: 'Allow',
-						Resource: '*', // Scoping precisely requires knowing ARNs beforehand, '*' is common here, or scope post-creation
+						Resource: '*', // Scoping is complex, be cautious in production
 					},
-					// Allow reading the specific secret for runtime
-					{ Action: ['secretsmanager:GetSecretValue'], Effect: 'Allow', Resource: mongoSecretArn },
-					// Allow reading the .env file from S3 for build time
-					{ Action: ['s3:GetObject'], Effect: 'Allow', Resource: 'arn:aws:s3:::lawlzer-website-env/.env' },
-					// Allow passing the Task Execution role to ECS tasks
-					{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: taskExecRole.arn },
+					{ Action: ['secretsmanager:GetSecretValue'], Effect: 'Allow', Resource: mongoSecretArn }, // Read runtime secret
+					{ Action: ['s3:GetObject'], Effect: 'Allow', Resource: 'arn:aws:s3:::lawlzer-website-env/.env' }, // Read build-time env
+					{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: taskExecRole.arn }, // Allow passing Task Execution role
+
+					// --- Permissions needed for Pulumi Refresh/Up operations ---
+					{
+						Action: ['ecs:DescribeClusters', 'ecs:DescribeServices', 'ecs:DescribeTaskDefinition', 'iam:GetRole', 'iam:ListAttachedRolePolicies', 'iam:GetOpenIDConnectProvider', 'elasticloadbalancing:DescribeListeners', 'elasticloadbalancing:DescribeLoadBalancers', 'elasticloadbalancing:DescribeTargetGroups', 'ecr:DescribeRepositories', 'ecr:GetLifecyclePolicy', 'logs:DescribeLogGroups', 'ec2:DescribeSecurityGroups'],
+						Effect: 'Allow',
+						Resource: '*', // Scoping these broadly is often necessary for Pulumi refresh
+					},
 				],
 			}),
 		},
