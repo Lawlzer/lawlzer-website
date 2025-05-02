@@ -25,8 +25,7 @@ COPY . .
 # Build the Next.js application
 # Set NEXT_TELEMETRY_DISABLED to avoid extra network calls during build
 ENV NEXT_TELEMETRY_DISABLED 1
-# Mount the .env file as a secret to make variables available during build
-RUN --mount=type=secret,id=dotenv,target=/app/.env npm run build
+RUN npm run build
 
 # Stage 2: Runner
 FROM node:lts-alpine AS runner
