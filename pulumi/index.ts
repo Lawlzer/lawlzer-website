@@ -1,13 +1,16 @@
 import * as pulumi from '@pulumi/pulumi';
 import * as aws from '@pulumi/aws';
 import * as awsx from '@pulumi/awsx'; // Using awsx for simplified networking/load balancing
-import type { GetDefaultVpcResult } from '@pulumi/awsx/ec2'; // Import the type
+
+function throwError(message: string): never {
+	throw new Error(message);
+}
 
 // --- Configuration ---
 const config = new pulumi.Config();
 // Basic config values - can be set via `pulumi config set <key> <value>`
 const appName = config.get('appName') ?? pulumi.getProject(); // Default to Pulumi project name
-const appPort = config.getNumber('appPort') ?? 3000; // Port your app listens on (from Dockerfile)
+const appPort = config.getNumber('appPort') ?? throwError('appPort is required'); // Port your app listens on (from Dockerfile)
 const cpu = config.getNumber('cpu') ?? 256; // Fargate CPU units (256 = 0.25 vCPU)
 const memory = config.getNumber('memory') ?? 512; // Fargate memory in MiB
 const desiredCount = config.getNumber('desiredCount') ?? 1; // Number of containers to run
@@ -25,14 +28,35 @@ const githubOrg = config.require('githubOrg'); // Your GitHub username or organi
 const githubRepo = config.require('githubRepo'); // Your GitHub repository name (e.g., lawlzer-website)
 
 // --- Networking (using Default VPC) ---
-// Using awsx to easily get default VPC and subnets
-const vpcPromise: Promise<GetDefaultVpcResult> = awsx.ec2.getDefaultVpc();
+// Get the default VPC using the core AWS provider
+const defaultVpc = aws.ec2.getVpc({ default: true });
+// Get subnet IDs from the default VPC
+const defaultSubnets = defaultVpc.then(async (vpc) => aws.ec2.getSubnets({ filters: [{ name: 'vpc-id', values: [vpc.id] }] }));
 
 // --- IAM ---
 
 // 1. Task Execution Role: Allows ECS tasks to pull images from ECR and send logs
 const taskExecRole = new aws.iam.Role('task-exec-role', {
 	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'ecs-tasks.amazonaws.com' }),
+	// Add inline policy to allow reading the specific SSM parameter
+	inlinePolicies: [
+		{
+			name: 'AllowSSMParameterRead',
+			policy: mongoSecretArn.apply((arn) =>
+				JSON.stringify({
+					Version: '2012-10-17',
+					Statement: [
+						{
+							Action: 'ssm:GetParameters',
+							Effect: 'Allow',
+							Resource: arn, // Use the ARN from the config
+						},
+						// If using KMS CMK for SecureString, might need kms:Decrypt here too
+					],
+				})
+			),
+		},
+	],
 });
 new aws.iam.RolePolicyAttachment('task-exec-policy-attachment', {
 	role: taskExecRole.name,
@@ -107,9 +131,13 @@ const cluster = new aws.ecs.Cluster('app-cluster', {
 
 // --- Load Balancer ---
 // Using awsx.lb.ApplicationLoadBalancer for easier setup
+// Let awsx determine subnets from the default VPC context
 const alb = new awsx.lb.ApplicationLoadBalancer('app-lb', {
 	name: `${appName}-alb`,
-	// external: true, // Removed: awsx determines this based on subnets used (public below)
+	// No explicit target group port needed since appPort is now 80 (the default)
+	// defaultTargetGroupPort: appPort, // REMOVED
+	// No explicit subnets needed here if using default VPC
+	// external: true, // awsx determines this based on subnets implicitly
 	// Security groups are managed by awsx component
 });
 
@@ -121,8 +149,8 @@ const appService = new awsx.ecs.FargateService(
 		cluster: cluster.arn,
 		desiredCount: desiredCount,
 		networkConfiguration: {
-			// Use default VPC subnets determined by awsx
-			subnets: vpcPromise.then((vpc) => vpc.publicSubnetIds), // Deploy in public subnets if ALB is public
+			// Use default VPC subnets
+			subnets: defaultSubnets.then((subnets) => subnets.ids), // Use the public subnet IDs from the lookup
 			assignPublicIp: true, // Required for Fargate tasks in public subnets to pull images if no NAT Gateway
 			// Security groups are managed by awsx component
 		},
@@ -139,6 +167,7 @@ const appService = new awsx.ecs.FargateService(
 				portMappings: [
 					{
 						containerPort: appPort,
+						hostPort: appPort, // Add hostPort, must match containerPort for awsvpc mode
 						targetGroup: alb.defaultTargetGroup, // Connect container to the ALB's default target group
 					},
 				],

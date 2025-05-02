@@ -55,7 +55,10 @@ COPY --from=builder --chown=node:node /app/node_modules/lightningcss ./node_modu
 COPY --from=builder --chown=node:node /app/node_modules/@tailwindcss/oxide ./node_modules/@tailwindcss/oxide
 
 # Expose the port the app runs on
-EXPOSE 3000
+EXPOSE 80
+
+# Set the port environment variable for the Next.js server
+ENV PORT=80
 
 # Define the command to run the app
 # Use the standalone server entry point
