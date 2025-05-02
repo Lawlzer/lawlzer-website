@@ -72,7 +72,28 @@ new aws.iam.RolePolicyAttachment('task-exec-policy-attachment', {
 	policyArn: aws.iam.ManagedPolicy.AmazonECSTaskExecutionRolePolicy,
 });
 
-// 2. GitHub Actions OIDC Role: Allows GitHub Actions to deploy to AWS
+// 3. Task Role: Permissions for the application running inside the container
+const appTaskRole = new aws.iam.Role('app-task-role', {
+	name: `${appName}-task-role`,
+	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'ecs-tasks.amazonaws.com' }),
+	// Add inline policies here if your application needs specific AWS permissions at runtime
+	inlinePolicies: [
+		// Example: Allow reading from a specific S3 bucket
+		// {
+		//     name: "AllowAppS3Read",
+		//     policy: JSON.stringify({
+		//         Version: "2012-10-17",
+		//         Statement: [{
+		//             Action: ["s3:GetObject"],
+		//             Effect: "Allow",
+		//             Resource: "arn:aws:s3:::your-app-data-bucket/*"
+		//         }]
+		//     })
+		// }
+	],
+});
+
+// 4. GitHub Actions OIDC Role: Allows GitHub Actions to deploy to AWS
 const githubActionsRole = new aws.iam.Role('github-actions-role', {
 	name: `${appName}-github-actions-role`,
 	assumeRolePolicy: pulumi.jsonStringify({
@@ -113,7 +134,8 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 					},
 					{ Action: ['secretsmanager:GetSecretValue'], Effect: 'Allow', Resource: mongoSecretArn }, // Read runtime secret
 					{ Action: ['s3:GetObject'], Effect: 'Allow', Resource: 'arn:aws:s3:::lawlzer-website-env/.env' }, // Read build-time env
-					{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: taskExecRole.arn }, // Allow passing Task Execution role
+					// Allow passing the Task Execution role AND the Task Role to ECS tasks
+					{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: [taskExecRole.arn, appTaskRole.arn] },
 
 					// --- Permissions needed for Pulumi Refresh/Up operations ---
 					{
@@ -167,6 +189,7 @@ const appService = new awsx.ecs.FargateService(
 		},
 		taskDefinitionArgs: {
 			executionRole: { roleArn: taskExecRole.arn },
+			taskRole: { roleArn: appTaskRole.arn }, // Explicitly assign the task role
 			// Define the container using the ECR image
 			// The image URI will be dynamically built using the repo URL and a tag configured during deployment
 			container: {
