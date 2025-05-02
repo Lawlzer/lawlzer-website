@@ -14,10 +14,10 @@ COPY prisma ./prisma/
 # Explicitly install native modules for the target platform (alpine linux arm64)
 # This needs to happen *before* the main npm install
 # Ensure the platform matches the FROM image architecture if it differs from your host
-RUN npm install --include=optional --os=linux --libc=musl --cpu=arm64 sharp lightningcss @tailwindcss/oxide
+RUN npm install --force --include=optional --os=linux --libc=musl --cpu=arm64 sharp lightningcss @tailwindcss/oxide
 
 # Install dependencies (this will also run prisma generate via postinstall)
-RUN npm install --frozen-lockfile
+RUN npm install --force --frozen-lockfile
 
 # Copy the rest of the application code
 COPY . .
