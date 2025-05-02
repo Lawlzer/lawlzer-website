@@ -1,0 +1,12 @@
+config:
+  aws:region: us-east-1
+  lawlzer-infra:appName: lawlzer-website
+  lawlzer-infra:appPort: 3000
+  lawlzer-infra:cpu: 256
+  lawlzer-infra:memory: 512
+  lawlzer-infra:targetArch: ARM64 # (or X86_64)
+  lawlzer-infra:githubOrg: Lawlzer
+  lawlzer-infra:githubRepo: lawlzer-website
+  # Encrypt the secret ARN using: pulumi config set --secret mongoSecretArn arn:aws:secretsmanager:...
+  lawlzer-infra:mongoSecretArn:
+    secure: AAABAE... # This will be the encrypted value after running the command

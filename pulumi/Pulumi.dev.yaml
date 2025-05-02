@@ -1,0 +1,4 @@
+config:
+  aws:region: us-west-2
+  lawlzer-website-pulumi:mongoSecretArn:
+    secure: AAABAHIMxHhiMirbFmjpA1P3oY+VGHSqVKzpTuBMfu7RpXV4NjZpUZByuB26m0ENa1vHkFl6WZh8vm04GkKLg2RhurUK
