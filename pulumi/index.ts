@@ -25,8 +25,8 @@ console.log(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config va
 const mongoSecretArn = config.requireSecret('mongoSecretArn'); // Require this secret ARN in Pulumi config
 
 // Configuration for the GitHub OIDC Role
-const githubOrg = config.require('githubOrg'); // Your GitHub username or organization
-const githubRepo = config.require('githubRepo'); // Your GitHub repository name (e.g., lawlzer-website)
+// const githubOrg = config.require('githubOrg'); // REMOVED - Not needed if role is manual
+// const githubRepo = config.require('githubRepo'); // REMOVED - Not needed if role is manual
 
 // --- Networking (using Default VPC) ---
 // Get the default VPC using the core AWS provider
@@ -36,14 +36,12 @@ const defaultSubnets = defaultVpc.then(async (vpc) => aws.ec2.getSubnets({ filte
 
 // --- IAM ---
 
-// OIDC Provider for GitHub Actions
-const githubOidcProvider = new aws.iam.OpenIdConnectProvider('github-oidc-provider', {
-	url: 'https://token.actions.githubusercontent.com',
-	clientIdLists: ['sts.amazonaws.com'],
-	// Use a common thumbprint for GitHub Actions OIDC. Verify this against AWS docs if needed.
-	// Updated to include both known thumbprints as per GitHub/AWS recommendations (June 2023)
-	thumbprintLists: ['6938fd4d98bab03faadb97b34396831e3780aea1', '1c58a3a8518e8759bf075b76b750d4f2df264fcd'],
-});
+// OIDC Provider for GitHub Actions - REMOVED
+// const githubOidcProvider = new aws.iam.OpenIdConnectProvider('github-oidc-provider', {
+// 	url: 'https://token.actions.githubusercontent.com',
+// 	clientIdLists: ['sts.amazonaws.com'],
+// 	thumbprintLists: ['6938fd4d98bab03faadb97b34396831e3780aea1', '1c58a3a8518e8759bf075b76b750d4f2df264fcd'],
+// });
 
 // 1. Task Execution Role: Allows ECS tasks to pull images from ECR and send logs
 const taskExecRole = new aws.iam.Role('task-exec-role', {
@@ -97,91 +95,11 @@ const appTaskRole = new aws.iam.Role('app-task-role', {
 	],
 });
 
-// 4. GitHub Actions OIDC Role: Allows GitHub Actions to deploy to AWS
-
-// Define the policy content for the GitHub Actions role
-const githubActionsPolicyDocument = pulumi.jsonStringify({
-	Version: '2012-10-17',
-	Statement: [
-		// --- Core Deployment Permissions ---
-		{ Action: ['ecr:GetAuthorizationToken'], Effect: 'Allow', Resource: '*' },
-		{
-			Action: ['ecr:BatchCheckLayerAvailability', 'ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload', 'ecr:PutImage'],
-			Effect: 'Allow',
-			Resource: pulumi.interpolate`arn:aws:ecr:${aws.config.region}:${aws.getCallerIdentityOutput().accountId}:repository/${appName}-repo`,
-		},
-		{
-			Action: ['ecs:UpdateService', 'ecs:RegisterTaskDefinition'],
-			Effect: 'Allow',
-			Resource: '*',
-		},
-		{ Action: ['secretsmanager:GetSecretValue'], Effect: 'Allow', Resource: mongoSecretArn },
-		{ Action: ['s3:GetObject'], Effect: 'Allow', Resource: 'arn:aws:s3:::lawlzer-website-env/.env' },
-		{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: [taskExecRole.arn, appTaskRole.arn] },
-
-		// --- Permissions to manage the taskExecRole's policy ---
-		// { // Temporarily removed - Add this manually to the policy in AWS console after first failed run
-		// 	Action: ['iam:PutRolePolicy', 'iam:DeleteRolePolicy'],
-		// 	Effect: 'Allow',
-		// 	Resource: taskExecRole.arn,
-		// },
-
-		// --- Permissions needed for Pulumi Refresh/Up operations ---
-		{
-			Action: ['iam:GetRole', 'iam:GetPolicy', 'iam:GetPolicyVersion', 'iam:ListAttachedRolePolicies', 'iam:ListRolePolicies', 'iam:GetOpenIDConnectProvider', /* ... other describe/list actions ... */ 'ec2:DescribeVpcAttribute'],
-			Effect: 'Allow',
-			Resource: '*',
-		},
-		// --- Permissions needed to manage this policy itself (as a separate resource) ---
-		{
-			Action: ['iam:CreatePolicy', 'iam:DeletePolicy', 'iam:CreatePolicyVersion', 'iam:DeletePolicyVersion', 'iam:SetDefaultPolicyVersion'],
-			Effect: 'Allow',
-			// Scoping this precisely requires knowing the policy ARN beforehand, difficult with Pulumi.
-			// Using '*' is common but less secure. Alternatively, scope by path: "arn:aws:iam::ACCOUNT_ID:policy/pulumi-policies/*"
-			Resource: '*',
-		},
-		// --- Permissions needed to attach/detach this policy ---
-		{
-			Action: ['iam:AttachRolePolicy', 'iam:DetachRolePolicy'],
-			Effect: 'Allow',
-			Resource: pulumi.interpolate`arn:aws:iam::${aws.getCallerIdentityOutput().accountId}:role/${appName}-github-actions-role`, // Reference the role ARN implicitly using its name
-		},
-	],
-});
-
-// Create the IAM Policy for GitHub Actions
-const githubActionsPolicy = new aws.iam.Policy('github-actions-policy', {
-	name: `${appName}-github-actions-policy`,
-	policy: githubActionsPolicyDocument,
-	description: 'Policy for GitHub Actions to deploy the ECS service via Pulumi.',
-});
-
-const githubActionsRole = new aws.iam.Role('github-actions-role', {
-	name: `${appName}-github-actions-role`,
-	assumeRolePolicy: pulumi.jsonStringify({
-		Version: '2012-10-17',
-		Statement: [
-			{
-				Effect: 'Allow',
-				Principal: { Federated: githubOidcProvider.arn },
-				Action: 'sts:AssumeRoleWithWebIdentity',
-				Condition: {
-					StringEquals: {
-						'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-						'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:ref:refs/heads/main`,
-					},
-				},
-			},
-		],
-	}),
-	// Removed inlinePolicies
-});
-
-// Attach the policy to the role
-new aws.iam.RolePolicyAttachment('github-actions-policy-attachment', {
-	policyArn: githubActionsPolicy.arn,
-	role: githubActionsRole.name,
-});
+// 4. GitHub Actions OIDC Role: Allows GitHub Actions to deploy to AWS - REMOVED
+// const githubActionsPolicyDocument = pulumi.jsonStringify({ ... }); // REMOVED
+// const githubActionsPolicy = new aws.iam.Policy('github-actions-policy', { ... }); // REMOVED
+// const githubActionsRole = new aws.iam.Role('github-actions-role', { ... }); // REMOVED
+// new aws.iam.RolePolicyAttachment('github-actions-policy-attachment', { ... }); // REMOVED
 
 // --- ECR ---
 // Create a repository to store the Docker images
@@ -280,4 +198,4 @@ export const ecsServiceName = appService.service.name;
 // For now, the GH action will use config. Or we can construct it: `${appName}-service` often works.
 export const taskDefinitionFamily = pulumi.interpolate`${appName}-service`; // awsx usually names the underlying task def based on service name
 export const containerName = pulumi.interpolate`${appName}-container`; // Name given in taskDefinitionArgs
-export const githubActionsRoleArn = githubActionsRole.arn; // ARN for GitHub Actions OIDC config
+// export const githubActionsRoleArn = githubActionsRole.arn; // REMOVED
