@@ -48,20 +48,27 @@ const githubOidcProvider = new aws.iam.OpenIdConnectProvider('github-oidc-provid
 // 1. Task Execution Role: Allows ECS tasks to pull images from ECR and send logs
 const taskExecRole = new aws.iam.Role('task-exec-role', {
 	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'ecs-tasks.amazonaws.com' }),
-	// Add inline policy to allow reading the specific SSM parameter
+	// Add inline policy to allow reading the specific Secret Manager secret
 	inlinePolicies: [
 		{
-			name: 'AllowSSMParameterRead',
+			name: 'AllowSecretManagerRead', // Renamed for clarity
 			policy: mongoSecretArn.apply((arn) =>
 				JSON.stringify({
 					Version: '2012-10-17',
 					Statement: [
 						{
-							Action: 'ssm:GetParameters',
+							Action: 'secretsmanager:GetSecretValue', // Correct action for Secrets Manager
 							Effect: 'Allow',
 							Resource: arn, // Use the ARN from the config
 						},
-						// If using KMS CMK for SecureString, might need kms:Decrypt here too
+						// If the secret is encrypted with a customer-managed KMS key,
+						// you might also need kms:Decrypt permission on that key here.
+						// Example:
+						// {
+						//     "Action": "kms:Decrypt",
+						//     "Effect": "Allow",
+						//     "Resource": "arn:aws:kms:REGION:ACCOUNT_ID:key/YOUR_KMS_KEY_ID"
+						// }
 					],
 				})
 			),
