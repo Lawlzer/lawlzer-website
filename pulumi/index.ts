@@ -48,33 +48,29 @@ const githubOidcProvider = new aws.iam.OpenIdConnectProvider('github-oidc-provid
 // 1. Task Execution Role: Allows ECS tasks to pull images from ECR and send logs
 const taskExecRole = new aws.iam.Role('task-exec-role', {
 	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'ecs-tasks.amazonaws.com' }),
-	// Add inline policy to allow reading the specific Secret Manager secret
-	inlinePolicies: [
-		{
-			name: 'AllowSSMParameterRead', // Reverted name, but keeping correct action
-			policy: mongoSecretArn.apply((arn) =>
-				JSON.stringify({
-					Version: '2012-10-17',
-					Statement: [
-						{
-							Action: 'secretsmanager:GetSecretValue', // Correct action for Secrets Manager
-							Effect: 'Allow',
-							Resource: arn, // Use the ARN from the config
-						},
-						// If the secret is encrypted with a customer-managed KMS key,
-						// you might also need kms:Decrypt permission on that key here.
-						// Example:
-						// {
-						//     "Action": "kms:Decrypt",
-						//     "Effect": "Allow",
-						//     "Resource": "arn:aws:kms:REGION:ACCOUNT_ID:key/YOUR_KMS_KEY_ID"
-						// }
-					],
-				})
-			),
-		},
-	],
+	// Removed inline policy - will be managed as a separate resource
 });
+
+// Policy allowing the task execution role to read the specific Mongo secret
+const taskExecSecretPolicy = new aws.iam.RolePolicy('task-exec-secret-policy', {
+	name: 'AllowSecretManagerRead', // Explicit policy name
+	role: taskExecRole.id, // Attach to the task execution role
+	policy: mongoSecretArn.apply((arn) =>
+		JSON.stringify({
+			Version: '2012-10-17',
+			Statement: [
+				{
+					Action: 'secretsmanager:GetSecretValue',
+					Effect: 'Allow',
+					Resource: arn,
+				},
+				// Add kms:Decrypt here if using customer-managed KMS key for the secret
+			],
+		})
+	),
+});
+
+// Attach the standard AWS managed policy for task execution
 new aws.iam.RolePolicyAttachment('task-exec-policy-attachment', {
 	role: taskExecRole.name,
 	policyArn: aws.iam.ManagedPolicy.AmazonECSTaskExecutionRolePolicy,
