@@ -51,7 +51,7 @@ const taskExecRole = new aws.iam.Role('task-exec-role', {
 	// Add inline policy to allow reading the specific Secret Manager secret
 	inlinePolicies: [
 		{
-			name: 'AllowSecretManagerRead', // Renamed for clarity
+			name: 'AllowSSMParameterRead', // Reverted name, but keeping correct action
 			policy: mongoSecretArn.apply((arn) =>
 				JSON.stringify({
 					Version: '2012-10-17',
