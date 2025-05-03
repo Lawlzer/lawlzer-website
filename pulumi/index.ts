@@ -98,6 +98,64 @@ const appTaskRole = new aws.iam.Role('app-task-role', {
 });
 
 // 4. GitHub Actions OIDC Role: Allows GitHub Actions to deploy to AWS
+
+// Define the policy content for the GitHub Actions role
+const githubActionsPolicyDocument = pulumi.jsonStringify({
+	Version: '2012-10-17',
+	Statement: [
+		// --- Core Deployment Permissions ---
+		{ Action: ['ecr:GetAuthorizationToken'], Effect: 'Allow', Resource: '*' },
+		{
+			Action: ['ecr:BatchCheckLayerAvailability', 'ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload', 'ecr:PutImage'],
+			Effect: 'Allow',
+			Resource: pulumi.interpolate`arn:aws:ecr:${aws.config.region}:${aws.getCallerIdentityOutput().accountId}:repository/${appName}-repo`,
+		},
+		{
+			Action: ['ecs:UpdateService', 'ecs:RegisterTaskDefinition'],
+			Effect: 'Allow',
+			Resource: '*',
+		},
+		{ Action: ['secretsmanager:GetSecretValue'], Effect: 'Allow', Resource: mongoSecretArn },
+		{ Action: ['s3:GetObject'], Effect: 'Allow', Resource: 'arn:aws:s3:::lawlzer-website-env/.env' },
+		{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: [taskExecRole.arn, appTaskRole.arn] },
+
+		// --- Permissions to manage the taskExecRole's policy ---
+		{
+			Action: ['iam:PutRolePolicy', 'iam:DeleteRolePolicy'], // Needed to manage the separate task-exec-secret-policy
+			Effect: 'Allow',
+			Resource: taskExecRole.arn,
+		},
+
+		// --- Permissions needed for Pulumi Refresh/Up operations ---
+		{
+			Action: ['iam:GetRole', 'iam:GetPolicy', 'iam:GetPolicyVersion', 'iam:ListAttachedRolePolicies', 'iam:ListRolePolicies', 'iam:GetOpenIDConnectProvider', /* ... other describe/list actions ... */ 'ec2:DescribeVpcAttribute'],
+			Effect: 'Allow',
+			Resource: '*',
+		},
+		// --- Permissions needed to manage this policy itself (as a separate resource) ---
+		{
+			Action: ['iam:CreatePolicy', 'iam:DeletePolicy', 'iam:CreatePolicyVersion', 'iam:DeletePolicyVersion', 'iam:SetDefaultPolicyVersion'],
+			Effect: 'Allow',
+			// Scoping this precisely requires knowing the policy ARN beforehand, difficult with Pulumi.
+			// Using '*' is common but less secure. Alternatively, scope by path: "arn:aws:iam::ACCOUNT_ID:policy/pulumi-policies/*"
+			Resource: '*',
+		},
+		// --- Permissions needed to attach/detach this policy ---
+		{
+			Action: ['iam:AttachRolePolicy', 'iam:DetachRolePolicy'],
+			Effect: 'Allow',
+			Resource: pulumi.interpolate`arn:aws:iam::${aws.getCallerIdentityOutput().accountId}:role/${appName}-github-actions-role`, // Reference the role ARN implicitly using its name
+		},
+	],
+});
+
+// Create the IAM Policy for GitHub Actions
+const githubActionsPolicy = new aws.iam.Policy('github-actions-policy', {
+	name: `${appName}-github-actions-policy`,
+	policy: githubActionsPolicyDocument,
+	description: 'Policy for GitHub Actions to deploy the ECS service via Pulumi.',
+});
+
 const githubActionsRole = new aws.iam.Role('github-actions-role', {
 	name: `${appName}-github-actions-role`,
 	assumeRolePolicy: pulumi.jsonStringify({
@@ -105,59 +163,24 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 		Statement: [
 			{
 				Effect: 'Allow',
-				Principal: { Federated: githubOidcProvider.arn }, // Reference the provider ARN
+				Principal: { Federated: githubOidcProvider.arn },
 				Action: 'sts:AssumeRoleWithWebIdentity',
 				Condition: {
 					StringEquals: {
 						'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-						// Scope the role to your specific repository
-						'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:ref:refs/heads/main`, // Restrict to main branch pushes
+						'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:ref:refs/heads/main`,
 					},
 				},
 			},
 		],
 	}),
-	// Define inline policy for necessary permissions
-	inlinePolicies: [
-		{
-			name: 'GitHubActionsECSPermissions',
-			policy: pulumi.jsonStringify({
-				Version: '2012-10-17',
-				Statement: [
-					// --- Core Deployment Permissions ---
-					{ Action: ['ecr:GetAuthorizationToken'], Effect: 'Allow', Resource: '*' }, // ECR Login
-					{
-						Action: ['ecr:BatchCheckLayerAvailability', 'ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload', 'ecr:PutImage'],
-						Effect: 'Allow',
-						Resource: pulumi.interpolate`arn:aws:ecr:${aws.config.region}:${aws.getCallerIdentityOutput().accountId}:repository/${appName}-repo`, // ECR Push
-					},
-					{
-						Action: ['ecs:UpdateService', 'ecs:RegisterTaskDefinition'], // Core actions to update service and task def
-						Effect: 'Allow',
-						Resource: '*', // Scoping is complex, be cautious in production
-					},
-					{ Action: ['secretsmanager:GetSecretValue'], Effect: 'Allow', Resource: mongoSecretArn }, // Read runtime secret
-					{ Action: ['s3:GetObject'], Effect: 'Allow', Resource: 'arn:aws:s3:::lawlzer-website-env/.env' }, // Read build-time env
-					// Allow passing the Task Execution role AND the Task Role to ECS tasks
-					{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: [taskExecRole.arn, appTaskRole.arn] },
+	// Removed inlinePolicies
+});
 
-					// --- Permissions to modify the specific inline policies of taskExecRole ---
-					{
-						Action: ['iam:PutRolePolicy', 'iam:DeleteRolePolicy'],
-						Effect: 'Allow',
-						Resource: taskExecRole.arn, // Only allow modifying the task execution role
-					},
-
-					// --- Permissions needed for Pulumi Refresh/Up operations ---
-					{
-						Action: ['ecs:DescribeClusters', 'ecs:DescribeServices', 'ecs:DescribeTaskDefinition', 'iam:GetRole', 'iam:GetRolePolicy', 'iam:ListAttachedRolePolicies', 'iam:ListRolePolicies', 'iam:GetOpenIDConnectProvider', 'elasticloadbalancing:DescribeListeners', 'elasticloadbalancing:DescribeLoadBalancers', 'elasticloadbalancing:DescribeTargetGroups', 'elasticloadbalancing:DescribeListenerAttributes', 'elasticloadbalancing:DescribeLoadBalancerAttributes', 'elasticloadbalancing:DescribeTargetGroupAttributes', 'elasticloadbalancing:DescribeTags', 'ecr:DescribeRepositories', 'ecr:GetLifecyclePolicy', 'ecr:ListTagsForResource', 'logs:DescribeLogGroups', 'logs:ListTagsForResource', 'ec2:DescribeSecurityGroups', 'ec2:DescribeVpcs', 'ec2:DescribeSubnets', 'ec2:DescribeVpcAttribute'],
-						Effect: 'Allow',
-						Resource: '*', // Scoping these broadly is often necessary for Pulumi refresh
-					},
-				],
-			}),
-		},
-	],
+// Attach the policy to the role
+new aws.iam.RolePolicyAttachment('github-actions-policy-attachment', {
+	policyArn: githubActionsPolicy.arn,
+	role: githubActionsRole.name,
 });
 
 // --- ECR ---
