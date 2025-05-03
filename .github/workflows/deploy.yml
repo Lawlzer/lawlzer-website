@@ -34,13 +34,23 @@ jobs:
         working-directory: ./pulumi # Run in the pulumi directory
 
       # --- Configure AWS Credentials using OIDC ---
-      # Removed steps to get role ARN from Pulumi outputs
-      # Using manually created role ARN directly
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::019997775122:role/admin-full-access-to-all # Hardcoded ARN
           aws-region: ${{ secrets.AWS_REGION }}
+
+      # Re-add step to get necessary stack outputs for subsequent steps
+      - name: Get Pulumi Stack Outputs
+        id: get_pulumi_outputs
+        run: |
+          pulumi login
+          pulumi stack select Lawlzer/lawlzer-website-pulumi/prod --cwd ./pulumi # Ensure correct stack is selected
+          pulumi stack output --json --cwd ./pulumi > pulumi-outputs.json
+          echo "Pulumi outputs saved to pulumi-outputs.json"
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          # AWS creds already configured via OIDC role
 
       # --- Login to ECR ---
       - name: Login to Amazon ECR
