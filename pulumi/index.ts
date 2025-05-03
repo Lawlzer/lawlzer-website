@@ -145,6 +145,13 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 					// Allow passing the Task Execution role AND the Task Role to ECS tasks
 					{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: [taskExecRole.arn, appTaskRole.arn] },
 
+					// --- Permissions to modify the specific inline policies of taskExecRole ---
+					{
+						Action: ['iam:PutRolePolicy', 'iam:DeleteRolePolicy'],
+						Effect: 'Allow',
+						Resource: taskExecRole.arn, // Only allow modifying the task execution role
+					},
+
 					// --- Permissions needed for Pulumi Refresh/Up operations ---
 					{
 						Action: ['ecs:DescribeClusters', 'ecs:DescribeServices', 'ecs:DescribeTaskDefinition', 'iam:GetRole', 'iam:GetRolePolicy', 'iam:ListAttachedRolePolicies', 'iam:ListRolePolicies', 'iam:GetOpenIDConnectProvider', 'elasticloadbalancing:DescribeListeners', 'elasticloadbalancing:DescribeLoadBalancers', 'elasticloadbalancing:DescribeTargetGroups', 'elasticloadbalancing:DescribeListenerAttributes', 'elasticloadbalancing:DescribeLoadBalancerAttributes', 'elasticloadbalancing:DescribeTargetGroupAttributes', 'elasticloadbalancing:DescribeTags', 'ecr:DescribeRepositories', 'ecr:GetLifecyclePolicy', 'ecr:ListTagsForResource', 'logs:DescribeLogGroups', 'logs:ListTagsForResource', 'ec2:DescribeSecurityGroups', 'ec2:DescribeVpcs', 'ec2:DescribeSubnets', 'ec2:DescribeVpcAttribute'],
