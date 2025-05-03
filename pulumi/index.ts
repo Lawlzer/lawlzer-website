@@ -220,8 +220,21 @@ const cluster = new aws.ecs.Cluster('app-cluster', {
 // Let awsx determine subnets from the default VPC context
 const alb = new awsx.lb.ApplicationLoadBalancer('app-lb', {
 	name: `${appName}-alb`,
-	// No explicit target group port needed since appPort is now 80 (the default)
-	// defaultTargetGroupPort: appPort, // REMOVED
+	// Define default target group with health check settings
+	defaultTargetGroup: {
+		port: appPort, // Target port is the app port
+		protocol: 'HTTP',
+		healthCheck: {
+			path: '/', // Health check path (adjust if your app uses a specific health endpoint)
+			port: 'traffic-port', // Use the target group's port for health checks
+			protocol: 'HTTP',
+			interval: 30, // Interval between checks (seconds) - increased
+			timeout: 10, // Timeout for each check (seconds) - increased
+			healthyThreshold: 3, // Number of consecutive successes needed - increased
+			unhealthyThreshold: 3, // Number of consecutive failures needed
+			matcher: '200-399', // Expect success codes
+		},
+	},
 	// No explicit subnets needed here if using default VPC
 	// external: true, // awsx determines this based on subnets implicitly
 	// Security groups are managed by awsx component
@@ -243,8 +256,6 @@ const appService = new awsx.ecs.FargateService(
 		taskDefinitionArgs: {
 			executionRole: { roleArn: taskExecRole.arn },
 			taskRole: { roleArn: appTaskRole.arn }, // Explicitly assign the task role
-			// Define the container using the ECR image
-			// The image URI will be dynamically built using the repo URL and a tag configured during deployment
 			container: {
 				name: `${appName}-container`,
 				image: imageUri ?? pulumi.interpolate`${repo.url}:latest`,
@@ -252,11 +263,12 @@ const appService = new awsx.ecs.FargateService(
 				memory: memory,
 				essential: true,
 				portMappings: [
-					{
+					alb.defaultTargetGroup.apply((tg) => ({
+						// Use apply to get the target group Output
 						containerPort: appPort,
-						hostPort: appPort, // Add hostPort, must match containerPort for awsvpc mode
-						targetGroup: alb.defaultTargetGroup, // Connect container to the ALB's default target group
-					},
+						hostPort: appPort,
+						targetGroup: tg, // Connect container to the ALB's default target group
+					})),
 				],
 				secrets: [{ name: 'MONGO_URI', valueFrom: mongoSecretArn }],
 				environment: [
