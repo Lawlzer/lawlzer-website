@@ -4,7 +4,7 @@ config:
   lawlzer-website-pulumi:appPort: '80'
   lawlzer-website-pulumi:cpu: '256'
   lawlzer-website-pulumi:memory: '512'
-  lawlzer-website-pulumi:targetArch: ARM64 # (or X86_64)
+  lawlzer-website-pulumi:targetArch: X86_64 # Changed from ARM64
   lawlzer-website-pulumi:githubOrg: Lawlzer
   lawlzer-website-pulumi:githubRepo: lawlzer-website
   # Encrypt the secret ARN using: pulumi config set --secret mongoSecretArn arn:aws:secretsmanager:...
