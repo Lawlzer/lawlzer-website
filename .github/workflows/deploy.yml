@@ -34,32 +34,12 @@ jobs:
         working-directory: ./pulumi # Run in the pulumi directory
 
       # --- Configure AWS Credentials using OIDC ---
-      # First, get the Role ARN from Pulumi stack outputs
-      - name: Get Pulumi Stack Outputs
-        id: get_pulumi_outputs
-        run: |
-          pulumi login
-          pulumi stack ls --all --cwd ./pulumi
-          pulumi stack select Lawlzer/lawlzer-website-pulumi/prod --cwd ./pulumi # Ensure correct stack is selected
-          pulumi stack output --json --cwd ./pulumi > pulumi-outputs.json
-          # Optional: Output the file content for debugging
-          echo "--- Pulumi Outputs (pulumi-outputs.json) ---"
-          cat pulumi-outputs.json
-          echo "-------------------------------------------"
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          AWS_REGION: ${{ secrets.AWS_REGION }} # Region needed for Pulumi stack access
-
-      - name: Extract Role ARN from Output
-        id: extract_role_arn
-        run: |
-          ROLE_ARN=$(jq -r '.githubActionsRoleArn' pulumi-outputs.json)
-          echo "AWS_ROLE_TO_ASSUME=${ROLE_ARN}" >> $GITHUB_ENV
-
+      # Removed steps to get role ARN from Pulumi outputs
+      # Using manually created role ARN directly
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: arn:aws:iam::019997775122:role/admin-full-access-to-all # Hardcoded ARN
           aws-region: ${{ secrets.AWS_REGION }}
 
       # --- Login to ECR ---
