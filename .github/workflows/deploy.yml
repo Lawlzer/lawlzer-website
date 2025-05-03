@@ -115,6 +115,7 @@ jobs:
           stack-name: prod # Your stack name
           work-dir: ./pulumi # Run in the pulumi directory
           refresh: true # Refresh state before update
+          suppress-progress: true # Reduce log verbosity during waits
           # config-map removed - now set explicitly in previous step
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
