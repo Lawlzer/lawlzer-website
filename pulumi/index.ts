@@ -51,6 +51,20 @@ repo.url.apply((url) => {
 	console.log(`DEBUG: ECR Repo URL: ${url}`);
 });
 
+// --- Route 53 DNS ---
+const domainName = 'lawlzer.com'; // Your domain name
+
+// Create a Route 53 Hosted Zone for the domain (if not already managed in Route 53)
+// If you already manage this domain in Route 53, you should import the existing zone
+// instead of creating a new one. Example:
+// const hostedZone = aws.route53.getZone({ name: domainName });
+// const hostedZoneId = hostedZone.then(zone => zone.id);
+const hostedZone = new aws.route53.Zone('hosted-zone', {
+	name: domainName,
+	comment: 'Hosted zone for lawlzer.com managed by Pulumi',
+});
+const hostedZoneId = hostedZone.zoneId; // Use the ID from the created zone
+
 // --- IAM ---
 
 // 1. OIDC Provider for GitHub Actions
@@ -218,6 +232,8 @@ const cluster = new aws.ecs.Cluster('app-cluster', {
 // --- Load Balancer ---
 // Using awsx.lb.ApplicationLoadBalancer for easier setup
 // Let awsx determine subnets from the default VPC context
+// NOTE: For HTTPS, you'll need an ACM certificate validated for your domain
+// and configure the listener accordingly. This setup assumes HTTP for now.
 const alb = new awsx.lb.ApplicationLoadBalancer('app-lb', {
 	name: `${appName}-alb`,
 	// Define default target group with health check settings
@@ -298,7 +314,10 @@ if (pulumi.Output.isInstance(finalImageUriForLog)) {
 }
 
 // --- Outputs ---
-export const appUrl = pulumi.interpolate`http://${alb.loadBalancer.dnsName}`; // URL to access the app
+// Output the ALB DNS name. You will use this to create a CNAME record in Cloudflare.
+export const albDnsName = alb.loadBalancer.dnsName;
+// The final URL will be https://lawlzer.com after setting up the CNAME in Cloudflare.
+export const appUrl = pulumi.interpolate`http://${alb.loadBalancer.dnsName}`; // Direct ALB URL
 export const ecrRepositoryUrl = repo.url;
 export const ecrRepositoryName = repo.repository.name; // Export just the name for GitHub Actions
 export const ecsClusterName = cluster.name;
