@@ -101,7 +101,13 @@ jobs:
         # working-directory: ./ # Build context is root
 
       # --- Deploy using Pulumi ---
-      - name: Update Pulumi Stack Config with New Image Tag
+      - name: Set Pulumi Image Config
+        run: pulumi config set image ${{ steps.build-image.outputs.image }} --cwd ./pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          # AWS creds already configured via OIDC role
+
+      - name: Update Pulumi Stack
         id: pulumi_up
         uses: pulumi/actions@v5
         with:
@@ -109,9 +115,7 @@ jobs:
           stack-name: prod # Your stack name
           work-dir: ./pulumi # Run in the pulumi directory
           refresh: true # Refresh state before update
-          # Pass the specific image tag to the Pulumi program via config
-          config-map: |
-            { "image": "${{ steps.build-image.outputs.image }}" }
+          # config-map removed - now set explicitly in previous step
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           # AWS creds already configured via OIDC role

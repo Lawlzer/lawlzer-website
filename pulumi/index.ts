@@ -16,6 +16,7 @@ const memory = config.getNumber('memory') ?? 512; // Fargate memory in MiB
 const desiredCount = config.getNumber('desiredCount') ?? 1; // Number of containers to run
 const targetArch = config.get('targetArch') ?? 'ARM64'; // Fargate CPU Architecture (match Dockerfile) - options: X86_64, ARM64
 const imageUri = config.get('image'); // Read the 'image' config value if provided
+console.log(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config value
 
 // Runtime environment variables from config (add others as needed)
 // The MongoDB URI should be stored securely, preferably in AWS Secrets Manager
@@ -156,6 +157,10 @@ const repo = new awsx.ecr.Repository('app-repo', {
 	// Optional: Add lifecycle policy to clean up old images
 	// lifecyclePolicy: { ... }
 });
+// Use .apply() to log the resolved value of the Output
+repo.url.apply((url) => {
+	console.log(`DEBUG: ECR Repo URL: ${url}`);
+});
 
 // --- ECS Cluster ---
 const cluster = new aws.ecs.Cluster('app-cluster', {
@@ -220,6 +225,17 @@ const appService = new awsx.ecs.FargateService(
 	},
 	{ dependsOn: [alb] }
 ); // Ensure ALB is created before the service tries to use its target group
+
+// Add a log for the final image value being used
+const finalImageUriForLog = imageUri ?? pulumi.interpolate`${repo.url}:latest`;
+// Use .apply() if it's an Output, otherwise log directly
+if (pulumi.Output.isInstance(finalImageUriForLog)) {
+	finalImageUriForLog.apply((uri) => {
+		console.log(`DEBUG: Final image URI for container: ${uri}`);
+	});
+} else {
+	console.log(`DEBUG: Final image URI for container: ${finalImageUriForLog}`);
+}
 
 // --- Outputs ---
 export const appUrl = pulumi.interpolate`http://${alb.loadBalancer.dnsName}`; // URL to access the app
