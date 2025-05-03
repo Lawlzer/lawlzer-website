@@ -120,11 +120,11 @@ const githubActionsPolicyDocument = pulumi.jsonStringify({
 		{ Action: ['iam:PassRole'], Effect: 'Allow', Resource: [taskExecRole.arn, appTaskRole.arn] },
 
 		// --- Permissions to manage the taskExecRole's policy ---
-		{
-			Action: ['iam:PutRolePolicy', 'iam:DeleteRolePolicy'], // Needed to manage the separate task-exec-secret-policy
-			Effect: 'Allow',
-			Resource: taskExecRole.arn,
-		},
+		// { // Temporarily removed - Add this manually to the policy in AWS console after first failed run
+		// 	Action: ['iam:PutRolePolicy', 'iam:DeleteRolePolicy'],
+		// 	Effect: 'Allow',
+		// 	Resource: taskExecRole.arn,
+		// },
 
 		// --- Permissions needed for Pulumi Refresh/Up operations ---
 		{
