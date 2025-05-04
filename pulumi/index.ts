@@ -228,7 +228,7 @@ const domainName = 'lawlzer.com';
 // Request a certificate for the domain and www subdomain
 const certificate = new aws.acm.Certificate('app-certificate', {
 	domainName: domainName,
-	subjectAlternativeNames: [`www.${domainName}`],
+	subjectAlternativeNames: [`www.${domainName}`, `*.${domainName}`],
 	validationMethod: 'DNS',
 	tags: {
 		Name: `${appName}-certificate`,
