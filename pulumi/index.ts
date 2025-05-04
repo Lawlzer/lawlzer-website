@@ -14,7 +14,7 @@ const appPort = config.getNumber('appPort') ?? throwError('appPort is required')
 const cpu = config.getNumber('cpu') ?? 256; // Fargate CPU units (256 = 0.25 vCPU)
 const memory = config.getNumber('memory') ?? 512; // Fargate memory in MiB
 const desiredCount = config.getNumber('desiredCount') ?? 1; // Number of containers to run
-const targetArch = config.get('targetArch') ?? 'ARM64'; // Fargate CPU Architecture (match Dockerfile) - options: X86_64, ARM64
+const targetArch = config.get('targetArch') ?? 'X86_64'; // Fargate CPU Architecture (match Dockerfile) - options: X86_64, ARM64
 const imageUri = config.get('image'); // Read the 'image' config value if provided
 console.log(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config value
 
