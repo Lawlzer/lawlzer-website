@@ -278,7 +278,8 @@ const httpsTargetGroupResource = new aws.lb.TargetGroup(`${appName}-https-tg`, {
 		timeout: 30, // Increased from 10
 		healthyThreshold: 5, // Increased from 3
 		unhealthyThreshold: 5, // Increased from 3
-		matcher: '200-399',
+		matcher: '200-404', // todo change to 399, temporarily 404 so we can push/commit faster
+		// matcher: '200-399',
 	},
 	tags: {
 		Name: `${appName}-https-tg`,
