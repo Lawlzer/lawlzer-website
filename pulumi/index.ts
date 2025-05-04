@@ -75,29 +75,24 @@ const taskExecRole = new aws.iam.Role('task-exec-role', {
 const taskExecSecretPolicy = new aws.iam.RolePolicy('task-exec-secret-policy', {
 	name: `${appName}-AllowMongoSecretRead`,
 	role: taskExecRole.id,
-	policy: mongoSecretArn.apply(
-		(
-			arn // Assuming mongoSecretArn holds the SSM Parameter ARN
-		) =>
-			JSON.stringify({
-				Version: '2012-10-17',
-				Statement: [
-					{
-						Action: 'ssm:GetParameters', // CHANGED from secretsmanager:GetSecretValue
-						Effect: 'Allow',
-						Resource: arn, // The ARN of the SSM Parameter
-					},
-					// If the SSM parameter is KMS encrypted with a customer key,
-					// you also need kms:Decrypt permission on that key here.
-					// MODIFIED: Adding kms:Decrypt for the default SSM key
-					{
-						Action: 'kms:Decrypt',
-						Effect: 'Allow',
-						// Target the default AWS-managed KMS key for SSM in the current region and account
-						Resource: pulumi.interpolate`arn:aws:kms:${region}:${accountId}:alias/aws/ssm`,
-					},
-				],
-			})
+	// MODIFIED: Use pulumi.all to resolve dependencies before stringifying
+	policy: pulumi.all([mongoSecretArn, region, accountId]).apply(([secretArn, resolvedRegion, resolvedAccountId]) =>
+		JSON.stringify({
+			Version: '2012-10-17',
+			Statement: [
+				{
+					Action: 'ssm:GetParameters',
+					Effect: 'Allow',
+					Resource: secretArn, // Use the resolved secret ARN
+				},
+				{
+					Action: 'kms:Decrypt',
+					Effect: 'Allow',
+					// Construct the ARN string using resolved values
+					Resource: `arn:aws:kms:${resolvedRegion}:${resolvedAccountId}:alias/aws/ssm`,
+				},
+			],
+		})
 	),
 });
 
