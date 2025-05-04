@@ -51,19 +51,7 @@ repo.url.apply((url) => {
 	console.log(`DEBUG: ECR Repo URL: ${url}`);
 });
 
-// --- Route 53 DNS ---
-const domainName = 'lawlzer.com'; // Your domain name
-
-// Create a Route 53 Hosted Zone for the domain (if not already managed in Route 53)
-// If you already manage this domain in Route 53, you should import the existing zone
-// instead of creating a new one. Example:
-// const hostedZone = aws.route53.getZone({ name: domainName });
-// const hostedZoneId = hostedZone.then(zone => zone.id);
-const hostedZone = new aws.route53.Zone('hosted-zone', {
-	name: domainName,
-	comment: 'Hosted zone for lawlzer.com managed by Pulumi',
-});
-const hostedZoneId = hostedZone.zoneId; // Use the ID from the created zone
+// --- Route 53 DNS --- (Removed as DNS is managed by Cloudflare)
 
 // --- IAM ---
 
@@ -224,39 +212,109 @@ new aws.iam.RolePolicyAttachment('github-actions-deploy-policy-attachment', {
 	policyArn: githubActionsDeployPolicy.arn,
 });
 
+// --- ACM Certificate for HTTPS ---
+const domainName = 'lawlzer.com';
+
+// Request a certificate for the domain and www subdomain
+const certificate = new aws.acm.Certificate('app-certificate', {
+	domainName: domainName,
+	subjectAlternativeNames: [`www.${domainName}`],
+	validationMethod: 'DNS',
+	tags: {
+		Name: `${appName}-certificate`,
+	},
+});
+
+// Output the DNS validation records needed. User must add these to Cloudflare.
+// Note: Pulumi won't proceed with validation until these are created AND propagated.
+export const certificateValidationOptions = certificate.domainValidationOptions;
+
+// Create the validation record resources in Pulumi - this resource waits
+// until the DNS records are confirmed by AWS.
+// IMPORTANT: This requires a SECOND `pulumi up` run after manually creating
+// the CNAME records in Cloudflare using the output from the first run.
+const certificateValidation = new aws.acm.CertificateValidation(
+	'app-certificate-validation',
+	{
+		certificateArn: certificate.arn,
+		// This field is intentionally empty/commented out in the initial setup.
+		// Pulumi automatically uses the certificate's domainValidationOptions
+		// to know what to wait for when validationMethod is DNS.
+		// validationRecordFqdns: [], // Only needed if using EMAIL validation or managing DNS outside Route 53 *with Pulumi*
+	},
+	// Explicitly depend on the certificate resource
+	{ dependsOn: [certificate] }
+);
+
 // --- ECS Cluster ---
 const cluster = new aws.ecs.Cluster('app-cluster', {
 	name: `${appName}-cluster`,
 });
 
-// --- Load Balancer ---
-// Using awsx.lb.ApplicationLoadBalancer for easier setup
-// Let awsx determine subnets from the default VPC context
-// NOTE: For HTTPS, you'll need an ACM certificate validated for your domain
-// and configure the listener accordingly. This setup assumes HTTP for now.
+// --- Target Group for HTTPS Listener ---
+// Define the target group explicitly for the HTTPS listener
+const httpsTargetGroupResource = new aws.lb.TargetGroup(`${appName}-https-tg`, {
+	name: `${appName}-https-tg`,
+	port: appPort,
+	protocol: 'HTTP', // Protocol between ALB and container
+	vpcId: defaultVpc.then((vpc) => vpc.id), // Associate with the default VPC
+	targetType: 'ip', // Required for Fargate
+	healthCheck: {
+		path: '/',
+		port: 'traffic-port',
+		protocol: 'HTTP',
+		interval: 30,
+		timeout: 10,
+		healthyThreshold: 3,
+		unhealthyThreshold: 3,
+		matcher: '200-399',
+	},
+	tags: {
+		Name: `${appName}-https-tg`,
+	},
+});
+
+// --- Load Balancer (Updated for HTTPS) ---
 const alb = new awsx.lb.ApplicationLoadBalancer('app-lb', {
 	name: `${appName}-alb`,
-	// Define default target group with health check settings
-	defaultTargetGroup: {
-		port: appPort, // Target port is the app port
-		protocol: 'HTTP',
-		healthCheck: {
-			path: '/', // Health check path (adjust if your app uses a specific health endpoint)
-			port: 'traffic-port', // Use the target group's port for health checks
-			protocol: 'HTTP',
-			interval: 30, // Interval between checks (seconds) - increased
-			timeout: 10, // Timeout for each check (seconds) - increased
-			healthyThreshold: 3, // Number of consecutive successes needed - increased
-			unhealthyThreshold: 3, // Number of consecutive failures needed
-			matcher: '200-399', // Expect success codes
+	// Remove default listener/target group on port 80 created by awsx by default
+	defaultTargetGroup: undefined,
+	// Define listeners explicitly
+	listeners: [
+		{
+			// HTTPS listener using the validated ACM certificate
+			port: 443,
+			protocol: 'HTTPS',
+			certificateArn: certificateValidation.certificateArn, // Use ARN from validation resource
+			// Default action forwards traffic to the explicitly defined target group
+			defaultActions: [
+				{
+					type: 'forward',
+					// Reference the target group ARN
+					targetGroupArn: httpsTargetGroupResource.arn,
+				},
+			],
 		},
-	},
-	// No explicit subnets needed here if using default VPC
-	// external: true, // awsx determines this based on subnets implicitly
-	// Security groups are managed by awsx component
+		{
+			// HTTP listener that redirects to HTTPS
+			port: 80,
+			protocol: 'HTTP',
+			defaultActions: [
+				{
+					type: 'redirect',
+					redirect: {
+						protocol: 'HTTPS',
+						port: '443',
+						statusCode: 'HTTP_301', // Permanent redirect
+					},
+				},
+			],
+		},
+	],
 });
 
 // --- ECS Fargate Service ---
+// Reference the explicitly created Target Group in the service definition
 const appService = new awsx.ecs.FargateService(
 	'app-service',
 	{
@@ -265,13 +323,12 @@ const appService = new awsx.ecs.FargateService(
 		desiredCount: desiredCount,
 		networkConfiguration: {
 			// Use default VPC subnets
-			subnets: defaultSubnets.then((subnets) => subnets.ids), // Use the public subnet IDs from the lookup
-			assignPublicIp: true, // Required for Fargate tasks in public subnets to pull images if no NAT Gateway
-			// Security groups are managed by awsx component
+			subnets: defaultSubnets.then((subnets) => subnets.ids),
+			assignPublicIp: true,
 		},
 		taskDefinitionArgs: {
 			executionRole: { roleArn: taskExecRole.arn },
-			taskRole: { roleArn: appTaskRole.arn }, // Explicitly assign the task role
+			taskRole: { roleArn: appTaskRole.arn },
 			container: {
 				name: `${appName}-container`,
 				image: imageUri ?? pulumi.interpolate`${repo.url}:latest`,
@@ -279,12 +336,12 @@ const appService = new awsx.ecs.FargateService(
 				memory: memory,
 				essential: true,
 				portMappings: [
-					alb.defaultTargetGroup.apply((tg) => ({
-						// Use apply to get the target group Output
+					// Use the explicitly created Target Group
+					{
 						containerPort: appPort,
 						hostPort: appPort,
-						targetGroup: tg, // Connect container to the ALB's default target group
-					})),
+						targetGroup: httpsTargetGroupResource, // Pass the TargetGroup resource itself
+					},
 				],
 				secrets: [{ name: 'MONGO_URI', valueFrom: mongoSecretArn }],
 				environment: [
@@ -316,8 +373,8 @@ if (pulumi.Output.isInstance(finalImageUriForLog)) {
 // --- Outputs ---
 // Output the ALB DNS name. You will use this to create a CNAME record in Cloudflare.
 export const albDnsName = alb.loadBalancer.dnsName;
-// The final URL will be https://lawlzer.com after setting up the CNAME in Cloudflare.
-export const appUrl = pulumi.interpolate`http://${alb.loadBalancer.dnsName}`; // Direct ALB URL
+// The final URL will be https://lawlzer.com after setting up the CNAME in Cloudflare and HTTPS.
+export const appUrl = `https://${domainName}`;
 export const ecrRepositoryUrl = repo.url;
 export const ecrRepositoryName = repo.repository.name; // Export just the name for GitHub Actions
 export const ecsClusterName = cluster.name;
