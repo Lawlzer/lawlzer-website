@@ -11,6 +11,7 @@ const config = new pulumi.Config();
 // Basic config values - can be set via `pulumi config set <key> <value>`
 const appName = config.get('appName') ?? pulumi.getProject(); // Default to Pulumi project name
 const appPort = config.getNumber('appPort') ?? throwError('appPort is required'); // Port your app listens on (from Dockerfile)
+console.log(`DEBUG: Using appPort: ${appPort}`); // Log appPort
 const cpu = config.getNumber('cpu') ?? 256; // Fargate CPU units (256 = 0.25 vCPU)
 const memory = config.getNumber('memory') ?? 512; // Fargate memory in MiB
 const desiredCount = config.getNumber('desiredCount') ?? 1; // Number of containers to run
@@ -23,6 +24,10 @@ console.log(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config va
 // We'll assume it's stored there and retrieve its ARN via config
 // Example: pulumi config set mongoSecretArn arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/myapp/mongo-db-conn-string-XXXXXX
 const mongoSecretArn = config.requireSecret('mongoSecretArn'); // Require this secret ARN in Pulumi config
+
+mongoSecretArn.apply((arn) => {
+	console.log(`DEBUG: Using mongoSecretArn (SSM Parameter ARN): ${arn}`);
+}); // Log secret ARN
 
 // NEW: GitHub Configuration - Replace with your actual Org/Repo
 const githubOrg = 'lawlzer'; // Replace with your GitHub Org name
@@ -102,6 +107,10 @@ new aws.iam.RolePolicyAttachment('task-exec-policy-attachment', {
 	policyArn: aws.iam.ManagedPolicy.AmazonECSTaskExecutionRolePolicy,
 });
 
+taskExecRole.arn.apply((arn) => {
+	console.log(`DEBUG: Task Execution Role ARN: ${arn}`);
+}); // Log Task Exec Role ARN
+
 // 3. Application Task Role: Permissions for the application *inside* the container
 const appTaskRole = new aws.iam.Role('app-task-role', {
 	name: `${appName}-app-task-role`, // More specific name
@@ -112,6 +121,10 @@ const appTaskRole = new aws.iam.Role('app-task-role', {
 		// { name: "AllowAppS3Read", policy: JSON.stringify({ ... }) }
 	],
 });
+
+appTaskRole.arn.apply((arn) => {
+	console.log(`DEBUG: Application Task Role ARN: ${arn}`);
+}); // Log App Task Role ARN
 
 // 4. GitHub Actions Deployment Role: Assumed by the workflow via OIDC
 const githubActionsRole = new aws.iam.Role('github-actions-role', {
@@ -257,18 +270,24 @@ const httpsTargetGroupResource = new aws.lb.TargetGroup(`${appName}-https-tg`, {
 	vpcId: defaultVpc.then((vpc) => vpc.id), // Associate with the default VPC
 	targetType: 'ip', // Required for Fargate
 	healthCheck: {
-		path: '/',
+		path: '/', // Consider changing to a dedicated /api/health endpoint if available
 		port: 'traffic-port',
 		protocol: 'HTTP',
-		interval: 30,
-		timeout: 10,
-		healthyThreshold: 3,
-		unhealthyThreshold: 3,
+		// Increased tolerance for health checks
+		interval: 60, // Increased from 30
+		timeout: 30, // Increased from 10
+		healthyThreshold: 5, // Increased from 3
+		unhealthyThreshold: 5, // Increased from 3
 		matcher: '200-399',
 	},
 	tags: {
 		Name: `${appName}-https-tg`,
 	},
+});
+
+// Log health check config
+httpsTargetGroupResource.healthCheck.apply((hc) => {
+	console.log(`DEBUG: Target Group Health Check Config: ${JSON.stringify(hc)}`);
 });
 
 // --- Load Balancer (Updated for HTTPS) ---
@@ -361,10 +380,10 @@ const finalImageUriForLog = imageUri ?? pulumi.interpolate`${repo.url}:latest`;
 // Use .apply() if it's an Output, otherwise log directly
 if (pulumi.Output.isInstance(finalImageUriForLog)) {
 	finalImageUriForLog.apply((uri) => {
-		console.log(`DEBUG: Final image URI for container: ${uri}`);
+		console.log(`DEBUG: Final image URI passed to container definition: ${uri}`);
 	});
 } else {
-	console.log(`DEBUG: Final image URI for container: ${finalImageUriForLog}`);
+	console.log(`DEBUG: Final image URI passed to container definition: ${finalImageUriForLog}`);
 }
 
 // --- Outputs ---
