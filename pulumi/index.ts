@@ -89,11 +89,13 @@ const taskExecSecretPolicy = new aws.iam.RolePolicy('task-exec-secret-policy', {
 					},
 					// If the SSM parameter is KMS encrypted with a customer key,
 					// you also need kms:Decrypt permission on that key here.
-					// {
-					//     Action: "kms:Decrypt",
-					//     Effect: "Allow",
-					//     Resource: "arn:aws:kms:<region>:<account-id>:key/<your-kms-key-id>"
-					// }
+					// MODIFIED: Adding kms:Decrypt for the default SSM key
+					{
+						Action: 'kms:Decrypt',
+						Effect: 'Allow',
+						// Target the default AWS-managed KMS key for SSM in the current region and account
+						Resource: pulumi.interpolate`arn:aws:kms:${region}:${accountId}:alias/aws/ssm`,
+					},
 				],
 			})
 	),
