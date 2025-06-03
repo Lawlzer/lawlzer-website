@@ -1,57 +1,59 @@
 # Dependencies
 node_modules
 
-# Logs and dev output
+# Logs & Debug
 logs
-routeTypes
-
-# Temporary caches
-*.tsbuildinfo
-caches
-cache
 lerna-debug.log
-zig-cache
-Cargo.lock
-bun.lockb
-
-# Environment variables/secrets
-.env
-.env.development
-.env.production
-.envrc
-
-# Build / Generated output
-build
-dist
-output
-zig-out
-
-data
-.next
-coverage
-
-
-# Temporary/dev locations
-legacy
-temp
-tmp
 debug
 
+# Build artifacts
+*.tsbuildinfo
+build
+dist
+out
+output
+lib
+zig-out
+zig-cache
+serverOutput
+coverage
+routeTypes
+
+# Caches
+cache
+caches
+.next
+
+# Environment
+.env
+.env.*
+.envrc
+
+# Temporary files
+temp
+tmp
 todo
 todo.txt
+backup
+legacy
 
-serverOutput
+# Package locks (intentionally ignored)
+package-lock.json
+bun.lock
+bun.lockb
+Cargo.lock
+
+# Data & Volumes
+data
 volume
 volumes
 
-# Python specific
+# Python
 __pycache__
 .venv
 
-# Model caches
+# AI/ML
 model_cache/
 **/model_cache/**
 whisper-openai-exp/
 feature_cache
-
-# Specific to this project

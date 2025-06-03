@@ -1,7 +1,6 @@
-import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
-import { loadEnv } from 'vite';
 import path from 'path';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import { defineConfig } from 'vitest/config';
 
 const __dirname = path.resolve();
 const setupFilesPath = path.resolve(__dirname, 'testUtils', 'unit', 'vitest.setup.ts');
