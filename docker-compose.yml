@@ -9,7 +9,7 @@ services:
         # Define the secret to be used during build, referencing the top-level secrets key
         - dotenv
     ports:
-      - '3000:3000'
+      - '80:80'
     env_file:
       # env_file is still needed for the runtime container
       - .env

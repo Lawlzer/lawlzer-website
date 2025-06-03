@@ -7,8 +7,10 @@ import { getBaseUrl, subdomains } from './lib/utils';
 // Function to determine if the hostname corresponds to the main domain
 function isMainDomain(hostname: string): boolean {
 	// List of hostnames that should be treated as the main domain
-	const mainDomainHostnames = ['localhost', '127.0.0.1', 'dev.localhost']; // Filter out potential undefined/null values\
-	// todo clean up mainDomainHostnames
+	const mainDomainUrl = getBaseUrl(); // Get the base URL for the main domain
+	const mainDomainHostname = new URL(mainDomainUrl).hostname; // Extract hostname
+
+	const mainDomainHostnames = ['localhost', '127.0.0.1', 'dev.localhost', mainDomainHostname]; // Add the dynamic hostname
 
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Input hostname: ${hostname}`);
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Calculated mainDomainHostnames: ${JSON.stringify(mainDomainHostnames)}`);
@@ -23,11 +25,15 @@ export function middleware(request: NextRequest): NextResponse {
 	const { pathname } = url;
 
 	const hostHeader = request.headers.get('host');
-	const detectedHostname = hostHeader?.split(':')[0] ?? url.hostname;
+	const forwardedHost = request.headers.get('x-forwarded-host'); // Check for x-forwarded-host
+
+	// Prioritize x-forwarded-host, then host header, then URL hostname as fallback
+	const detectedHostname = forwardedHost ?? hostHeader?.split(':')[0] ?? url.hostname;
 
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Request hostname (from URL): ${url.hostname}, pathname: ${pathname}`);
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Host header: ${hostHeader}`);
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Detected hostname (from Host header): ${detectedHostname}`);
+	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] X-Forwarded-Host header: ${forwardedHost}`);
+	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Detected hostname: ${detectedHostname}`);
 
 	// Check for subdomain matches
 	for (const subdomain of subdomains) {

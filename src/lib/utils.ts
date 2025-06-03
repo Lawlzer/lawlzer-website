@@ -73,9 +73,19 @@ export function getBaseUrl(subdomain?: SubdomainName | null): string {
 	let subdomainText = '';
 	if (subdomain) subdomainText = `${subdomain}.`;
 
-	// Special case for localhost
+	// Special case for localhost development
+	if (topLevel === 'localhost') {
+		// For localhost, build the URL as subdomain.secondLevel.localhost:port
+		// But if no subdomain and secondLevel is 'localhost', use just localhost:port
+		if (!subdomain && secondLevel === 'localhost') {
+			return `${protocol}://localhost${port ? `:${port}` : ''}`;
+		}
+		return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}`;
+	}
+
+	// Special case for when secondLevel is localhost (legacy support)
 	if (secondLevel === 'localhost') {
-		return `${protocol}://${secondLevel}${port ? `:${port}` : ''}`;
+		return `${protocol}://${subdomainText}${secondLevel}${port ? `:${port}` : ''}`;
 	}
 
 	return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}`;
