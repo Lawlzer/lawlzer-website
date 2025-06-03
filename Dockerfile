@@ -14,10 +14,10 @@ COPY prisma ./prisma/
 # Explicitly install native modules for the target platform (alpine linux arm64)
 # This needs to happen *before* the main npm install
 # Ensure the platform matches the FROM image architecture if it differs from your host
-RUN npm install --include=optional --os=linux --libc=musl --cpu=arm64 sharp lightningcss @tailwindcss/oxide
+RUN npm install --force --include=optional --os=linux --libc=musl --cpu=arm64 sharp lightningcss @tailwindcss/oxide
 
 # Install dependencies (this will also run prisma generate via postinstall)
-RUN npm install --frozen-lockfile
+RUN npm install --force --frozen-lockfile
 
 # Copy the rest of the application code
 COPY . .
@@ -25,8 +25,8 @@ COPY . .
 # Build the Next.js application
 # Set NEXT_TELEMETRY_DISABLED to avoid extra network calls during build
 ENV NEXT_TELEMETRY_DISABLED 1
-# Mount the .env file as a secret to make variables available during build
-RUN --mount=type=secret,id=dotenv,target=/app/.env npm run build
+# Mount the .env secret file provided by the build command
+RUN --mount=type=secret,id=dotenv,dst=.env npm run build
 
 # Stage 2: Runner
 FROM node:lts-alpine AS runner
@@ -56,7 +56,10 @@ COPY --from=builder --chown=node:node /app/node_modules/lightningcss ./node_modu
 COPY --from=builder --chown=node:node /app/node_modules/@tailwindcss/oxide ./node_modules/@tailwindcss/oxide
 
 # Expose the port the app runs on
-EXPOSE 3000
+EXPOSE 80
+
+# Set the port environment variable for the Next.js server
+ENV PORT=80
 
 # Define the command to run the app
 # Use the standalone server entry point

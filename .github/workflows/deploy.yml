@@ -34,30 +34,28 @@ jobs:
         working-directory: ./pulumi # Run in the pulumi directory
 
       # --- Configure AWS Credentials using OIDC ---
-      # First, get the Role ARN from Pulumi stack outputs
-      - name: Get GitHub Actions Role ARN from Pulumi Output
-        id: get_role_arn
-        uses: pulumi/actions@v5
-        with:
-          command: stack
-          stack-name: prod # Your stack name (e.g., prod)
-          work-dir: ./pulumi
-          outputs-file: pulumi-outputs.json # Save outputs to a file
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          AWS_REGION: ${{ secrets.AWS_REGION }} # Region needed for Pulumi stack access
-
-      - name: Extract Role ARN from Output
-        id: extract_role_arn
-        run: |
-          ROLE_ARN=$(jq -r '.githubActionsRoleArn' pulumi-outputs.json)
-          echo "AWS_ROLE_TO_ASSUME=${ROLE_ARN}" >> $GITHUB_ENV
-
       - name: Configure AWS Credentials (OIDC)
+        id: aws-creds # Give ID for potential future use
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: arn:aws:iam::019997775122:role/admin-full-access-to-all # Hardcoded ARN
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS Credentials
+        run: aws sts get-caller-identity
+
+      # Re-add step to get necessary stack outputs for subsequent steps
+      - name: Get Pulumi Stack Outputs
+        id: get_pulumi_outputs
+        run: |
+          pulumi login
+          pulumi stack select Lawlzer/lawlzer-website-pulumi/prod --cwd ./pulumi # Ensure correct stack is selected
+          pulumi stack output --json --cwd ./pulumi > pulumi-outputs.json
+          echo "Pulumi outputs saved to pulumi-outputs.json"
+          cat pulumi-outputs.json # Log the outputs
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          # AWS creds already configured via OIDC role
 
       # --- Login to ECR ---
       - name: Login to Amazon ECR
@@ -75,48 +73,39 @@ jobs:
         run: |
           REPO_NAME=$(jq -r '.ecrRepositoryName' pulumi-outputs.json)
           echo "ECR_REPOSITORY=${REPO_NAME}" >> $GITHUB_ENV
-          echo "Repository name: ${REPO_NAME}" # For logging
+          echo "DEBUG: ECR Repository Name = ${REPO_NAME}" # For logging
 
-      # Prepare build secrets if needed (extract from GH secrets to temp file)
-      # Example: Assumes a GitHub secret named BUILD_ENV_FILE contains base64 encoded .env content
-      - name: Prepare .env for Docker build
-        # NOTE: Ensure you have created a GitHub secret named BUILD_ENV_FILE containing the
-        # base64 encoded content of the .env file needed ONLY for the build step.
-        if: secrets.BUILD_ENV_FILE != ''
-        run: echo "${{ secrets.BUILD_ENV_FILE }}" | base64 --decode > .env.build
-        # If BUILD_ENV_FILE is not set, create an empty file to avoid docker build errors
-        shell: bash
-        # continue-on-error: true # Removed: Fail fast if secret is expected but missing
+      - name: Download build-time env file from S3
+        run: aws s3 cp s3://lawlzer-website-env/.env .env.build
+
       - name: Build, Tag, and Push Docker Image to ECR
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ steps.image_tag.outputs.tag }}
+          DOCKER_BUILDKIT: 1 # Enable BuildKit for secrets
         run: |
-          echo "Building image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          # If you needed the .env secret during build:
-          if [[ -f .env.build ]]; then
-            echo "Using .env.build secret for docker build"
-            docker build --secret id=dotenv,src=.env.build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          else
-            echo "Building without .env.build secret"
-            docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          fi
-          # Otherwise, without the build secret:
-          # docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          echo "DEBUG: Building image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          # Use BuildKit secrets to mount the .env file securely - Use id=dotenv
+          docker build --secret id=dotenv,src=.env.build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
 
-          echo "Pushing image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "DEBUG: Pushing image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-        # Clean up temp build file if created
         # working-directory: ./ # Build context is root
-      - name: Cleanup build secrets
-        if: always() && steps.prepare_env.outcome == 'success' # Use the ID of the prepare step if changed
-        run: rm -f .env.build
 
       # --- Deploy using Pulumi ---
-      - name: Update Pulumi Stack Config with New Image Tag
+      - name: Set Pulumi Image Config
+        run: |
+          IMAGE_URI="${{ steps.build-image.outputs.image }}"
+          echo "DEBUG: Setting Pulumi config image = $IMAGE_URI"
+          pulumi config set image $IMAGE_URI --cwd ./pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          # AWS creds already configured via OIDC role
+
+      - name: Update Pulumi Stack
         id: pulumi_up
         uses: pulumi/actions@v5
         with:
@@ -124,14 +113,66 @@ jobs:
           stack-name: prod # Your stack name
           work-dir: ./pulumi # Run in the pulumi directory
           refresh: true # Refresh state before update
-          # Pass the specific image tag to the Pulumi program via config
-          config-map: |
-            { "image": "${{ steps.build-image.outputs.image }}" }
+          suppress-progress: true # Reduce log verbosity during waits
+          # config-map removed - now set explicitly in previous step
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           # AWS creds already configured via OIDC role
 
+      # --- Debugging Step: Fetch Logs on Failure ---
+      - name: Attempt to Fetch ECS Task Logs on Failure
+        if: failure() # Only run if the pulumi_up step failed
+        run: |
+          echo "Pulumi deployment failed. Attempting to fetch ECS logs..."
+          CLUSTER_NAME=$(jq -r '.ecsClusterName' pulumi-outputs.json)
+          SERVICE_NAME=$(jq -r '.ecsServiceName' pulumi-outputs.json)
+          CONTAINER_NAME=$(jq -r '.containerName' pulumi-outputs.json)
+          echo "Cluster: $CLUSTER_NAME, Service: $SERVICE_NAME, Container: $CONTAINER_NAME"
+
+          # Get the ARN of the latest task (running or stopped) for the service
+          TASK_ARN=$(aws ecs list-tasks --cluster "$CLUSTER_NAME" --service-name "$SERVICE_NAME" --output json | jq -r '.taskArns[-1]')
+          if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" == "null" ]; then
+            echo "Could not find any recent tasks for service $SERVICE_NAME."
+            # Try finding stopped tasks as a fallback
+            TASK_ARN=$(aws ecs list-tasks --cluster "$CLUSTER_NAME" --service-name "$SERVICE_NAME" --desired-status STOPPED --output json | jq -r '.taskArns[-1]')
+            if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" == "null" ]; then
+              echo "Could not find any stopped tasks either."
+              exit 0 # Exit gracefully, no task found
+            fi
+          fi
+          echo "Latest Task ARN found: $TASK_ARN"
+
+          # Describe the task to get log config
+          TASK_DETAILS=$(aws ecs describe-tasks --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN" --output json)
+          LOG_CONFIG=$(echo "$TASK_DETAILS" | jq -r --arg CNAME "$CONTAINER_NAME" '.tasks[0].containers[] | select(.name==$CNAME) | .logConfiguration')
+
+          if [ -z "$LOG_CONFIG" ] || [ "$LOG_CONFIG" == "null" ]; then
+            echo "Log configuration not found for container $CONTAINER_NAME in task $TASK_ARN."
+            echo "Task details:"
+            echo "$TASK_DETAILS" | jq '.' # Print details for manual inspection
+            exit 0
+          fi
+
+          LOG_DRIVER=$(echo "$LOG_CONFIG" | jq -r '.logDriver')
+          if [ "$LOG_DRIVER" != "awslogs" ]; then
+            echo "Container does not use 'awslogs' log driver. Found: $LOG_DRIVER"
+            exit 0
+          fi
+
+          LOG_GROUP=$(echo "$LOG_CONFIG" | jq -r '.options."awslogs-group"')
+          LOG_STREAM_PREFIX=$(echo "$LOG_CONFIG" | jq -r '.options."awslogs-stream-prefix"')
+          TASK_ID=$(echo "$TASK_ARN" | cut -d '/' -f3)
+          LOG_STREAM_NAME="${LOG_STREAM_PREFIX}/${CONTAINER_NAME}/${TASK_ID}"
+
+          echo "Log Group: $LOG_GROUP"
+          echo "Log Stream: $LOG_STREAM_NAME"
+
+          echo "Fetching logs..."
+          aws logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "$LOG_STREAM_NAME" --output json | jq -r '.events[].message' || echo "Failed to retrieve logs from CloudWatch."
+          echo "--- End of Logs --- (if any)"
+
       - name: Show App URL after deploy
+        if: success() # Only show on success
         run: |
           APP_URL=$(jq -r '.appUrl' pulumi-outputs.json) # Get URL from last output
           echo "Application successfully deployed."

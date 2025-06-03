@@ -34,3 +34,5 @@ docker compose up --build -d
 
 Mongodb atlas for the db
 2fohgI5OCl7p7bXL
+
+todo: readiness/healthcheck
