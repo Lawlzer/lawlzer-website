@@ -2,7 +2,6 @@
 // import './testUtils/playwright/loadEnv';
 
 import { defineConfig, devices } from '@playwright/test';
-
 import path from 'path';
 
 // Define the path to the global setup file
@@ -13,9 +12,9 @@ export default defineConfig({
 	testDir: './src', // Directory where tests are located
 	testMatch: '**/*.playwright.ts', // Match only files ending in .playwright.ts
 	fullyParallel: true,
-	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 2 : 0,
-	workers: process.env.CI ? 1 : undefined,
+	forbidOnly: Boolean(process.env.CI),
+	retries: process.env.CI !== undefined ? 2 : 0,
+	workers: process.env.CI !== undefined ? 1 : undefined,
 	reporter: [['html', { open: 'never', outputFolder: './coverage/playwright-report' }]],
 	timeout: 10000,
 	expect: {
@@ -34,8 +33,8 @@ export default defineConfig({
 	updateSnapshots: 'missing',
 	metadata: {},
 	use: {
-		baseURL: 'http://localhost:3005', // Base URL for the tests
-		trace: 'on-first-retry',
+		baseURL: process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:3000',
+		trace: Boolean(process.env.CI) ? 'retain-on-failure' : 'on',
 		headless: true,
 		viewport: { width: 1280, height: 720 },
 		ignoreHTTPSErrors: false,
@@ -44,16 +43,61 @@ export default defineConfig({
 		// screenshot: 'only-on-failure',
 	},
 	projects: [
-		{
-			name: 'chromium',
-			use: { ...devices['Desktop Chrome'] },
-			dependencies: [],
-		},
+		...(Boolean(process.env.GITHUB_ACTIONS)
+			? []
+			: [
+					{
+						name: 'chromium',
+						use: { ...devices['Desktop Chrome'] },
+						dependencies: [],
+					},
+					{
+						name: 'Google Chrome',
+						use: { channel: 'chrome' },
+						...(Boolean(process.env.CI) ? { retries: 2 } : {}),
+					},
+					...(process.env.PLAYWRIGHT_SAFARI === 'true'
+						? [
+								{
+									name: 'Safari',
+									use: { ...devices['Desktop Safari'] },
+								},
+							]
+						: []),
+					...(process.env.PLAYWRIGHT_FIREFOX === 'true'
+						? [
+								{
+									name: 'Firefox',
+									use: { ...devices['Desktop Firefox'] },
+								},
+							]
+						: []),
+					...(process.env.PLAYWRIGHT_MOBILE === 'true'
+						? [
+								{
+									name: 'Mobile Chrome',
+									use: { ...devices['Pixel 5'] },
+								},
+								{
+									name: 'Mobile Safari',
+									use: { ...devices['iPhone 12'] },
+								},
+							]
+						: []),
+				]),
 	],
-	webServer: {
-		command: 'next dev --turbo -p 3005', // Command to start the dev server
-		url: 'http://localhost:3005',
-		reuseExistingServer: !process.env.CI,
-		timeout: 10000,
-	},
+	webServer: [
+		{
+			command: process.env.PLAYWRIGHT_BACKEND_URL !== undefined && process.env.PLAYWRIGHT_BACKEND_URL.trim() !== '' ? '' : 'npm run dev',
+			url: process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:3000',
+		},
+		...(Boolean(process.env.GITHUB_ACTIONS) || Boolean(process.env.CI)
+			? []
+			: [
+					{
+						command: process.env.PLAYWRIGHT_DATABASE_URL !== undefined && process.env.PLAYWRIGHT_DATABASE_URL.trim() !== '' ? '' : 'docker-compose up database -d',
+						url: process.env.PLAYWRIGHT_DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/site',
+					},
+				]),
+	],
 });

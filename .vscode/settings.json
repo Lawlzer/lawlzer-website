@@ -1,33 +1,40 @@
 {
-  "files.eol": "\n",
-  "editor.quickSuggestions": {
-    "strings": true
-  },
-  "typescript.tsdk": "node_modules\\typescript\\lib",
-  "editor.detectIndentation": false,
-  "editor.insertSpaces": false,
-  "eslint.validate": [
-    "javascript",
-    "typescript",
-    "javascriptreact",
-    "typescriptreact",
-    "json",
-    "jsonc"
-  ],
-  "eslint.options": {
-    "overrideConfigFile": "./.config/.eslint.config.mjs"
-  },
-  "eslint.format.enable": true,
-  "eslint.run": "onSave",
-  "eslint.workingDirectories": [
-    "../.config",
-    "../**/*"
-  ],
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
-    "source.fixAll.format": "explicit"
-  },
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "prettier.enable": true
+	// File handling
+	"files.eol": "\n", // End of Line (use LF, not CRLF)
+	"editor.detectIndentation": false,
+	"editor.insertSpaces": false,
+
+	// TypeScript
+	"typescript.tsdk": "node_modules\\typescript\\lib", // VSCode should use the same TypeScript version as the projects
+	"editor.quickSuggestions": { "strings": true },
+
+	// ESLint
+	"eslint.validate": ["javascript", "typescript", "javascriptreact", "typescriptreact", "json", "jsonc"],
+	"eslint.options": { "overrideConfigFile": ".config/.eslint.config.mjs" },
+	"eslint.run": "onSave",
+	"eslint.format.enable": true,
+	"eslint.workingDirectories": ["../config", "../**/*"],
+
+	// Formatting
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "esbenp.prettier-vscode", // Force VSCode to use Prettier
+	"prettier.enable": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit",
+		"source.fixAll.format": "explicit"
+	},
+
+	// C/C++ IntelliSense
+	"C_Cpp.default.configurationProvider": "ms-vscode.cpptools",
+	"C_Cpp.errorSquiggles": "enabled",
+	"C_Cpp.intelliSenseEngine": "default",
+	"C_Cpp.intelliSenseEngineFallback": "enabled",
+	"C_Cpp.autocompleteAddParentheses": true,
+	"C_Cpp.default.cppStandard": "c++17",
+	"C_Cpp.default.cStandard": "c11",
+	"files.associations": {
+		"*.h": "cpp",
+		"*.hpp": "cpp",
+		"*.cpp": "cpp"
+	}
 }
