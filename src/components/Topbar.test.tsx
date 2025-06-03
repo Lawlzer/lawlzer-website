@@ -1,11 +1,9 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { SessionData } from '~/server/db/session';
+import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Import after mocks are defined
 import Topbar from './Topbar';
-import { getBaseUrl } from '~/lib/utils';
 
 // Mock dependencies
 vi.mock('./AuthButton', () => ({
@@ -32,16 +30,16 @@ vi.mock('~/lib/utils', () => ({
 vi.mock('./Topbar', () => ({
 	__esModule: true,
 	default: () => (
-		<nav role='navigation' className='bg-secondary text-secondary-foreground p-4 h-16 border-b border-border'>
-			<div className='w-full flex justify-between items-start h-full'>
-				<div className='flex space-x-4 flex-wrap'>
-					<a href='https://example.com' className='button-class'>
+		<nav className='bg-secondary text-secondary-foreground border-border h-16 border-b p-4' role='navigation'>
+			<div className='flex h-full w-full items-start justify-between'>
+				<div className='flex flex-wrap space-x-4'>
+					<a className='button-class' href='https://example.com'>
 						Home
 					</a>
-					<a href='https://valorant.example.com' className='button-class'>
+					<a className='button-class' href='https://valorant.example.com'>
 						Valorant
 					</a>
-					<a href='https://colors.example.com' className='button-class'>
+					<a className='button-class' href='https://colors.example.com'>
 						Colors
 					</a>
 				</div>

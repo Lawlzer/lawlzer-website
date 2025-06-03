@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 
 function getErrorMessage(errorCode: string | null): string {
 	switch (errorCode) {
@@ -19,7 +19,7 @@ function getErrorMessage(errorCode: string | null): string {
 	}
 }
 
-export default function AuthErrorPage(): React.JSX.Element {
+const AuthErrorPage = (): React.JSX.Element => {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const [countdown, setCountdown] = useState(5);
@@ -49,10 +49,12 @@ export default function AuthErrorPage(): React.JSX.Element {
 				<p className='mb-4 text-sm text-gray-500'>
 					Redirecting to homepage in {countdown} second{countdown !== 1 ? 's' : ''}...
 				</p>
-				<Link href='/' className='inline-flex w-full justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75'>
+				<Link className='inline-flex w-full justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75' href='/'>
 					Return to Home
 				</Link>
 			</div>
 		</div>
 	);
-}
+};
+
+export default AuthErrorPage;

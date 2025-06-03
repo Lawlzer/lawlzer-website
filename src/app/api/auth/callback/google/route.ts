@@ -1,10 +1,10 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
-import { env } from '~/env.mjs';
 import type { User } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+import { env } from '~/env.mjs';
 import { handleAndGenerateSessionToken } from '~/lib/auth';
-import { createSession } from '~/server/db/session';
 import { getBaseUrl } from '~/lib/utils';
 
 const prisma = new PrismaClient();
@@ -28,7 +28,7 @@ interface GoogleUserInfo {
 	locale: string;
 }
 
-async function getGoogleOAuthTokens(code: string, request: NextRequest): Promise<GoogleTokenResponse> {
+async function getGoogleOAuthTokens(code: string, _request: NextRequest): Promise<GoogleTokenResponse> {
 	const url = 'https://oauth2.googleapis.com/token';
 
 	const originWithPort = getBaseUrl();
@@ -142,10 +142,10 @@ async function upsertUser(googleUser: GoogleUserInfo, tokens: GoogleTokenRespons
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-	const searchParams = request.nextUrl.searchParams;
+	const { searchParams } = request.nextUrl;
 	const code = searchParams.get('code');
 
-	if (!code) {
+	if (code === null || code === '') {
 		return NextResponse.redirect(new URL('/error/auth?error=no_code', request.url));
 	}
 

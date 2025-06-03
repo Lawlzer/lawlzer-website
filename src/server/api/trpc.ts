@@ -44,13 +44,13 @@ export const createTRPCContext = async (opts: {
 	const authHeader = opts.headers.get('authorization');
 	let session: Session | undefined;
 
-	if (authHeader) {
+	if (authHeader !== null) {
 		// Parse auth header and validate token
 		// This is just a placeholder - replace with your actual auth logic
 		try {
 			// Assuming the token is in format: "Bearer token"
 			const token = authHeader.split(' ')[1];
-			if (token) {
+			if (token !== undefined && token !== '') {
 				// Here you would validate the token and get the user ID
 				// For now we're just using a placeholder
 				session = { userId: 'placeholder-user-id' };
@@ -93,7 +93,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
  *
  * @see https://trpc.io/docs/server/server-side-calls
  */
-export const createCallerFactory = t.createCallerFactory;
+export const { createCallerFactory } = t;
 
 /**
  * 3. ROUTER & PROCEDURE (THE IMPORTANT BIT)
@@ -121,13 +121,15 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
 	if (t._config.isDev) {
 		// artificial delay in dev
 		const waitMs = Math.floor(Math.random() * 400) + 100;
-		await new Promise((resolve) => setTimeout(resolve, waitMs));
+		await new Promise<void>((resolve) => {
+			setTimeout(resolve, waitMs);
+		});
 	}
 
 	const result = await next();
 
 	const end = Date.now();
-	console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
+	console.info(`[TRPC] ${path} took ${end - start}ms to execute`);
 
 	return result;
 });
@@ -145,7 +147,7 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
  * Auth middleware that verifies the user is authenticated
  */
 const isAuthed = t.middleware(async ({ ctx, next }) => {
-	if (!ctx.session?.userId) {
+	if (ctx.session?.userId === undefined) {
 		throw new TRPCError({ code: 'UNAUTHORIZED' });
 	}
 	return next({

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { JSX } from 'react';
-import { COOKIE_KEYS, PREDEFINED_PALETTES, setCookie, getCookie, getDefaultColors, LIGHT_MODE_COLORS } from '~/lib/palette';
-import { useRouter, usePathname } from 'next/navigation';
-import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+// import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'; // Unused import
 import Head from 'next/head';
+import { usePathname, useRouter } from 'next/navigation';
+import type { JSX } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import { COOKIE_KEYS, getCookie, getDefaultColors, LIGHT_MODE_COLORS, PREDEFINED_PALETTES, setCookie } from '~/lib/palette';
 
 // Define the type for a single palette
 interface ColorPalette {
@@ -25,24 +26,17 @@ declare global {
 }
 
 // Helper to detect if we're in test environment
-const isTestEnvironment = (): boolean => {
-	return typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
-};
+const isTestEnvironment = (): boolean => typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 
 export default function ColorsPage(): JSX.Element {
-	// Safe check for testing environments where router might not be available
-	let router: AppRouterInstance | undefined;
-	let pathname: string = '/';
-	try {
-		router = useRouter();
-		pathname = usePathname() || '/';
-	} catch (e) {
-		// Router is not available in test environment
-	}
+	// Always call hooks unconditionally
+	const router = useRouter();
+	const pathname = usePathname();
 
 	const [paletteName, setPaletteName] = useState<string | null>(null);
-	const [isClient, setIsClient] = useState(false);
-	const [initialDefaults, setInitialDefaults] = useState(LIGHT_MODE_COLORS);
+
+	const [isClient, setIsClient] = useState<boolean>(false);
+	const [initialDefaults, setInitialDefaults] = useState<ColorPalette>(LIGHT_MODE_COLORS);
 
 	// Determine defaults on client-side mount
 	useEffect(() => {
@@ -78,9 +72,7 @@ export default function ColorsPage(): JSX.Element {
 	}, [initialDefaults]);
 
 	// Function to check if current colors differ from saved colors
-	const checkForUnsavedChanges = useCallback((): boolean => {
-		return pageBg !== savedColors.PAGE_BG || primaryTextColor !== savedColors.PRIMARY_TEXT_COLOR || primaryColor !== savedColors.PRIMARY_COLOR || secondaryColor !== savedColors.SECONDARY_COLOR || secondaryTextColor !== savedColors.SECONDARY_TEXT_COLOR || borderColor !== savedColors.BORDER_COLOR;
-	}, [pageBg, primaryTextColor, primaryColor, secondaryColor, secondaryTextColor, borderColor, savedColors]);
+	const checkForUnsavedChanges = useCallback((): boolean => pageBg !== savedColors.PAGE_BG || primaryTextColor !== savedColors.PRIMARY_TEXT_COLOR || primaryColor !== savedColors.PRIMARY_COLOR || secondaryColor !== savedColors.SECONDARY_COLOR || secondaryTextColor !== savedColors.SECONDARY_TEXT_COLOR || borderColor !== savedColors.BORDER_COLOR, [pageBg, primaryTextColor, primaryColor, secondaryColor, secondaryTextColor, borderColor, savedColors]);
 
 	// Effect: Load colors from cookies on mount and prevent applying styles until complete
 	useEffect(() => {
@@ -198,7 +190,7 @@ export default function ColorsPage(): JSX.Element {
 	}, [pageBg, primaryTextColor, primaryColor, secondaryColor, secondaryTextColor, borderColor, colorsLoaded, checkForUnsavedChanges]);
 
 	// Function to apply a predefined palette
-	const applyPalette = (palette: ColorPalette): void => {
+	const applyPalette = useCallback((palette: ColorPalette): void => {
 		setPageBg(palette.PAGE_BG);
 		setPrimaryTextColor(palette.PRIMARY_TEXT_COLOR);
 		setPrimaryColor(palette.PRIMARY_COLOR);
@@ -206,7 +198,7 @@ export default function ColorsPage(): JSX.Element {
 		setSecondaryTextColor(palette.SECONDARY_TEXT_COLOR);
 		setBorderColor(palette.BORDER_COLOR);
 		setClipboardStatus(''); // Clear status on palette change
-	};
+	}, []);
 
 	// Function to save current colors to cookies
 	const handleSaveColors = useCallback((): void => {
@@ -239,7 +231,7 @@ export default function ColorsPage(): JSX.Element {
 			setHasUnsavedChanges(false); // Mark changes as saved
 
 			// If there was a pending navigation, execute it now
-			if (pendingNavigation && router) {
+			if (pendingNavigation !== null && pendingNavigation.trim() !== '') {
 				router.push(pendingNavigation);
 				setPendingNavigation(null);
 			}
@@ -257,8 +249,8 @@ export default function ColorsPage(): JSX.Element {
 				setPendingNavigation(path);
 				// Show confirmation dialog
 				setShowConfirmDialog(true);
-			} else if (router) {
-				// No unsaved changes, navigate directly if router is available
+			} else {
+				// No unsaved changes, navigate directly
 				router.push(path);
 			}
 		},
@@ -270,7 +262,7 @@ export default function ColorsPage(): JSX.Element {
 		setHasUnsavedChanges(false);
 		setShowConfirmDialog(false);
 
-		if (pendingNavigation && router) {
+		if (pendingNavigation !== null && pendingNavigation.trim() !== '') {
 			router.push(pendingNavigation);
 			setPendingNavigation(null);
 		}
@@ -437,7 +429,7 @@ export default function ColorsPage(): JSX.Element {
 	}, [clipboardStatus]);
 
 	// Reset colors to default determined by system preference
-	const handleResetToSystemDefaults = useCallback(() => {
+	const _handleResetToSystemDefaults = useCallback(() => {
 		const defaults = getDefaultColors(); // Get current system defaults
 		applyPalette(defaults);
 		const matchingPalette = Object.entries(PREDEFINED_PALETTES).find(([, palette]) => JSON.stringify(palette) === JSON.stringify(defaults));
@@ -446,8 +438,8 @@ export default function ColorsPage(): JSX.Element {
 	}, [applyPalette]);
 
 	// Function to handle confirming navigation away
-	const confirmNavigation = (allow: boolean): void => {
-		if (allow && pendingNavigation && router) {
+	const _confirmNavigation = (allow: boolean): void => {
+		if (allow && pendingNavigation !== null && pendingNavigation.trim() !== '') {
 			// Temporarily disable the hook to allow navigation
 			const originalHandler = window.__NEXT_PROTECT_UNSAVED_CHANGES__;
 			window.__NEXT_PROTECT_UNSAVED_CHANGES__ = undefined;
@@ -467,115 +459,115 @@ export default function ColorsPage(): JSX.Element {
 	// }
 
 	return (
-		<div className='flex flex-col w-full min-h-0 h-full overflow-y-auto'>
+		<div className='flex h-full min-h-0 w-full flex-col overflow-y-auto'>
 			<Head>
 				<title>Color Theme Colors</title>
 			</Head>
-			<div className='p-4 sm:p-6 md:p-8 pb-16'>
+			<div className='p-4 pb-16 sm:p-6 md:p-8'>
 				{/* Header: Title Only */}
 				<div className='mb-4'>
 					<h1>Color Theme Colors</h1>
-					<p className='mt-2 text-secondary-text'>Adjust the colors used across the site or choose a predefined palette.</p>
+					<p className='text-secondary-text mt-2'>Adjust the colors used across the site or choose a predefined palette.</p>
 				</div>
 
 				{/* Individual Color Pickers */}
-				<div className='mt-8 p-4 border border-border rounded-lg'>
-					<h2 className='text-lg font-semibold mb-4'>Customize Colors</h2>
-					<div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4'>
+				<div className='border-border mt-8 rounded-lg border p-4'>
+					<h2 className='mb-4 text-lg font-semibold'>Customize Colors</h2>
+					<div className='grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6'>
 						<label className='flex flex-col'>
 							<span className='mb-1 text-sm font-medium'>Page Background</span>
-							<div className='relative w-full h-10'>
-								{colorsLoaded && (
+							<div className='relative h-10 w-full'>
+								{colorsLoaded ? (
 									<input
+										className='border-border bg-input h-10 w-full cursor-pointer rounded border'
 										type='color'
 										value={pageBg ?? ''}
 										onChange={(e) => {
 											setPageBg(e.target.value);
 										}}
-										className='w-full h-10 rounded border border-border bg-input cursor-pointer'
 									/>
-								)}
-								{!colorsLoaded && <div className='w-full h-10 opacity-0' />}
+								) : null}
+								{!colorsLoaded && <div className='h-10 w-full opacity-0' />}
 							</div>
 						</label>
 						<label className='flex flex-col'>
 							<span className='mb-1 text-sm font-medium'>Primary Color</span>
-							<div className='relative w-full h-10'>
-								{colorsLoaded && (
+							<div className='relative h-10 w-full'>
+								{colorsLoaded ? (
 									<input
+										className='border-border bg-input h-10 w-full cursor-pointer rounded border'
 										type='color'
 										value={primaryColor ?? ''}
 										onChange={(e) => {
 											setPrimaryColor(e.target.value);
 										}}
-										className='w-full h-10 rounded border border-border bg-input cursor-pointer'
 									/>
-								)}
-								{!colorsLoaded && <div className='w-full h-10 opacity-0' />}
+								) : null}
+								{!colorsLoaded && <div className='h-10 w-full opacity-0' />}
 							</div>
 						</label>
 						<label className='flex flex-col'>
 							<span className='mb-1 text-sm font-medium'>Secondary Colour</span>
-							<div className='relative w-full h-10'>
-								{colorsLoaded && (
+							<div className='relative h-10 w-full'>
+								{colorsLoaded ? (
 									<input
+										className='border-border bg-input h-10 w-full cursor-pointer rounded border'
 										type='color'
 										value={secondaryColor ?? ''}
 										onChange={(e) => {
 											setSecondaryColor(e.target.value);
 										}}
-										className='w-full h-10 rounded border border-border bg-input cursor-pointer'
 									/>
-								)}
-								{!colorsLoaded && <div className='w-full h-10 opacity-0' />}
+								) : null}
+								{!colorsLoaded && <div className='h-10 w-full opacity-0' />}
 							</div>
 						</label>
 						<label className='flex flex-col'>
 							<span className='mb-1 text-sm font-medium'>Primary Text</span>
-							<div className='relative w-full h-10'>
-								{colorsLoaded && (
+							<div className='relative h-10 w-full'>
+								{colorsLoaded ? (
 									<input
+										className='border-border bg-input h-10 w-full cursor-pointer rounded border'
 										type='color'
 										value={primaryTextColor ?? ''}
 										onChange={(e) => {
 											setPrimaryTextColor(e.target.value);
 										}}
-										className='w-full h-10 rounded border border-border bg-input cursor-pointer'
 									/>
-								)}
-								{!colorsLoaded && <div className='w-full h-10 opacity-0' />}
+								) : null}
+								{!colorsLoaded && <div className='h-10 w-full opacity-0' />}
 							</div>
 						</label>
 						<label className='flex flex-col'>
 							<span className='mb-1 text-sm font-medium'>Secondary Text</span>
-							<div className='relative w-full h-10'>
-								{colorsLoaded && (
+							<div className='relative h-10 w-full'>
+								{colorsLoaded ? (
 									<input
+										className='border-border bg-input h-10 w-full cursor-pointer rounded border'
 										type='color'
 										value={secondaryTextColor ?? ''}
 										onChange={(e) => {
 											setSecondaryTextColor(e.target.value);
 										}}
-										className='w-full h-10 rounded border border-border bg-input cursor-pointer'
 									/>
-								)}
-								{!colorsLoaded && <div className='w-full h-10 opacity-0' />}
+								) : null}
+								{!colorsLoaded && <div className='h-10 w-full opacity-0' />}
 							</div>
 						</label>
 						<label className='flex flex-col'>
 							<span className='mb-1 text-sm font-medium'>Border Color</span>
-							<div className='relative w-full h-10'>
-								{colorsLoaded && (
+							<div className='relative h-10 w-full'>
+								{colorsLoaded ? (
 									<input
+										className='border-border bg-input h-10 w-full cursor-pointer rounded border'
 										type='color'
 										value={borderColor ?? ''}
 										onChange={(e) => {
 											setBorderColor(e.target.value);
 										}}
-										className='w-full h-10 rounded border border-border bg-input cursor-pointer'
 									/>
-								)}
-								{!colorsLoaded && <div className='w-full h-10 opacity-0' />}
+								) : null}
+								{!colorsLoaded && <div className='h-10 w-full opacity-0' />}
 							</div>
 						</label>
 					</div>
@@ -583,57 +575,57 @@ export default function ColorsPage(): JSX.Element {
 
 				{/* Action Buttons & Status - Centered */}
 				<div className='my-6 flex flex-col items-center gap-4'>
-					<div className='flex gap-3 flex-shrink-0 flex-wrap justify-center'>
+					<div className='flex flex-shrink-0 flex-wrap justify-center gap-3'>
 						<button
+							className='border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-md border px-5 py-2.5 text-base'
+							disabled={!colorsLoaded}
+							title='Import colors from clipboard (JSON format)'
 							type='button'
 							onClick={() => {
 								void handleImportColors();
 							}}
-							className='px-5 py-2.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-base'
-							title='Import colors from clipboard (JSON format)'
-							disabled={!colorsLoaded}
 						>
 							Import
 						</button>
 						<button
+							className='border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-md border px-5 py-2.5 text-base'
+							disabled={!colorsLoaded}
+							title='Export current colors to clipboard (JSON format)'
 							type='button'
 							onClick={() => {
 								void handleExportColors();
 							}}
-							className='px-5 py-2.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-base'
-							title='Export current colors to clipboard (JSON format)'
-							disabled={!colorsLoaded}
 						>
 							Export
 						</button>
-						<button type='button' onClick={handleResetColors} className='px-5 py-2.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-base' title='Reset to last saved configuration' disabled={!colorsLoaded || !hasUnsavedChanges}>
+						<button className='border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-md border px-5 py-2.5 text-base' disabled={!colorsLoaded || !hasUnsavedChanges} title='Reset to last saved configuration' type='button' onClick={handleResetColors}>
 							Reset
 						</button>
-						<button type='button' onClick={handleSaveColors} className='px-6 py-2.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-base font-semibold' disabled={!colorsLoaded || !hasUnsavedChanges}>
+						<button className='bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-ring rounded-md px-6 py-2.5 text-base font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none' disabled={!colorsLoaded || !hasUnsavedChanges} type='button' onClick={handleSaveColors}>
 							Save
 						</button>
 					</div>
-					{clipboardStatus && <p className='mt-2 text-sm text-muted-foreground'>{clipboardStatus}</p>}
+					{clipboardStatus ? <p className='text-muted-foreground mt-2 text-sm'>{clipboardStatus}</p> : null}
 				</div>
 
 				{/* Predefined Palettes */}
-				<div className='mt-8 p-4 border border-border rounded-lg'>
-					<h2 className='text-lg font-semibold mb-4'>Predefined Palettes</h2>
+				<div className='border-border mt-8 rounded-lg border p-4'>
+					<h2 className='mb-4 text-lg font-semibold'>Predefined Palettes</h2>
 					<div className='flex flex-wrap gap-3'>
 						{Object.entries(PREDEFINED_PALETTES).map(([name, palette]) => (
 							<button
 								key={name}
+								className='border-border focus:ring-ring rounded-md border px-4 py-2 hover:opacity-90 focus:ring-2 focus:ring-offset-2 focus:outline-none'
+								disabled={!colorsLoaded}
 								type='button'
-								onClick={() => {
-									applyPalette(palette as ColorPalette);
-								}}
-								className='px-4 py-2 rounded-md border border-border hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
 								style={{
 									backgroundColor: (palette as ColorPalette).PAGE_BG,
 									color: (palette as ColorPalette).PRIMARY_TEXT_COLOR,
 									borderColor: (palette as ColorPalette).BORDER_COLOR,
 								}}
-								disabled={!colorsLoaded}
+								onClick={() => {
+									applyPalette(palette as ColorPalette);
+								}}
 							>
 								{name}
 							</button>
@@ -642,25 +634,25 @@ export default function ColorsPage(): JSX.Element {
 				</div>
 
 				{/* Confirmation Dialog */}
-				{showConfirmDialog && (
-					<div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-						<div className='bg-background p-6 rounded-lg max-w-md w-full shadow-lg'>
-							<h3 className='text-lg font-medium mb-3'>Unsaved Changes</h3>
+				{showConfirmDialog ? (
+					<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50'>
+						<div className='bg-background w-full max-w-md rounded-lg p-6 shadow-lg'>
+							<h3 className='mb-3 text-lg font-medium'>Unsaved Changes</h3>
 							<p className='mb-4'>You have unsaved color changes. Would you like to save them before leaving?</p>
 							<div className='flex justify-end gap-3'>
-								<button onClick={handleCancelNavigation} className='px-3 py-1.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-sm'>
+								<button type='button' className='border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-md border px-3 py-1.5 text-sm' onClick={handleCancelNavigation}>
 									Cancel
 								</button>
-								<button onClick={handleContinueWithoutSaving} className='px-3 py-1.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-sm'>
+								<button type='button' className='border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-md border px-3 py-1.5 text-sm' onClick={handleContinueWithoutSaving}>
 									Continue Without Saving
 								</button>
-								<button onClick={handleSaveColors} className='px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-sm font-semibold'>
+								<button type='button' className='bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-ring rounded-md px-4 py-2 text-sm font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none' onClick={handleSaveColors}>
 									Save & Continue
 								</button>
 							</div>
 						</div>
 					</div>
-				)}
+				) : null}
 			</div>
 		</div>
 	);

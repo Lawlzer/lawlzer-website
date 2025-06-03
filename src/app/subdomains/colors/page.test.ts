@@ -1,13 +1,29 @@
 'use client';
 
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import ColorsPage from './page';
-import { COOKIE_KEYS, LIGHT_MODE_COLORS, DARK_MODE_COLORS, setCookie, getCookie, PREDEFINED_PALETTES } from '~/lib/palette';
+
 import type * as PaletteModule from '~/lib/palette';
+import { COOKIE_KEYS, DARK_MODE_COLORS, getCookie, LIGHT_MODE_COLORS, setCookie } from '~/lib/palette';
 
 // --- Mocks --- //
+
+// Mock Next.js navigation hooks
+vi.mock('next/navigation', () => ({
+	useRouter: () => ({
+		push: vi.fn(),
+		replace: vi.fn(),
+		prefetch: vi.fn(),
+		back: vi.fn(),
+		forward: vi.fn(),
+		refresh: vi.fn(),
+	}),
+	usePathname: () => '/subdomains/colors',
+	useSearchParams: () => new URLSearchParams(),
+}));
 
 // Mock the palette module
 vi.mock('~/lib/palette', async (importOriginal) => {

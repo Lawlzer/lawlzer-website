@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { COOKIE_KEYS, getCookie } from '~/lib/palette';
 
 // Map COOKIE_KEYS to CSS variable names
@@ -21,19 +22,19 @@ const cookieToCssVarMap: Record<string, string> = {
 	// etc.
 };
 
-export function ThemeInitializer(): React.ReactNode {
+export const ThemeInitializer = (): React.ReactNode => {
 	useEffect(() => {
 		// Check if a theme preference cookie exists (using PAGE_BG as the indicator)
 		const hasSavedTheme = getCookie(COOKIE_KEYS.PAGE_BG);
 
-		if (hasSavedTheme) {
+		if (hasSavedTheme !== null) {
 			// Add pause class ONLY if applying styles from cookies
 			document.documentElement.classList.add('color-transition-paused');
 
 			// Apply saved theme colors from cookies
 			Object.entries(cookieToCssVarMap).forEach(([cookieKey, cssVarName]) => {
 				const value = getCookie(cookieKey);
-				if (value) {
+				if (value !== null) {
 					document.documentElement.style.setProperty(cssVarName, value);
 				}
 			});
@@ -54,4 +55,4 @@ export function ThemeInitializer(): React.ReactNode {
 
 	// This component doesn't render anything visual
 	return null;
-}
+};

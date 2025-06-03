@@ -1,9 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { handleAndGenerateSessionToken, getCookieDomain } from './auth';
-import { createSession } from '~/server/db/session';
 import { mockEnv, restoreEnv } from 'testUtils/unit/utils';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { getCookieDomain, handleAndGenerateSessionToken } from './auth';
+
+import { createSession } from '~/server/db/session';
 
 // --- Static Mocks (Run BEFORE imports are fully resolved) ---
 
@@ -119,7 +121,9 @@ describe('Auth Library Functions', () => {
 
 			// 3. Setup the *static* NextResponse.redirect mock
 			//    Need to cast because TS doesn't know NextResponse is the mocked class here
-			(NextResponse.redirect as ReturnType<typeof vi.fn>).mockReturnValue(mockResponse);
+			// eslint-disable-next-line @typescript-eslint/unbound-method
+			const redirectMock = NextResponse.redirect as ReturnType<typeof vi.fn>;
+			redirectMock.mockReturnValue(mockResponse);
 			// --- End Correction ---
 
 			// Setup createSession mock
@@ -131,7 +135,8 @@ describe('Auth Library Functions', () => {
 		it('should create a session with the provided userId', async () => {
 			await handleAndGenerateSessionToken(mockUserId, mockRequest);
 
-			expect(createSession).toHaveBeenCalledWith(mockUserId);
+			const mockedCreateSession = vi.mocked(createSession);
+			expect(mockedCreateSession).toHaveBeenCalledWith(mockUserId);
 		});
 
 		it('should redirect to the base URL when no redirect cookie exists', async () => {
@@ -144,12 +149,12 @@ describe('Auth Library Functions', () => {
 			const expectedUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}:${process.env.NEXT_PUBLIC_FRONTEND_PORT}`;
 
 			// eslint-disable-next-line @typescript-eslint/unbound-method
-			expect(NextResponse.redirect).toHaveBeenCalledWith(expectedUrl); // Expect the string URL
+			const mockedRedirect = vi.mocked(NextResponse.redirect); // Use vi.mocked for proper typing
+			expect(mockedRedirect).toHaveBeenCalledWith(expectedUrl); // Expect the string URL
 
 			// Check the URL is correct (this check might be redundant now, but keep for clarity)
-			// eslint-disable-next-line @typescript-eslint/unbound-method
-			const mockRedirect = NextResponse.redirect as ReturnType<typeof vi.fn>; // Cast for TS
-			const redirectUrlString = mockRedirect.mock.calls[0][0] as string; // Get the string arg
+
+			const redirectUrlString = mockedRedirect.mock.calls[0][0] as string; // Get the string arg
 			const redirectUrl = new URL(redirectUrlString); // Create URL object for checks
 			expect(redirectUrl.protocol).toBe(`${process.env.NEXT_PUBLIC_SCHEME}:`);
 			expect(redirectUrl.hostname).toBe(`${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}`);
@@ -165,7 +170,8 @@ describe('Auth Library Functions', () => {
 			await handleAndGenerateSessionToken(mockUserId, mockRequest);
 
 			// eslint-disable-next-line @typescript-eslint/unbound-method
-			expect(NextResponse.redirect).toHaveBeenCalledWith(mockRedirectUrl);
+			const mockedRedirect = vi.mocked(NextResponse.redirect); // Use vi.mocked for proper typing
+			expect(mockedRedirect).toHaveBeenCalledWith(mockRedirectUrl);
 		});
 
 		it('should clear the redirect cookie when it exists', async () => {

@@ -1,35 +1,35 @@
-import { test, expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { testPageBasics } from '@testUtils/playwright/utils';
-import { pathToURLTestsOnly } from '~/lib/utils';
-import { COOKIE_KEYS, LIGHT_MODE_COLORS, PREDEFINED_PALETTES } from '~/lib/palette';
+
 import { metadata as expectedMetadata } from './layout';
+
+import { COOKIE_KEYS, LIGHT_MODE_COLORS, PREDEFINED_PALETTES } from '~/lib/palette';
+import { pathToURLTestsOnly } from '~/lib/utils';
 
 const pathToThisFile = import.meta.url;
 
 const colorsPageUrl = pathToURLTestsOnly(pathToThisFile);
 
 // Define a type for our input elements to improve type checking
-type ColorInputs = {
+interface ColorInputs {
 	pageBg: Locator;
 	primaryTextColor: Locator;
 	primaryColor: Locator;
 	secondaryColor: Locator;
 	secondaryTextColor: Locator;
 	borderColor: Locator;
-};
+}
 
 // Utility function to get all the color inputs
-const getColorInputs = (page: Page): ColorInputs => {
-	return {
-		pageBg: page.locator('label:has-text("Page Background") input[type="color"]'),
-		primaryTextColor: page.locator('label:has-text("Primary Text") input[type="color"]'),
-		primaryColor: page.locator('label:has-text("Primary Color") input[type="color"]'),
-		secondaryColor: page.locator('label:has-text("Secondary Colour") input[type="color"]'),
-		secondaryTextColor: page.locator('label:has-text("Secondary Text") input[type="color"]'),
-		borderColor: page.locator('label:has-text("Border Color") input[type="color"]'),
-	};
-};
+const getColorInputs = (page: Page): ColorInputs => ({
+	pageBg: page.locator('label:has-text("Page Background") input[type="color"]'),
+	primaryTextColor: page.locator('label:has-text("Primary Text") input[type="color"]'),
+	primaryColor: page.locator('label:has-text("Primary Color") input[type="color"]'),
+	secondaryColor: page.locator('label:has-text("Secondary Colour") input[type="color"]'),
+	secondaryTextColor: page.locator('label:has-text("Secondary Text") input[type="color"]'),
+	borderColor: page.locator('label:has-text("Border Color") input[type="color"]'),
+});
 
 // Helper function to get the current value of a color input
 async function getColorInputValue(locator: Locator): Promise<string> {
@@ -48,9 +48,7 @@ async function checkElementStyle(page: Page, selector: string, property: string,
 	if (property.includes('color')) {
 		// Wait for the CSS property to be something other than empty
 		await expect(async () => {
-			const actualValue = await element.evaluate((el, prop) => {
-				return window.getComputedStyle(el).getPropertyValue(prop);
-			}, property);
+			const actualValue = await element.evaluate((el, prop) => window.getComputedStyle(el).getPropertyValue(prop), property);
 			return actualValue && actualValue !== '';
 		}).toPass({ timeout });
 
@@ -163,7 +161,7 @@ test.describe('Colors Page E2E Tests', () => {
 
 	test('should load saved colors from cookies on reload', async ({ page, context }) => {
 		const inputs = getColorInputs(page);
-		const saveButton = page.getByRole('button', { name: 'Save' });
+		const _saveButton = page.getByRole('button', { name: 'Save' });
 		const testColors = {
 			[COOKIE_KEYS.PAGE_BG]: '#99aabb',
 			[COOKIE_KEYS.PRIMARY_COLOR]: '#119922',
@@ -179,7 +177,11 @@ test.describe('Colors Page E2E Tests', () => {
 			{ name: COOKIE_KEYS.PRIMARY_COLOR, value: testColors[COOKIE_KEYS.PRIMARY_COLOR], url: colorsPageUrl },
 			{ name: COOKIE_KEYS.SECONDARY_COLOR, value: testColors[COOKIE_KEYS.SECONDARY_COLOR], url: colorsPageUrl },
 			{ name: COOKIE_KEYS.PRIMARY_TEXT_COLOR, value: testColors[COOKIE_KEYS.PRIMARY_TEXT_COLOR], url: colorsPageUrl },
-			{ name: COOKIE_KEYS.SECONDARY_TEXT_COLOR, value: testColors[COOKIE_KEYS.SECONDARY_TEXT_COLOR], url: colorsPageUrl },
+			{
+				name: COOKIE_KEYS.SECONDARY_TEXT_COLOR,
+				value: testColors[COOKIE_KEYS.SECONDARY_TEXT_COLOR],
+				url: colorsPageUrl,
+			},
 			{ name: COOKIE_KEYS.BORDER_COLOR, value: testColors[COOKIE_KEYS.BORDER_COLOR], url: colorsPageUrl },
 		]);
 
@@ -282,5 +284,34 @@ test.describe('Colors Page E2E Tests', () => {
 
 		// Check for error message
 		await expect(page.getByText(/Failed to import colors/i)).toBeVisible({ timeout: 5000 });
+	});
+
+	test('should save color scheme to cookies and show success message', async ({ page, context }) => {
+		const colorSchemeCombobox = page.getByRole('combobox', { name: 'Color Scheme' });
+		const customSchemeName = 'Custom Scheme';
+
+		await colorSchemeCombobox.click();
+		await page.getByRole('option', { name: customSchemeName }).click();
+
+		// Verify it exists
+		const _saveButton = await page.getByRole('button', { name: 'Save Color Scheme' });
+
+		// Save
+		await _saveButton.click();
+
+		// Check for success message
+		await expect(page.getByText('Color scheme saved successfully!')).toBeVisible();
+
+		// Verify cookies were set - use the current input values rather than expected values
+		const cookies = await context.cookies();
+		const findCookie = (name: string): any => cookies.find((c) => c.name === name);
+		const currentFgColor = await page.locator('label:has-text("Primary Text") input[type="color"]').inputValue();
+
+		expect(findCookie(COOKIE_KEYS.PAGE_BG)?.value).toBe(await getColorInputValue(page.locator('label:has-text("Page Background") input[type="color"]')));
+		expect(findCookie(COOKIE_KEYS.PRIMARY_TEXT_COLOR)?.value).toBe(currentFgColor);
+		expect(findCookie(COOKIE_KEYS.PRIMARY_COLOR)?.value).toBe(await getColorInputValue(page.locator('label:has-text("Primary Color") input[type="color"]')));
+		expect(findCookie(COOKIE_KEYS.SECONDARY_COLOR)?.value).toBe(await getColorInputValue(page.locator('label:has-text("Secondary Colour") input[type="color"]')));
+		expect(findCookie(COOKIE_KEYS.SECONDARY_TEXT_COLOR)?.value).toBe(await getColorInputValue(page.locator('label:has-text("Secondary Text") input[type="color"]')));
+		expect(findCookie(COOKIE_KEYS.BORDER_COLOR)?.value).toBe(await getColorInputValue(page.locator('label:has-text("Border Color") input[type="color"]')));
 	});
 });

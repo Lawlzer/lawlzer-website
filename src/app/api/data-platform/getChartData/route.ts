@@ -1,7 +1,7 @@
+import type { Document as MongoDocument, ObjectId } from 'mongodb';
 import { MongoClient } from 'mongodb';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import type { Document as MongoDocument, WithId, ObjectId } from 'mongodb';
 
 // --- Type Definitions ---
 
@@ -26,24 +26,24 @@ interface CommodityData extends MongoDocument {
 }
 
 // Structure for individual data points returned by the API
-export type RawDataPoint = {
+export interface RawDataPoint {
 	timestamp: number; // unixDate in milliseconds
 	values: Record<string, number>; // { fieldName: value }
-};
+}
 
 // Max documents to process to avoid performance issues
 const MAX_DOCUMENTS_FOR_PROCESSING = 5000;
 
 // --- MongoDB Connection (reuse logic - assumed correct) ---
 const uri = process.env.DATABASE_URL;
-if (!uri) {
+if (uri === undefined || uri === '') {
 	throw new Error('Missing environment variable: DATABASE_URL');
 }
 let client: MongoClient | null = null;
 let clientPromise: Promise<MongoClient> | null = null;
 
 async function getMongoClient(): Promise<MongoClient> {
-	if (!uri) {
+	if (uri === undefined || uri === '') {
 		throw new Error('Missing environment variable: DATABASE_URL');
 	}
 	if (process.env.NODE_ENV === 'development') {
@@ -88,7 +88,7 @@ function buildCommodityQuery(inputFilters: InputFilters): MongoDocument {
 		// Ignore empty arrays
 	}
 
-	console.log('Constructed Mongo Query:', JSON.stringify(query)); // Log the final query
+	console.info('Constructed Mongo Query:', JSON.stringify(query)); // Log the final query
 	return query;
 }
 
@@ -99,16 +99,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 	const filtersParam = url.searchParams.get('filters');
 	let inputFilters: InputFilters = {};
 
-	if (filtersParam) {
+	if (filtersParam !== null) {
 		try {
 			inputFilters = JSON.parse(filtersParam);
-			console.log('[ChartData API] Parsed inputFilters:', JSON.stringify(inputFilters));
+			console.info('[ChartData API] Parsed inputFilters:', JSON.stringify(inputFilters));
 		} catch (error) {
 			console.error('Failed to parse filters:', error);
 			return NextResponse.json({ error: 'Invalid filters format' }, { status: 400 });
 		}
 	} else {
-		console.log('[ChartData API] No filters param received.');
+		console.info('[ChartData API] No filters param received.');
 	}
 
 	try {
@@ -116,24 +116,24 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 		const db = mongoClient.db();
 		// --- Use CommodityData Collection Only ---
 		const commodityCollection = db.collection<CommodityData>('CommodityData');
-		console.log(`[ChartData API] Using DB: ${db.databaseName}, Collection: ${commodityCollection.collectionName}`);
+		console.info(`[ChartData API] Using DB: ${db.databaseName}, Collection: ${commodityCollection.collectionName}`);
 
 		// 1. Build the query directly from input filters
 		const mongoQuery = buildCommodityQuery(inputFilters);
 
 		// 2. Count documents matching the query
-		console.log(`[ChartData API] Counting documents in ${commodityCollection.collectionName} with query:`, JSON.stringify(mongoQuery));
+		console.info(`[ChartData API] Counting documents in ${commodityCollection.collectionName} with query:`, JSON.stringify(mongoQuery));
 		const documentCount = await commodityCollection.countDocuments(mongoQuery);
-		console.log(`[ChartData API] Found ${documentCount} documents matching query.`);
+		console.info(`[ChartData API] Found ${documentCount} documents matching query.`);
 
 		if (documentCount === 0) {
-			console.log('[ChartData API] No documents match filters.');
+			console.info('[ChartData API] No documents match filters.');
 			return NextResponse.json({ rawData: [], documentCount: 0 });
 		}
 
 		// 3. Check count against the limit
 		if (documentCount > MAX_DOCUMENTS_FOR_PROCESSING) {
-			console.log(`[ChartData API] Document count (${documentCount}) exceeds limit (${MAX_DOCUMENTS_FOR_PROCESSING}).`);
+			console.info(`[ChartData API] Document count (${documentCount}) exceeds limit (${MAX_DOCUMENTS_FOR_PROCESSING}).`);
 			return NextResponse.json({ rawData: null, limitExceeded: true, documentCount: documentCount });
 		}
 
@@ -147,10 +147,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 			totalVolume: 1,
 			// Add other numeric fields used in charts here
 		};
-		console.log('[ChartData API] Fetching documents with projection...');
+		console.info('[ChartData API] Fetching documents with projection...');
 		const documentsCursor = commodityCollection.find(mongoQuery, { projection });
 		const documents = await documentsCursor.toArray();
-		console.log(`[ChartData API] Fetched ${documents.length} documents.`);
+		console.info(`[ChartData API] Fetched ${documents.length} documents.`);
 
 		// 5. Process documents into RawDataPoint array
 		const rawData: RawDataPoint[] = [];
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 			}
 		}
 
-		console.log(`[ChartData API] Processed ${rawData.length} data points. Numeric fields found: ${Array.from(numericFieldsPresent).join(', ')}`);
+		console.info(`[ChartData API] Processed ${rawData.length} data points. Numeric fields found: ${Array.from(numericFieldsPresent).join(', ')}`);
 
 		// 6. Return the raw data points
 		return NextResponse.json({ rawData: rawData, documentCount: documentCount, limitExceeded: false });

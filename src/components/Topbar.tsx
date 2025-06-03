@@ -1,8 +1,10 @@
 import React from 'react';
-import ProtectedLink from './ProtectedLink';
+
 import AuthButton from './AuthButton'; // Import the new component
+import ProtectedLink from './ProtectedLink';
+
 import { getBaseUrl, subdomains } from '~/lib/utils';
-import { getSession } from '~/server/db/session'; // Import correct session fetching function
+// import { getSession } from '~/server/db/session'; // Import correct session fetching function - not used in component
 import type { SessionData } from '~/server/db/session'; // Import SessionData type
 // import { useUser } from '@auth0/nextjs-auth0'; // Remove Auth0 hook
 
@@ -11,32 +13,32 @@ import type { SessionData } from '~/server/db/session'; // Import SessionData ty
 // const NEXT_PUBLIC_BASE_URL = env.NEXT_PUBLIC_BASE_URL; // Removed
 // const NEXT_PUBLIC_FRONTEND_PORT = env.NEXT_PUBLIC_FRONTEND_PORT; // Removed
 
-// Make the component async to use await
-export default async function Topbar(): Promise<React.JSX.Element> {
+const Topbar = ({ session }: { session: SessionData | null }): React.JSX.Element => {
 	const baseUrl = getBaseUrl(); // todo these can be generated on demand
-	const sessionData: SessionData | null = await getSession(); // Fetch session data using getSession
 
 	// Define button style with proper CSS variables from the theme system
 	const buttonClass = 'px-4 py-2 border rounded-md transition-colors hover:opacity-90 bg-[var(--page-background)] text-[var(--primary-text-color)] border-[var(--custom-border-color)]';
 
 	return (
-		<nav className='bg-secondary text-secondary-foreground p-4 h-16 border-b border-border'>
-			<div className='w-full flex justify-between items-start h-full'>
-				<div className='flex space-x-4 flex-wrap'>
-					<ProtectedLink href={baseUrl} className={buttonClass}>
+		<nav className='bg-secondary text-secondary-foreground border-border h-16 border-b p-4'>
+			<div className='flex h-full w-full items-start justify-between'>
+				<div className='flex flex-wrap space-x-4'>
+					<ProtectedLink className={buttonClass} href={baseUrl}>
 						Home
 					</ProtectedLink>
 					{subdomains.map((subdomain) => (
-						<ProtectedLink key={subdomain.name} href={getBaseUrl(subdomain.name)} className={buttonClass}>
+						<ProtectedLink key={subdomain.name} className={buttonClass} href={getBaseUrl(subdomain.name)}>
 							{subdomain.name.charAt(0).toUpperCase() + subdomain.name.slice(1)}
 						</ProtectedLink>
 					))}
 				</div>
 				<div>
 					{/* Pass session data (which can be null) as initialSession prop */}
-					<AuthButton initialSession={sessionData} />
+					<AuthButton initialSession={session} />
 				</div>
 			</div>
 		</nav>
 	);
-}
+};
+
+export default Topbar;
