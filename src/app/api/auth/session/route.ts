@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+
 import { getSessionDataByToken } from '~/server/db/session'; // Use the new function
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -7,7 +8,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 		// Read the session token from the request cookies
 		const sessionToken = request.cookies.get('session_token')?.value;
 
-		if (!sessionToken) {
+		if (sessionToken === undefined || sessionToken === null || sessionToken === '') {
 			// No token, no session
 			return NextResponse.json(null);
 		}

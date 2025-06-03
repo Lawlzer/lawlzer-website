@@ -1,7 +1,9 @@
-import type { Page, Locator } from '@playwright/test';
-import { test, expect } from '@playwright/test';
-import { metadata } from './layout';
+import type { Locator, Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { testPageBasics } from '@testUtils/playwright/utils';
+
+import { metadata } from './layout';
+
 import { pathToURLTestsOnly } from '~/lib/utils';
 const pathToThisFile = import.meta.url;
 
@@ -66,7 +68,7 @@ test('images load correctly and multiple maps work', async ({ page }) => {
 
 test('should allow us to select utilities on the map properly, and show the correct lineup', async ({ page }) => {
 	await page.goto(valorantUrl);
-	const mapSvg = await getMapSvg(page);
+	const _mapSvg = await getMapSvg(page);
 
 	const ascentButton = page.getByRole('button', { name: 'Ascent' });
 	const gekkoButton = page.getByRole('button', { name: 'Gekko' });
@@ -89,7 +91,7 @@ test('should allow us to select utilities on the map properly, and show the corr
 
 test('should allow us to change maps, select different agents, and select different utility types', async ({ page }) => {
 	await page.goto(valorantUrl);
-	const mapSvg = await getMapSvg(page);
+	const _mapSvg = await getMapSvg(page);
 
 	// 1. Change map
 	const breezeButton = page.getByRole('button', { name: 'Breeze' });
@@ -119,7 +121,7 @@ test('should allow us to change maps, select different agents, and select differ
 
 test('should allow us to change to Split, test Poison clouds', async ({ page }) => {
 	await page.goto(valorantUrl);
-	const mapSvg = await getMapSvg(page);
+	const _mapSvg = await getMapSvg(page);
 
 	// Ensure initial elements are visible before interaction
 	await expect(page.getByRole('button', { name: 'Ascent' })).toBeVisible(); // Example check for initial map

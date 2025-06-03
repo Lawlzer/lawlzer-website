@@ -1,9 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { destroySession } from '~/server/db/session';
-import { env } from '~/env.mjs';
+
 import { getCookieDomain } from '~/lib/auth';
-import { getBaseUrl } from '~/lib/utils';
+import { destroySession } from '~/server/db/session';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
 	try {
@@ -12,7 +11,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 		// Get the referer URL to redirect back after logout
 		const referer = request.headers.get('referer') ?? '/';
 
-		if (!sessionToken) {
+		if (sessionToken === undefined || sessionToken === null || sessionToken === '') {
 			return NextResponse.redirect(new URL(referer, request.url));
 		}
 

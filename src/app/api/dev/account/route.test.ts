@@ -1,9 +1,12 @@
-import { expect, describe, it, vi, beforeEach, afterEach } from 'vitest';
-import { NextResponse } from 'next/server';
 import { testApiHandler } from 'next-test-api-route-handler'; // Ensure this utility is correctly set up
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // import type { Session } from 'next-auth'; // Removed Session type
 // import { getServerSession } from 'next-auth'; // Removed next-auth import
-import type { MockedFunction } from 'vitest';
+
+vi.mock('~/server/db', () => ({
+	// ... existing code ...
+}));
+
 // Helper function to set environment variables for testing
 
 const mockEnv = (env: any): void => {
@@ -73,9 +76,6 @@ describe('GET /api/dev/account', () => {
 	// 	await testApiHandler({
 	// 		appHandler: handler,
 	// 		test: async ({ fetch }) => {
-	// 			const res = await fetch({ method: 'GET' });
-	// 			expectSuccessfulResponse(res);
-
 	// 			// // Assert mockGetServerSession was called // Removed mock assertion
 	// 			// expect(mockGetServerSession).toHaveBeenCalledTimes(1);
 

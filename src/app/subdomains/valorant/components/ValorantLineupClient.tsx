@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 'use client';
 
-import Image, { type StaticImageData } from 'next/image.js'; // Import next/image
-import React, { useEffect, useState, useCallback } from 'react';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'; // Import zoom/pan library
 import { Bars3Icon as MenuIcon, XMarkIcon as XIcon } from '@heroicons/react/24/solid'; // Corrected import path for Heroicons v2 and using solid variant
-import { COOKIE_KEYS, getDefaultColors, setCookie, getCookie } from '~/lib/palette'; // Import palette utilities
-
-import type { Lineup, MapArea, Utility, LineupImage } from '../types'; // Use LineupImage instead of BottomleftImageVideo
-import { agents, agentUtilityMap, imageMap, type Agent } from '../types';
+import Image, { type StaticImageData } from 'next/image.js'; // Import next/image
+import React, { useCallback, useEffect, useState } from 'react';
+import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'; // Import zoom/pan library
 
 import { useMapMap } from '../hooks/useMapMap'; // Updated import path
+import type { Lineup, LineupImage, MapArea, Utility } from '../types'; // Use LineupImage instead of BottomleftImageVideo
+import { type Agent, agents, agentUtilityMap, imageMap } from '../types';
+
+// Import palette utilities
 // Removed map-specific import, handled by useMapMap now
 // import type { FromAreaTitles, ToAreaTitles } from './maps/ascent/lineups'; // Assuming this path is correct after moving files
 
@@ -26,7 +26,7 @@ interface LineupImagesDisplayProps {
 
 // Extracted component for displaying lineup images and notes
 // Added return type React.JSX.Element | null for clarity when returning nothing
-function LineupImagesDisplay({ images, onImageClick }: LineupImagesDisplayProps): React.JSX.Element | null {
+const LineupImagesDisplay = ({ images, onImageClick }: LineupImagesDisplayProps): React.JSX.Element | null => {
 	// Return null if no images, parent component handles placeholder logic/visibility
 	if (!images || images.length === 0) {
 		return null;
@@ -36,12 +36,10 @@ function LineupImagesDisplay({ images, onImageClick }: LineupImagesDisplayProps)
 		// Added padding directly to this container
 		<div className='flex flex-col gap-4 overflow-y-auto p-2'>
 			{images.map((imageData, index) => (
-				<React.Fragment key={index}>
+				<React.Fragment key={`lineup-image-${imageData.image.src}`}>
 					<Image
+						sizes='(max-width: 767px) 90vw, (max-width: 1023px) 280px, 360px'
 						src={imageData.image}
-						alt={`Lineup step ${index + 1}`}
-						// Conditionally add cursor-pointer and attach click handler
-						className={`w-full h-auto rounded border border-border object-contain ${onImageClick ? 'cursor-pointer' : ''}`}
 						onClick={
 							onImageClick
 								? () => {
@@ -51,10 +49,12 @@ function LineupImagesDisplay({ images, onImageClick }: LineupImagesDisplayProps)
 						}
 						// Adjusted sizes based on potential contexts (sidebar vs overlay)
 						// Reflect sidebar widths at different breakpoints
-						sizes='(max-width: 767px) 90vw, (max-width: 1023px) 280px, 360px'
+						alt={`Lineup step ${index + 1}`}
+						// Conditionally add cursor-pointer and attach click handler
+						className={`border-border h-auto w-full rounded border object-contain ${onImageClick ? 'cursor-pointer' : ''}`}
 					/>
-					{imageData?.notes.map((note: string, noteIndex: number) => (
-						<div key={noteIndex} className='-mt-3 text-center text-sm font-medium text-foreground'>
+					{imageData?.notes.map((note: string) => (
+						<div key={`note-${note.substring(0, 20)}`} className='text-foreground -mt-3 text-center text-sm font-medium'>
 							• {note}
 						</div>
 					))}
@@ -62,36 +62,35 @@ function LineupImagesDisplay({ images, onImageClick }: LineupImagesDisplayProps)
 			))}
 		</div>
 	);
-}
+};
 
 // Added return type
-function CustomButton({ buttonText, isSelected, onClick, disabled }: { disabled?: boolean; buttonText: string; isSelected: boolean; onClick: () => void }): React.JSX.Element {
-	return (
-		<button
-			disabled={!!disabled}
-			className={`${
-				// Use theme colors with better contrast
-				disabled ? 'disabled:opacity-50 text-secondary-text border-border cursor-not-allowed' : isSelected ? 'font-bold shadow-md' : 'bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground'
-			} px-4 py-2 rounded-md transition-colors duration-200 font-medium border-2`}
-			style={
-				isSelected && !disabled
-					? {
-							backgroundColor: 'var(--primary)',
-							color: 'var(--primary-text-color)', // Use primary-text-color instead of primary-foreground
-							borderColor: 'var(--primary)',
-						}
-					: undefined
-			}
-			onClick={onClick}
-		>
-			{buttonText}
-		</button>
-	);
-}
+const CustomButton = ({ buttonText, isSelected, onClick, disabled }: { disabled?: boolean; buttonText: string; isSelected: boolean; onClick: () => void }): React.JSX.Element => (
+	<button
+		type='button'
+		disabled={!!disabled}
+		className={`${
+			// Use theme colors with better contrast
+			disabled ? 'text-secondary-text border-border cursor-not-allowed disabled:opacity-50' : isSelected ? 'font-bold shadow-md' : 'bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+		} rounded-md border-2 px-4 py-2 font-medium transition-colors duration-200`}
+		style={
+			isSelected && !disabled
+				? {
+						backgroundColor: 'var(--primary)',
+						color: 'var(--primary-text-color)', // Use primary-text-color instead of primary-foreground
+						borderColor: 'var(--primary)',
+					}
+				: undefined
+		}
+		onClick={onClick}
+	>
+		{buttonText}
+	</button>
+);
 
 export type LineupDirection = 'destinationToStart' | 'startToDestination';
 // Added return type
-function ValorantLineupClient(): React.JSX.Element {
+const ValorantLineupClient = (): React.JSX.Element => {
 	// Palette State - REMOVED local initialization
 	// Colors should be inherited globally via CSS variables
 
@@ -104,7 +103,7 @@ function ValorantLineupClient(): React.JSX.Element {
 	const [utility, setUtility] = useState<Utility | undefined>('Mosh Pit');
 	const [lineupDirection, setLineupDirection] = useState<LineupDirection>('destinationToStart');
 
-	const [bottomleftImageVideo, setBottomleftImageVideoImages] = useState<LineupImage[] | null>(); // Use LineupImage
+	const [bottomleftImageVideo, setBottomleftImageVideo] = useState<LineupImage[] | null>(); // Use LineupImage
 
 	const [fullscreen, setFullscreen] = useState<StaticImageData | undefined>(); // Use StaticImageData
 
@@ -234,7 +233,7 @@ function ValorantLineupClient(): React.JSX.Element {
 
 	// Effect to update lineup images when selection changes
 	useEffect(() => {
-		setBottomleftImageVideoImages(null);
+		setBottomleftImageVideo(null);
 		const currentMapData = mapData[map];
 		if (!currentMapData || !primaryFrom || !primaryTo || !agent || !utility) {
 			setShowMobileLineupOverlay(false); // Ensure overlay is hidden if conditions aren't met
@@ -257,7 +256,7 @@ function ValorantLineupClient(): React.JSX.Element {
 			return;
 		}
 
-		setBottomleftImageVideoImages(currentLineup.imageStuff);
+		setBottomleftImageVideo(currentLineup.imageStuff);
 		// Trigger the mobile overlay if a lineup is found
 		setShowMobileLineupOverlay(true);
 	}, [primaryTo, primaryFrom, agent, utility, map, mapData, setShowMobileLineupOverlay]); // Rerun when relevant state or mapData changes // Added setShowMobileLineupOverlay dependency
@@ -312,16 +311,16 @@ function ValorantLineupClient(): React.JSX.Element {
 				<image // Use image instead of rect to show agent icons
 					key={`from-${area.title}`}
 					className='cursor-pointer transition-opacity duration-200'
-					x={area.x - 6} // Adjust based on Ascent/map.tsx original logic
-					y={area.y - 6}
-					width={area.width + 12}
+					data-area-title={area.title} // Add area title for potential specific clicking
 					height={area.height + 12}
 					opacity={opacity}
 					pointerEvents={opacity === 0 ? 'none' : 'auto'}
+					width={area.width + 12}
+					x={area.x - 6} // Adjust based on Ascent/map.tsx original logic
+					y={area.y - 6}
 					href={imageSrc} // Use agent image
 					// Add data-testid for easier selection in tests
 					data-testid={`map-icon-agent-${agent}`}
-					data-area-title={area.title} // Add area title for potential specific clicking
 					onClick={() => {
 						handleAreaFromClick(area);
 					}}
@@ -331,7 +330,7 @@ function ValorantLineupClient(): React.JSX.Element {
 			);
 		});
 		// Dependencies should be correct as they rely on handler refs
-	}, [mapData, map, getAreaOpacity, handleAreaFromClick, agent, imageMap]);
+	}, [mapData, map, getAreaOpacity, handleAreaFromClick, agent]);
 
 	const buildToAreas = useCallback((): React.ReactNode => {
 		const currentAreasTo = mapData[map]?.areasTo;
@@ -347,16 +346,16 @@ function ValorantLineupClient(): React.JSX.Element {
 				<image // Use image instead of rect to show utility icons
 					key={`to-${area.title}`}
 					className='cursor-pointer transition-opacity duration-200'
-					x={area.x - 10} // Adjust based on Ascent/map.tsx original logic
-					y={area.y - 10}
-					width={area.width + 20}
+					data-area-title={area.title} // Add area title for potential specific clicking
 					height={area.height + 20}
 					opacity={opacity}
 					pointerEvents={opacity === 0 ? 'none' : 'auto'}
+					width={area.width + 20}
+					x={area.x - 10} // Adjust based on Ascent/map.tsx original logic
+					y={area.y - 10}
 					href={imageSrc} // Use utility image
 					// Add data-testid for easier selection in tests
 					data-testid={`map-icon-utility-${utility}`}
-					data-area-title={area.title} // Add area title for potential specific clicking
 					onClick={() => {
 						handleAreaToClick(area);
 					}}
@@ -366,14 +365,14 @@ function ValorantLineupClient(): React.JSX.Element {
 			);
 		});
 		// Dependencies should be correct as they rely on handler refs
-	}, [mapData, map, getAreaOpacity, handleAreaToClick, utility, imageMap]);
+	}, [mapData, map, getAreaOpacity, handleAreaToClick, utility]);
 	// ---- End Functions to build SVG area elements ----
 
 	return (
 		// Adjusted to fill the parent container from page.tsx - Added relative positioning for sidebar overlay AND map overlay
-		<div className='relative flex h-full w-full items-stretch overflow-hidden bg-background text-foreground'>
+		<div className='bg-background text-foreground relative flex h-full w-full items-stretch overflow-hidden'>
 			{/* Original Fullscreen (Single Image - Desktop/Mobile) */}
-			{fullscreen && (
+			{fullscreen ? (
 				<div
 					className='fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/80 p-10' // Use fixed, inset-0 for true overlay
 					onClick={() => {
@@ -382,44 +381,37 @@ function ValorantLineupClient(): React.JSX.Element {
 				>
 					{/* Use next/image for fullscreen */}
 					{/* Added max-w/h to prevent overflow if image is huge */}
-					<Image src={fullscreen} className='block max-h-full max-w-full object-contain' alt='Fullscreen lineup step' />
+					<Image alt='Fullscreen lineup step' className='block max-h-full max-w-full object-contain' src={fullscreen} />
 				</div>
-			)}
+			) : null}
 
 			{/* Sidebar Toggle Button (Mobile Only) */}
 			<button
-				className='fixed bottom-4 right-4 z-30 rounded-full bg-primary p-3 text-primary-foreground shadow-lg md:hidden' // Show only on small screens
+				type='button'
+				aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+				className='bg-primary text-primary-foreground fixed right-4 bottom-4 z-30 rounded-full p-3 shadow-lg md:hidden' // Show only on small screens
 				onClick={() => {
 					setIsSidebarOpen(!isSidebarOpen);
 				}}
-				aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
 			>
 				{isSidebarOpen ? <XIcon className='h-6 w-6' /> : <MenuIcon className='h-6 w-6' />}
 			</button>
 
 			{/* Control Panel (Sidebar) */}
 			{/* Added responsive classes: hidden on small screens unless open, fixed position overlay when open on small screens */}
-			<div
-				className={`
-					// Base styles for content
-					flex flex-shrink-0 flex-col items-stretch overflow-y-auto border-r border-border bg-card p-4 max-w-md z-20
-					// Mobile: Hidden or Fixed Overlay
-					${isSidebarOpen ? 'fixed inset-y-0 left-0 w-full shadow-lg' : 'hidden'}
-					// Desktop: Static, specific widths, flex display
-					md:static md:z-auto md:w-96 lg:w-[480px] md:shadow-none md:flex
-				`}
-			>
+			<div className={`// Base styles for content border-border bg-card // Mobile: Hidden or Fixed Overlay z-20 flex max-w-md flex-shrink-0 flex-col items-stretch overflow-y-auto border-r p-4 ${isSidebarOpen ? 'fixed inset-y-0 left-0 w-full shadow-lg' : 'hidden'} // Desktop: Static, specific widths, display flex md:static md:z-auto md:flex md:w-96 md:shadow-none lg:w-[480px]`}>
 				{/* Close button inside sidebar for mobile */}
 				<button
-					className='absolute top-2 right-2 text-secondary-text hover:text-foreground md:hidden'
+					type='button'
+					aria-label='Close sidebar'
+					className='text-secondary-text hover:text-foreground absolute top-2 right-2 md:hidden'
 					onClick={() => {
 						setIsSidebarOpen(false);
 					}}
-					aria-label='Close sidebar'
 				>
 					<XIcon className='h-6 w-6' />
 				</button>
-				<h2 className='mb-4 text-lg font-semibold text-center text-foreground'>Controls</h2> {/* Added title */}
+				<h2 className='text-foreground mb-4 text-center text-lg font-semibold'>Controls</h2> {/* Added title */}
 				{/* Maps */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					{/* Use availableMaps derived from mapData */}
@@ -441,8 +433,8 @@ function ValorantLineupClient(): React.JSX.Element {
 						return (
 							<CustomButton
 								key={agentName}
-								disabled={!lineupsExist}
 								buttonText={agentName}
+								disabled={!lineupsExist}
 								isSelected={agentName === agent}
 								onClick={() => {
 									if (!lineupsExist || agentName === agent) return; // Don't do anything if disabled or already selected
@@ -455,29 +447,29 @@ function ValorantLineupClient(): React.JSX.Element {
 				</div>
 				{/* Utilities */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
-					{agent &&
-						mapData[map] && // Ensure agent and map data exist
-						agentUtilityMap[agent].map((localUtility) => {
-							const hasLineups = mapData[map].lineups.some((lineup: Lineup<any, any>) => lineup.agent === agent && lineup.util === localUtility);
-							return (
-								<CustomButton
-									key={localUtility}
-									disabled={!hasLineups}
-									buttonText={localUtility}
-									isSelected={localUtility === utility}
-									onClick={() => {
-										if (!hasLineups || localUtility === utility) return; // Don't do anything if disabled or already selected
-										setUtility(localUtility);
-										resetLineup(); // Reset points when utility changes, effect won't catch this
-									}}
-								/>
-							);
-						})}
+					{agent && mapData[map]
+						? agentUtilityMap[agent].map((localUtility) => {
+								const hasLineups = mapData[map].lineups.some((lineup: Lineup<any, any>) => lineup.agent === agent && lineup.util === localUtility);
+								return (
+									<CustomButton
+										key={localUtility}
+										buttonText={localUtility}
+										disabled={!hasLineups}
+										isSelected={localUtility === utility}
+										onClick={() => {
+											if (!hasLineups || localUtility === utility) return; // Don't do anything if disabled or already selected
+											setUtility(localUtility);
+											resetLineup(); // Reset points when utility changes, effect won't catch this
+										}}
+									/>
+								);
+							})
+						: null}
 				</div>
 				{/* Lineup Direction */}
 				<div className='mb-4 flex flex-wrap justify-center gap-2'>
 					<CustomButton
-						buttonText={'Utility ➔ Agent'}
+						buttonText='Utility ➔ Agent'
 						isSelected={lineupDirection === 'destinationToStart'}
 						onClick={() => {
 							if (lineupDirection !== 'destinationToStart') {
@@ -487,7 +479,7 @@ function ValorantLineupClient(): React.JSX.Element {
 						}}
 					/>
 					<CustomButton
-						buttonText={'Agent ➔ Utility'}
+						buttonText='Agent ➔ Utility'
 						isSelected={lineupDirection === 'startToDestination'}
 						onClick={() => {
 							if (lineupDirection !== 'startToDestination') {
@@ -507,7 +499,7 @@ function ValorantLineupClient(): React.JSX.Element {
 
 					{/* Placeholder: Show only when images are absent AND this container is supposed to be visible */}
 					{(!bottomleftImageVideo || bottomleftImageVideo.length === 0) && (
-						<div className='flex h-full flex-grow items-center justify-center p-4 text-center text-secondary-text'>
+						<div className='text-secondary-text flex h-full flex-grow items-center justify-center p-4 text-center'>
 							{' '}
 							{/* Added flex-grow and padding/text-center */}
 							Select a start and end point to see lineup images.
@@ -519,12 +511,12 @@ function ValorantLineupClient(): React.JSX.Element {
 			{/* Map Display Area - Wrapped with TransformWrapper */}
 			{/* Adjusted padding based on multi-breakpoint sidebar */}
 			{/* Added relative positioning for the mobile overlay */}
-			<div className='relative flex flex-grow items-center justify-center overflow-hidden bg-background'>
+			<div className='bg-background relative flex flex-grow items-center justify-center overflow-hidden'>
 				{/* Conditional rendering based on map data and SVG component */}
 				{CurrentMapSvgComponent ? (
-					<TransformWrapper initialScale={1} minScale={0.5} maxScale={5} centerOnInit={true} panning={{ velocityDisabled: true }}>
-						{({ zoomIn, zoomOut, resetTransform, ...rest }) => (
-							<React.Fragment>
+					<TransformWrapper centerOnInit initialScale={1} maxScale={5} minScale={0.5} panning={{ velocityDisabled: true }}>
+						{() => (
+							<>
 								{/* Zoom/Pan Controls Overlay - REMOVED */}
 								{/* Adjusted position based on new sidebar width (w-80) */}
 								{/* 
@@ -562,7 +554,16 @@ function ValorantLineupClient(): React.JSX.Element {
 									</button>
 								</div>
 								 */}
-								<TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+								<TransformComponent
+									wrapperStyle={{ width: '100%', height: '100%' }}
+									contentStyle={{
+										width: '100%',
+										height: '100%',
+										display: 'flex',
+										justifyContent: 'center',
+										alignItems: 'center',
+									}}
+								>
 									<CurrentMapSvgComponent
 										// The parent div already centers. object-contain scales the SVG within its box.
 										className='max-h-full max-w-full object-contain' // Adjust classes for direct flex child
@@ -570,7 +571,7 @@ function ValorantLineupClient(): React.JSX.Element {
 										newBuildTo={buildToAreas}
 									/>
 								</TransformComponent>
-							</React.Fragment>
+							</>
 						)}
 					</TransformWrapper>
 				) : (
@@ -580,8 +581,7 @@ function ValorantLineupClient(): React.JSX.Element {
 			</div>
 
 			{/* Mobile Fullscreen Lineup Overlay */}
-			{showMobileLineupOverlay && (
-				// Fullscreen container, dims background, only on mobile (md:hidden)
+			{showMobileLineupOverlay ? (
 				<div
 					className='fixed inset-0 z-40 flex cursor-pointer items-center justify-center bg-black/80 p-4 md:hidden'
 					onClick={() => {
@@ -590,18 +590,19 @@ function ValorantLineupClient(): React.JSX.Element {
 				>
 					{/* Content area, prevents closing when clicking inside */}
 					<div
-						className='relative max-h-full w-full max-w-3xl cursor-default overflow-y-auto rounded bg-card p-4 shadow-lg'
+						className='bg-card relative max-h-full w-full max-w-3xl cursor-default overflow-y-auto rounded p-4 shadow-lg'
 						onClick={(e) => {
 							e.stopPropagation();
 						}} // Stop click from bubbling to background
 					>
 						{/* Close button inside the mobile overlay */}
 						<button
-							className='absolute top-2 right-2 z-50 text-secondary-text hover:text-foreground'
+							type='button'
+							aria-label='Close lineup view'
+							className='text-secondary-text hover:text-foreground absolute top-2 right-2 z-50'
 							onClick={() => {
 								setShowMobileLineupOverlay(false);
 							}}
-							aria-label='Close lineup view'
 						>
 							<XIcon className='h-6 w-6' />
 						</button>
@@ -609,9 +610,9 @@ function ValorantLineupClient(): React.JSX.Element {
 						<LineupImagesDisplay images={bottomleftImageVideo} />
 					</div>
 				</div>
-			)}
+			) : null}
 		</div>
 	);
-}
+};
 
 export default ValorantLineupClient;

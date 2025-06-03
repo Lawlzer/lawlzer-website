@@ -1,10 +1,11 @@
 'use client';
 
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { ChartDataApiResponse, FiltersApiResponse, RawDataPoint } from './DataPlatformPreview';
 import DataPlatformPreview from './DataPlatformPreview';
-import type { FiltersApiResponse, ChartDataApiResponse, RawDataPoint } from './DataPlatformPreview';
 
 // --- Mocks --- //
 
@@ -281,7 +282,9 @@ describe('DataPlatformPreview Component', () => {
 
 		// The mock data `originalMockFiltersResponse` has keys a, b, c
 		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 0)); // Delay render slightly
+			await new Promise((resolve) => {
+				setTimeout(resolve, 0);
+			}); // Delay render slightly
 			render(React.createElement(DataPlatformPreview, { onClose: onCloseMock }));
 		});
 

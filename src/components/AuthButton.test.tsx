@@ -1,6 +1,7 @@
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import AuthButtonMock from './AuthButton.mock';
 
 // Mock ResizeObserver
@@ -19,7 +20,6 @@ class ResizeObserverMock {
 global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 // Mock window.location
-const mockWindowLocation = vi.fn();
 Object.defineProperty(window, 'location', {
 	value: {
 		href: '',

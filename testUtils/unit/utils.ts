@@ -1,5 +1,6 @@
-import type { MockedFunction, Mock } from 'vitest';
-import { expect, vi } from 'vitest';
+import type { Mock } from 'vitest';
+import { expect } from 'vitest';
+
 import { db } from '../../src/server/db';
 
 // Store the original process.env to restore later
@@ -204,7 +205,7 @@ export function expectUnauthorized(response: Response): void {
  * @param expectedJson The partial JSON object structure to match against.
  * @param expectedStatus The specific success status code expected (default: 200).
  */
-export async function expectSuccessfulResponseWithJson(response: Response, expectedJson: object, expectedStatus = 200): Promise<void> {
+export async function expectSuccessfulResponseWithJson(response: Response, expectedJson: object, _expectedStatus = 200): Promise<void> {
 	expectSuccessfulResponse(response, true);
 	await expect(response.json()).resolves.toMatchObject(expectedJson);
 }

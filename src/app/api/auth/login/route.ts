@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+
 import { env } from '~/env.mjs';
 import { getCookieDomain } from '~/lib/auth';
 import { getBaseUrl } from '~/lib/utils';
@@ -67,10 +68,10 @@ function getAuthorizationUrl(provider: string, state: string, callbackUrl: strin
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-	const searchParams = request.nextUrl.searchParams;
+	const { searchParams } = request.nextUrl;
 	const provider = searchParams.get('provider');
 
-	if (!provider) {
+	if (provider === null) {
 		return NextResponse.json({ error: 'Provider is required' }, { status: 400 });
 	}
 

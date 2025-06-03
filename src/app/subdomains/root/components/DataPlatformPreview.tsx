@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { JSX } from 'react';
-import { getYear, getDayOfYear as dfnsGetDayOfYear, format as formatDateFns, addDays, startOfYear } from 'date-fns';
-import { Group } from '@visx/group';
-import { AreaClosed, LinePath, Bar } from '@visx/shape';
-import { scaleLinear, scaleTime } from '@visx/scale';
 import type { TickFormatter } from '@visx/axis';
-import { AxisLeft, AxisBottom, SharedAxisProps } from '@visx/axis';
-import { GridRows, GridColumns } from '@visx/grid';
-import { curveLinear, curveMonotoneX } from '@visx/curve';
-import { useTooltip, useTooltipInPortal, defaultStyles as defaultTooltipStyles, TooltipWithBounds } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
-import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend';
-import ParentSize from '@visx/responsive/lib/components/ParentSize';
+import { defaultStyles as defaultTooltipStyles, useTooltip, useTooltipInPortal } from '@visx/tooltip';
 import type { NumberValue } from '@visx/vendor/d3-scale';
-import { useMediaQuery } from '~/hooks/useMediaQuery'; // Import the hook
-import { FilterPanel } from './FilterPanel'; // Import the new component
+import { addDays, format as formatDateFns, getDayOfYear as dfnsGetDayOfYear, getYear } from 'date-fns';
+import type { JSX } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { ChartPanel } from './ChartPanel'; // Import the chart panel
+import { FilterPanel } from './FilterPanel'; // Import the new component
+
+import { useMediaQuery } from '~/hooks/useMediaQuery'; // Import the hook
 
 // REMOVED MAX_DOCUMENTS constant, limit now handled by backend
 // export const MAX_DOCUMENTS = 300;
@@ -25,25 +19,25 @@ import { ChartPanel } from './ChartPanel'; // Import the chart panel
 // --- Data Structures for API Responses and State ---
 
 // Structure for the response from /api/data-platform/filters
-export type FiltersApiResponse = {
+export interface FiltersApiResponse {
 	filters: Record<string, { value: string; count: number }[]>;
 	totalDocuments: number;
 	commonFields?: Record<string, any>;
-};
+}
 
 // Structure for individual data points from the API
-export type RawDataPoint = {
+export interface RawDataPoint {
 	timestamp: number; // unixDate in milliseconds
 	values: Record<string, number>; // { fieldName: value }
-};
+}
 
 // Structure for the response from /api/data-platform/getChartData
-export type ChartDataApiResponse = {
+export interface ChartDataApiResponse {
 	rawData: RawDataPoint[] | null; // Array of raw data points
 	limitExceeded?: boolean;
 	documentCount?: number;
 	error?: string;
-};
+}
 
 // REMOVED TimeSeriesData & TimeSeriesChartData types - data is now aggregatedFields
 
@@ -52,15 +46,22 @@ type Filters = Record<string, string[]>;
 
 // --- Type Definitions ---
 // MOVE type definitions here
-type ChartPoint = { x: number; y: number };
-type RangePoint = { x: number; yMin: number; yMax: number };
+interface ChartPoint {
+	x: number;
+	y: number;
+}
+interface RangePoint {
+	x: number;
+	yMin: number;
+	yMax: number;
+}
 type TooltipPointData = ChartPoint & { year: number };
-type CombinedTooltipData = {
+interface CombinedTooltipData {
 	day: number;
 	points: TooltipPointData[];
 	// Allow range to be RangePoint or null/undefined
 	range?: RangePoint | null;
-};
+}
 
 // --- Component Props ---
 interface DataPlatformPreviewProps {
@@ -71,12 +72,15 @@ interface DataPlatformPreviewProps {
 
 // FIX: Add explicit return types
 // FIX: Simplify signature - index is not used
-const getMinY = (d: RangePoint): number => d.yMin;
-const getMaxY = (d: RangePoint): number => d.yMax;
+const _getMinY = (d: RangePoint): number => d.yMin;
 
 // FIX: Add explicit return types
 // FIX: Simplify signature - index is not used
-const formatDayOfYearForAxis: TickFormatter<NumberValue> = (dayValue: NumberValue /*, index?: number, ticks?: any[] */): string => {
+const _getMaxY = (d: RangePoint): number => d.yMax;
+
+// FIX: Add explicit return types
+// FIX: Simplify signature - index is not used
+const _formatDayOfYearForAxis: TickFormatter<NumberValue> = (dayValue: NumberValue /*, index?: number, ticks?: any[] */): string => {
 	const day = typeof dayValue === 'number' ? dayValue : dayValue.valueOf();
 	// Use a non-leap year like 2001 as a reference for formatting
 	const referenceDate = new Date(2001, 0, 1);
@@ -85,11 +89,11 @@ const formatDayOfYearForAxis: TickFormatter<NumberValue> = (dayValue: NumberValu
 };
 
 // Define accessor functions for visx - types added
-const getX = (d: ChartPoint | RangePoint): number => d.x;
-const getY = (d: ChartPoint): number => d.y;
+const _getX = (d: ChartPoint | RangePoint): number => d.x;
+const _getY = (d: ChartPoint): number => d.y;
 
 // Tooltip styles - can be outside
-const tooltipStyles = {
+const _tooltipStyles = {
 	...defaultTooltipStyles,
 	backgroundColor: 'rgba(50,50,50,0.8)',
 	color: 'white',
@@ -126,17 +130,12 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	const isMobile = useMediaQuery('(max-width: 1023px)'); // Tailwind's lg breakpoint
 
 	// Generate cache key based on active filters (time range no longer needed for data fetch)
-	const getCacheKey = useCallback(
-		(type: 'chartData' | 'filters') => {
-			return JSON.stringify({ type, filters: activeFilters });
-		},
-		[activeFilters]
-	);
+	const getCacheKey = useCallback((type: 'chartData' | 'filters') => JSON.stringify({ type, filters: activeFilters }), [activeFilters]);
 
 	// Check if data needs refresh (simplified)
-	const isDataStale = useCallback(
+	const _isDataStale = useCallback(
 		(cacheKey: string) => {
-			const lastFetch = lastFetchTime[cacheKey] || 0;
+			const lastFetch = lastFetchTime[cacheKey] ?? 0;
 			return Date.now() - lastFetch > 3600000; // 1 hour cache
 		},
 		[lastFetchTime]
@@ -145,10 +144,10 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	// Function to fetch raw data points
 	const fetchChartData = useCallback(async () => {
 		if (loadingFilters) {
-			console.log('[fetchChartData] Skipped - Filters are loading');
+			console.debug('[fetchChartData] Skipped - Filters are loading');
 			return;
 		}
-		console.log('[fetchChartData] Triggering fetch for raw data');
+		console.debug('[fetchChartData] Triggering fetch for raw data');
 		setLoadingChartData(true);
 		setError(null);
 		setChartLimitExceeded(false);
@@ -166,7 +165,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			}
 			const result: ChartDataApiResponse = await response.json();
 
-			if (result.error) {
+			if (result.error !== undefined && result.error !== '') {
 				throw new Error(result.error);
 			}
 
@@ -195,7 +194,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 				setActiveChartTab(availableChartKeys[0]);
 			} else if (availableChartKeys.length > 0) {
 				setActiveChartTab((currentTab) => {
-					if (!currentTab || !availableChartKeys.includes(currentTab)) {
+					if (currentTab === null || !availableChartKeys.includes(currentTab)) {
 						return availableChartKeys[0];
 					}
 					return currentTab;
@@ -217,7 +216,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 
 	// Function to fetch filters and total count
 	const fetchFiltersAndCount = useCallback(async () => {
-		console.log('[fetchFiltersAndCount] Triggered');
+		console.debug('[fetchFiltersAndCount] Triggered');
 		setLoadingFilters(true);
 		setError(null);
 		setRawDataPoints(undefined); // Clear raw data when filters change
@@ -294,7 +293,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	// --- Effects ---
 	// Fetch filters when activeFilters change
 	useEffect(() => {
-		console.log('Effect 1: Filters');
+		console.debug('Effect 1: Filters');
 		// Reset mobile view to filters when filters change significantly
 		if (isMobile) {
 			setMobileViewMode('filters');
@@ -304,7 +303,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 
 	// Fetch chart data when activeFilters change or when filters finish loading
 	useEffect(() => {
-		console.log('Effect 2: Chart Data - Triggered by filter change or loading state');
+		console.debug('Effect 2: Chart Data - Triggered by filter change or loading state');
 		if (!loadingFilters) {
 			void fetchChartData();
 		}
@@ -314,7 +313,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	useEffect(() => {
 		if (isMobile && canShowChartBasedOnFilters && !loadingFilters && !loadingChartData && !chartLimitExceeded && chartableFields.length > 0) {
 			// Only switch if we can actually show *something* in the chart panel
-			console.log('[Mobile View] Switching to Chart View');
+			console.debug('[Mobile View] Switching to Chart View');
 			setMobileViewMode('chart');
 		}
 		// Intentionally don't switch back automatically if filters become incomplete
@@ -342,9 +341,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		});
 	};
 
-	const isFilterActive = (key: string, value: string): boolean => {
-		return activeFilters[key]?.includes(value) ?? false;
-	};
+	const isFilterActive = (key: string, value: string): boolean => activeFilters[key]?.includes(value) ?? false;
 
 	// Clear Filters Button Handler (Modified for mobile)
 	const handleClearFilters = (): void => {
@@ -385,16 +382,20 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	// --- Memoized Values for Rendering (Restored) ---
 
 	// Check if there's filter data to display
-	const hasFilterData = useMemo(() => {
-		// Explicitly return boolean
-		return !!(availableFilters && Object.keys(availableFilters).length > 0);
-	}, [availableFilters]);
+	const hasFilterData = useMemo(
+		() =>
+			// Explicitly return boolean
+			!!(availableFilters && Object.keys(availableFilters).length > 0),
+		[availableFilters]
+	);
 
 	// Determine if charts should be shown
-	const showCharts = useMemo(() => {
-		// Explicitly return boolean
-		return !!(!chartLimitExceeded && totalDocuments > 0 && rawDataPoints && rawDataPoints.length > 0);
-	}, [chartLimitExceeded, totalDocuments, rawDataPoints]);
+	const showCharts = useMemo(
+		() =>
+			// Explicitly return boolean
+			!!(!chartLimitExceeded && totalDocuments > 0 && rawDataPoints && rawDataPoints.length > 0),
+		[chartLimitExceeded, totalDocuments, rawDataPoints]
+	);
 
 	const sortedFilterEntries = useMemo(() => {
 		if (!availableFilters) return [];
@@ -420,7 +421,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 
 	// Format raw data points for Chart.js, grouping by year, adding min/max overlay
 	const getFormattedChartData = useMemo(() => {
-		if (!rawDataPoints || rawDataPoints.length === 0 || !activeChartTab) {
+		if (!rawDataPoints || rawDataPoints.length === 0 || activeChartTab === null) {
 			return null;
 		}
 
@@ -530,7 +531,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		return { datasets, minMaxData, rangeLabel, rangeFillColor, hasPreviousYears: previousYears.length > 0 };
 	}, [rawDataPoints, activeChartTab, hiddenDatasets]); // Add hiddenDatasets dependency
 
-	const getYAxisLabel = (dataType: string): string => {
+	const _getYAxisLabel = (dataType: string): string => {
 		const formattedName = dataType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 		if (/price|cost|value|revenue|salary/i.test(dataType)) return `${formattedName} (USD)`;
 		if (/count|number|quantity|total|frequency/i.test(dataType)) return formattedName;
@@ -558,11 +559,11 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			const { x } = localPoint(event) ?? { x: 0 };
 			const x0 = xScale.invert(x - chartMargin.left);
 			const dayOfYear = Math.round(x0);
-			console.log('[handleTooltip] Hover event - Day:', dayOfYear); // LOG 1
+			console.debug('[handleTooltip] Hover event - Day:', dayOfYear); // LOG 1
 
 			const formattedData = getFormattedChartData;
 			if (dayOfYear < 1 || dayOfYear > 366 || !formattedData?.datasets || !rawDataPoints) {
-				console.log('[handleTooltip] Aborting: Invalid day, no data, or no raw points.'); // LOG 2
+				console.debug('[handleTooltip] Aborting: Invalid day, no data, or no raw points.'); // LOG 2
 				hideTooltip();
 				return;
 			}
@@ -585,7 +586,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 						}
 					});
 					// LOG 3: Log details for each year's check
-					console.log(`[handleTooltip] Year ${year}: Closest Point=`, closestPointForYear, `Min Dist=`, minDist);
+					console.debug(`[handleTooltip] Year ${year}: Closest Point=`, closestPointForYear, `Min Dist=`, minDist);
 
 					// Only add the point if it exists, is close enough, and has a valid numeric y-value
 					if (closestPointForYear !== null && minDist <= 1) {
@@ -600,18 +601,18 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			let rangeData: RangePoint | null = null;
 			if (!hiddenDatasets.has(formattedData.rangeLabel) && formattedData.minMaxData.length > 0) {
 				const closestRangePoint = formattedData.minMaxData.find((d) => Math.abs(d.x - dayOfYear) <= 0.5);
-				console.log('[handleTooltip] Range Check: Closest Range Point=', closestRangePoint); // LOG 4
+				console.debug('[handleTooltip] Range Check: Closest Range Point=', closestRangePoint); // LOG 4
 				if (closestRangePoint) {
 					const { y } = localPoint(event) ?? { y: 0 };
 					const yValue = yScale.invert(y - chartMargin.top);
-					console.log('[handleTooltip] Range Check: Hover Y Value=', yValue, `Range Y Min/Max=`, closestRangePoint.yMin, '/', closestRangePoint.yMax); // LOG 5
+					console.debug('[handleTooltip] Range Check: Hover Y Value=', yValue, `Range Y Min/Max=`, closestRangePoint.yMin, '/', closestRangePoint.yMax); // LOG 5
 					if (yValue >= closestRangePoint.yMin && yValue <= closestRangePoint.yMax) {
 						rangeData = closestRangePoint;
 					}
 				}
 			}
-			console.log('[handleTooltip] Final Closest Points for Tooltip:', closestPoints); // LOG 6
-			console.log('[handleTooltip] Final Range Data for Tooltip:', rangeData); // LOG 7
+			console.debug('[handleTooltip] Final Closest Points for Tooltip:', closestPoints); // LOG 6
+			console.debug('[handleTooltip] Final Range Data for Tooltip:', rangeData); // LOG 7
 
 			if (closestPoints.length > 0 || rangeData) {
 				const combinedTooltipData: CombinedTooltipData = {
@@ -619,7 +620,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 					points: closestPoints.sort((a, b) => b.year - a.year),
 					range: rangeData,
 				};
-				console.log('[handleTooltip] Showing Tooltip with data:', combinedTooltipData); // LOG 8
+				console.debug('[handleTooltip] Showing Tooltip with data:', combinedTooltipData); // LOG 8
 
 				let tooltipYValue: number;
 				if (rangeData) {
@@ -650,8 +651,8 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		if (chartLimitExceeded) return `Chart generation disabled. Dataset size (${chartDocumentCount} documents) exceeds the limit. Apply more specific filters to reduce the count.`;
 		if (!canShowChartBasedOnFilters) return 'Apply all available filters to view the chart.';
 		if (chartableFields.length === 0) return 'No suitable numeric fields found for charting in the current data.';
-		if (!activeChartTab) return 'Select a field above to view chart.';
-		if (!getFormattedChartData) return 'Could not generate chart data.';
+		if (activeChartTab === null) return 'Select a field above to view chart.';
+		if (getFormattedChartData === null) return 'Could not generate chart data.';
 		return null;
 	}, [loadingChartData, chartLimitExceeded, chartDocumentCount, canShowChartBasedOnFilters, chartableFields.length, activeChartTab, getFormattedChartData]);
 
@@ -659,86 +660,88 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 
 	return (
 		<div
-			className='bg-secondary p-6 rounded-lg shadow-2xl w-[95vw] max-w-[1600px] border border-border overflow-hidden flex flex-col'
+			className='bg-secondary border-border flex w-[95vw] max-w-[1600px] flex-col overflow-hidden rounded-lg border p-6 shadow-2xl'
 			onClick={(e) => {
 				e.stopPropagation();
 			}}
 		>
 			{/* Header */}
-			<div className='flex justify-between items-center flex-shrink-0 mb-4 flex-wrap gap-y-2'>
-				<h2 className='text-2xl font-bold text-primary'>
+			<div className='mb-4 flex flex-shrink-0 flex-wrap items-center justify-between gap-y-2'>
+				<h2 className='text-primary text-2xl font-bold'>
 					Data Platform - Analytics
-					{isLoading && <span className='text-lg font-normal text-muted-foreground ml-2'>(Loading...)</span>}
+					{isLoading ? <span className='text-muted-foreground ml-2 text-lg font-normal'>(Loading...)</span> : null}
 				</h2>
 				{/* NEW: Mobile View Toggle Button */}
-				{isMobile && canShowChartBasedOnFilters && !isLoading && (
-					<button onClick={handleToggleMobileView} className='px-3 py-1 rounded bg-accent text-accent-foreground hover:bg-accent/90 text-sm mr-2'>
+				{isMobile && canShowChartBasedOnFilters && !isLoading ? (
+					<button type='button' className='bg-accent text-accent-foreground hover:bg-accent/90 mr-2 rounded px-3 py-1 text-sm' onClick={handleToggleMobileView}>
 						{mobileViewMode === 'filters' ? 'View Chart' : 'View Filters'}
 					</button>
-				)}
+				) : null}
 			</div>
 
 			{/* Controls: Count */}
-			<div className='mb-4 flex-shrink-0 flex flex-wrap items-center justify-between gap-4'>
+			<div className='mb-4 flex flex-shrink-0 flex-wrap items-center justify-between gap-4'>
 				<div>
-					<p className='text-sm text-muted-foreground'>
+					<p className='text-muted-foreground text-sm'>
 						Total documents matching filters: <span className='font-medium'>{totalDocuments}</span>
-						{chartLimitExceeded && <span className='ml-2 text-destructive'>(Charts disabled - {chartDocumentCount} documents exceeds limit. Apply more filters.)</span>}
+						{chartLimitExceeded ? <span className='text-destructive ml-2'>(Charts disabled - {chartDocumentCount} documents exceeds limit. Apply more filters.)</span> : null}
 					</p>
 				</div>
 				{/* REMOVED Time Range Selector */}
 			</div>
 
 			{/* Main Layout: Conditional Rendering */}
-			<div className={`flex-grow overflow-hidden min-h-[400px] ${!isMobile ? 'grid grid-cols-1 lg:grid-cols-4 gap-6' : 'flex'}`}>
+			<div className={`min-h-[400px] flex-grow overflow-hidden ${!isMobile ? 'grid grid-cols-1 gap-6 lg:grid-cols-4' : 'flex'}`}>
 				{isMobile ? (
 					// Mobile View: Show one panel at a time
-					<div className='w-full h-full'>
+					<div className='h-full w-full'>
 						{mobileViewMode === 'filters' ? (
 							<FilterPanel
-								isLoading={loadingFilters} // Pass specific loading state
-								error={error}
-								hasFilterData={hasFilterData}
-								sortedFilterEntries={sortedFilterEntries}
-								commonFields={commonFields}
-								totalDocuments={totalDocuments}
 								activeFilters={activeFilters}
 								availableFilters={availableFilters} // Pass needed prop
-								isMobile={isMobile}
-								handleFilterToggle={handleFilterToggle}
+								commonFields={commonFields}
+								error={error}
 								handleClearFilters={handleClearFilters}
+								handleFilterToggle={handleFilterToggle}
+								hasFilterData={hasFilterData}
 								isFilterActive={isFilterActive}
+								isLoading={loadingFilters} // Pass specific loading state
+								isMobile={isMobile}
+								sortedFilterEntries={sortedFilterEntries}
+								totalDocuments={totalDocuments}
+								searchTerm=''
+								showAllStates={{}}
 							/>
 						) : (
 							// Pass props needed by ChartPanel
 							<ChartPanel
-								isLoading={loadingChartData} // Use chart loading state
-								error={error}
-								showCharts={showCharts}
-								chartLimitExceeded={chartLimitExceeded}
-								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
-								chartableFields={chartableFields}
+								TooltipInPortal={TooltipInPortal}
 								activeChartTab={activeChartTab}
-								handleChartTabChange={handleChartTabChange}
+								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+								changingChartTabVisual={changingChartTabVisual}
+								chartDocumentCount={chartDocumentCount}
+								chartLimitExceeded={chartLimitExceeded}
 								chartMessage={chartMessage}
+								chartableFields={chartableFields}
+								containerRef={containerRef}
+								error={error}
 								getFormattedChartData={getFormattedChartData} // Pass the memoized data
+								handleChartTabChange={handleChartTabChange}
+								handleToggleMobileView={handleToggleMobileView}
+								handleTooltip={handleTooltip}
+								hiddenDatasets={hiddenDatasets}
+								hideTooltip={hideTooltip}
+								isLoading={loadingChartData} // Use chart loading state
 								isMobile={isMobile}
 								mobileViewMode={mobileViewMode}
-								handleToggleMobileView={handleToggleMobileView}
-								chartDocumentCount={chartDocumentCount}
+								showCharts={showCharts}
+								tooltipLeft={tooltipLeft}
+								tooltipOpen={tooltipOpen}
+								tooltipTop={tooltipTop}
 								totalDocuments={totalDocuments} // Pass total documents
-								changingChartTabVisual={changingChartTabVisual}
-								hiddenDatasets={hiddenDatasets}
 								handleLegendClick={handleLegendClick}
 								// Pass tooltip props
 								tooltipData={tooltipData}
-								tooltipLeft={tooltipLeft}
-								tooltipTop={tooltipTop}
-								tooltipOpen={tooltipOpen}
-								hideTooltip={hideTooltip}
-								handleTooltip={handleTooltip}
-								containerRef={containerRef}
-								TooltipInPortal={TooltipInPortal}
 							/>
 						)}
 					</div>
@@ -747,39 +750,39 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 					<>
 						{/* WRAPPER DIV for FilterPanel to apply layout classes */}
 						<div className='lg:col-span-1 lg:min-w-[300px]'>
-							<FilterPanel isLoading={loadingFilters} error={error} hasFilterData={hasFilterData} sortedFilterEntries={sortedFilterEntries} commonFields={commonFields} totalDocuments={totalDocuments} activeFilters={activeFilters} availableFilters={availableFilters} isMobile={isMobile} handleFilterToggle={handleFilterToggle} handleClearFilters={handleClearFilters} isFilterActive={isFilterActive} />
+							<FilterPanel activeFilters={activeFilters} availableFilters={availableFilters} commonFields={commonFields} error={error} handleClearFilters={handleClearFilters} handleFilterToggle={handleFilterToggle} hasFilterData={hasFilterData} isFilterActive={isFilterActive} isLoading={loadingFilters} isMobile={isMobile} sortedFilterEntries={sortedFilterEntries} totalDocuments={totalDocuments} searchTerm='' showAllStates={{}} />
 						</div>
 						{/* Pass props needed by ChartPanel */}
 						{/* WRAPPER DIV for ChartPanel to apply layout classes */}
 						<div className='lg:col-span-3'>
 							<ChartPanel
-								isLoading={loadingChartData}
-								error={error}
-								showCharts={showCharts}
-								chartLimitExceeded={chartLimitExceeded}
-								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
-								chartableFields={chartableFields}
+								TooltipInPortal={TooltipInPortal}
 								activeChartTab={activeChartTab}
-								handleChartTabChange={handleChartTabChange}
+								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+								changingChartTabVisual={changingChartTabVisual}
+								chartDocumentCount={chartDocumentCount}
+								chartLimitExceeded={chartLimitExceeded}
 								chartMessage={chartMessage}
+								chartableFields={chartableFields}
+								containerRef={containerRef}
+								error={error}
 								getFormattedChartData={getFormattedChartData}
+								handleChartTabChange={handleChartTabChange}
+								handleToggleMobileView={handleToggleMobileView}
+								handleTooltip={handleTooltip}
+								hiddenDatasets={hiddenDatasets}
+								hideTooltip={hideTooltip}
+								isLoading={loadingChartData}
 								isMobile={isMobile}
 								mobileViewMode={mobileViewMode}
-								handleToggleMobileView={handleToggleMobileView}
-								chartDocumentCount={chartDocumentCount}
+								showCharts={showCharts}
+								tooltipLeft={tooltipLeft}
+								tooltipOpen={tooltipOpen}
+								tooltipTop={tooltipTop}
 								totalDocuments={totalDocuments}
-								changingChartTabVisual={changingChartTabVisual}
-								hiddenDatasets={hiddenDatasets}
 								handleLegendClick={handleLegendClick}
 								// Pass tooltip props
 								tooltipData={tooltipData}
-								tooltipLeft={tooltipLeft}
-								tooltipTop={tooltipTop}
-								tooltipOpen={tooltipOpen}
-								hideTooltip={hideTooltip}
-								handleTooltip={handleTooltip}
-								containerRef={containerRef}
-								TooltipInPortal={TooltipInPortal}
 							/>
 						</div>
 					</>
@@ -787,8 +790,8 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			</div>
 
 			{/* Close Button */}
-			<div className='mt-6 flex-shrink-0 border-t border-border pt-4'>
-				<button type='button' className='px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50' onClick={onClose} disabled={isLoading}>
+			<div className='border-border mt-6 flex-shrink-0 border-t pt-4'>
+				<button className='bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-ring rounded px-4 py-2 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:opacity-50' disabled={isLoading} type='button' onClick={onClose}>
 					Close
 				</button>
 			</div>

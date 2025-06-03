@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import React from 'react';
+import type React from 'react';
 
 // Add metadata export for SEO
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ColorsLayout({ children }: { children: React.ReactNode }): React.JSX.Element {
-	return <>{children}</>; // Simple layout wrapper
+	return children as React.JSX.Element; // Simple layout wrapper
 }

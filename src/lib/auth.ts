@@ -1,8 +1,9 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { createSession } from '~/server/db/session';
+
 import { env } from '~/env.mjs';
 import { getBaseUrl } from '~/lib/utils';
+import { createSession } from '~/server/db/session';
 
 export function getCookieDomain(): string {
 	return `${env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}`;

@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const RESET_DATABASE = true; // Set to true to delete all existing documents before generating
 const BATCH_SIZE = 500; // Reduced batch size for createMany with potentially larger documents
@@ -21,7 +21,7 @@ const getRandomNumber = (min: number, max: number, decimals = 2): number => {
 };
 
 // Moved definition up to fix linter error
-const getMsPerFrequency = (frequency: 'daily'): number => {
+const getMsPerFrequency = (_frequency: 'daily'): number => {
 	const msInDay = 24 * 60 * 60 * 1000;
 	// Only daily frequency is needed now
 	return msInDay;
@@ -130,12 +130,8 @@ interface CategoricalValues {
 interface DataTypeConfig {
 	category: 'Crop' | 'Livestock' | 'Produce';
 	frequency: 'daily'; // All frequencies are now daily
-	numericalFields: {
-		[configKey: string]: NumericalRange; // e.g., 'Exports': { min: ..., max: ..., schemaFieldName: 'exports' }
-	};
-	categoricalFields?: {
-		[configKey: string]: CategoricalValues; // e.g., 'Cattle Type': { values: ..., schemaFieldName: 'cattleType' }
-	};
+	numericalFields: Record<string, NumericalRange>;
+	categoricalFields?: Record<string, CategoricalValues>;
 	includeState?: boolean;
 }
 
@@ -202,7 +198,7 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 	const allDataInput: Prisma.CommodityDataCreateInput[] = [];
 
 	// Cache for the immediately preceding value in a series
-	const lastValuesCache = new Map<string, { [fieldName: string]: number }>();
+	const lastValuesCache = new Map<string, Record<string, number>>();
 	// Cache for the value from the same day in the previous year
 	const previousYearValuesCache = new Map<string, number>(); // Key: seriesKey-dayOfYear-fieldName
 	// Cache for the randomly assigned annual trend for a series
@@ -225,7 +221,7 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 			// Iterate through states (or the single undefined value)
 			for (const state of statesToIterate) {
 				// Function to process a specific series combination (handles categorical variations)
-				const processSeriesCombination = (categoricalCombination: { [schemaFieldName: string]: string } = {}): void => {
+				const processSeriesCombination = (categoricalCombination: Record<string, string> = {}): void => {
 					// Construct a unique base key for this series (type, country, state, categories)
 					const baseSeriesKey = `${type}-${country}-${state ?? 'N/A'}`;
 					const combinationKeyPart = Object.entries(categoricalCombination)
@@ -262,7 +258,7 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 							type,
 							category: config.category,
 							country,
-							...(state && { state }),
+							...(state !== undefined && { state }),
 							...categoricalCombination,
 						};
 
@@ -304,7 +300,7 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 					const categoricalKeys = Object.keys(config.categoricalFields);
 
 					// Recursive function to generate all combinations and then process the series for each
-					const generateCombinationsAndProcess = (keyIndex: number, currentCombination: { [schemaFieldName: string]: string }): void => {
+					const generateCombinationsAndProcess = (keyIndex: number, currentCombination: Record<string, string>): void => {
 						if (keyIndex === categoricalKeys.length) {
 							// Base case: Combination complete, process this series
 							processSeriesCombination(currentCombination);
@@ -331,17 +327,17 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 		}
 	}
 
-	console.log(`Generated ${allDataInput.length} data creation inputs.`);
+	console.info(`Generated ${allDataInput.length} data creation inputs.`);
 	return allDataInput;
 }
 
 // --- Database Operations ---
 
 async function resetDatabase(): Promise<void> {
-	console.log('Resetting database: deleting existing CommodityData...');
+	console.info('Resetting database: deleting existing CommodityData...');
 	// Target the new model name
 	await prisma.commodityData.deleteMany({});
-	console.log('Existing data deleted.');
+	console.info('Existing data deleted.');
 }
 
 async function batchCreateData(dataItems: Prisma.CommodityDataCreateInput[]): Promise<number> {
@@ -351,7 +347,7 @@ async function batchCreateData(dataItems: Prisma.CommodityDataCreateInput[]): Pr
 	for (let i = 0; i < dataItems.length; i += BATCH_SIZE) {
 		const batch = dataItems.slice(i, i + BATCH_SIZE);
 		const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-		const totalBatches = Math.ceil(dataItems.length / BATCH_SIZE);
+		// const totalBatches = Math.ceil(dataItems.length / BATCH_SIZE);
 		// console.log(`Creating batch ${batchNumber}/${totalBatches} (size: ${batch.length})...`);
 		try {
 			const result = await prisma.commodityData.createMany({
@@ -365,14 +361,14 @@ async function batchCreateData(dataItems: Prisma.CommodityDataCreateInput[]): Pr
 			// For now, we log and continue
 		}
 	}
-	console.log(`Attempted to create ${dataItems.length}, successfully created ${createdCount} items.`);
+	console.info(`Attempted to create ${dataItems.length}, successfully created ${createdCount} items.`);
 	return createdCount;
 }
 
 // --- Main Execution ---
 
 async function main(): Promise<void> {
-	console.log('Starting database population script...');
+	console.info('Starting database population script...');
 
 	if (RESET_DATABASE) {
 		await resetDatabase();
@@ -381,15 +377,15 @@ async function main(): Promise<void> {
 	const dataToCreate = generateAllData();
 
 	if (dataToCreate.length === 0) {
-		console.log('No data generated. Check configurations and timestamp logic.');
+		console.info('No data generated. Check configurations and timestamp logic.');
 		return;
 	}
 
 	const createdCount = await batchCreateData(dataToCreate);
 
-	console.log(`Attempted to create ${dataToCreate.length}, successfully created ${createdCount} items.`);
+	console.info(`Attempted to create ${dataToCreate.length}, successfully created ${createdCount} items.`);
 	const finalCount = await prisma.commodityData.count();
-	console.log(`Database now contains ${finalCount} items in CommodityData collection.`);
+	console.info(`Database now contains ${finalCount} items in CommodityData collection.`);
 }
 
 main()
@@ -405,9 +401,9 @@ main()
 		process.exit(1);
 	})
 	.finally(() => {
-		console.log('Disconnecting Prisma client...');
+		console.info('Disconnecting Prisma client...');
 		void prisma.$disconnect().catch((err) => {
 			console.error('Error disconnecting Prisma in finally:', err);
 		});
-		console.log('Script finished execution.');
+		console.info('Script finished execution.');
 	});

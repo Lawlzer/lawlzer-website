@@ -1,7 +1,7 @@
-import { MongoClient, ObjectId } from 'mongodb';
+import type { Document as MongoDocument } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import type { Document as MongoDocument } from 'mongodb';
 
 // Define the structure for a single filter value with its count
 interface FilterValueCount {
@@ -28,7 +28,7 @@ const FILTERABLE_FIELDS: string[] = ['type', 'category', 'country', 'state', 'Ca
 
 // Ensure DATABASE_URL is set in your environment variables
 const uri = process.env.DATABASE_URL;
-if (!uri) {
+if (uri === undefined || uri === '') {
 	throw new Error('Missing environment variable: DATABASE_URL');
 }
 
@@ -37,7 +37,7 @@ let clientPromise: Promise<MongoClient> | null = null;
 
 async function getMongoClient(): Promise<MongoClient> {
 	// Add explicit checks for uri inside the function
-	if (!uri) {
+	if (uri === undefined || uri === '') {
 		throw new Error('Missing environment variable: DATABASE_URL');
 	}
 	if (process.env.NODE_ENV === 'development') {
@@ -93,10 +93,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 	const filtersParam = url.searchParams.get('filters');
 	let inputFilters: InputFilters = {};
 
-	if (filtersParam) {
+	if (filtersParam !== null && filtersParam !== '') {
 		try {
 			inputFilters = JSON.parse(filtersParam);
-			console.log('[Filters API] Parsed inputFilters:', JSON.stringify(inputFilters));
+			console.debug('[Filters API] Parsed inputFilters:', JSON.stringify(inputFilters));
 		} catch (error) {
 			console.error('Failed to parse filters:', error);
 			return NextResponse.json({ error: 'Invalid filters format' }, { status: 400 });
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 		const db = mongoClient.db();
 		// --- Use CommodityData Collection Directly ---
 		const commodityCollection = db.collection('CommodityData');
-		console.log(`[Filters API] Using DB: ${db.databaseName}, Collection: ${commodityCollection.collectionName}`);
+		console.debug(`[Filters API] Using DB: ${db.databaseName}, Collection: ${commodityCollection.collectionName}`);
 
 		let totalDocuments: number;
 		const aggregationPipeline: MongoDocument[] = [];
@@ -117,16 +117,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 		// 1. Build $match stage if filters are present
 		if (hasInputFilters) {
 			const matchStage = buildMatchStage(inputFilters);
-			console.log('[Filters API] Filters applied. Match stage:', JSON.stringify(matchStage));
+			console.debug('[Filters API] Filters applied. Match stage:', JSON.stringify(matchStage));
 			aggregationPipeline.push(matchStage);
 			// Recalculate totalDocuments based on the filter match
 			totalDocuments = await commodityCollection.countDocuments(matchStage.$match);
-			console.log(`[Filters API] Filtered document count: ${totalDocuments}`);
+			console.debug(`[Filters API] Filtered document count: ${totalDocuments}`);
 		} else {
-			console.log('[Filters API] No input filters. Counting all documents.');
+			console.debug('[Filters API] No input filters. Counting all documents.');
 			// Count all documents if no filters are applied
 			totalDocuments = await commodityCollection.countDocuments({});
-			console.log(`[Filters API] Total document count: ${totalDocuments}`);
+			console.debug(`[Filters API] Total document count: ${totalDocuments}`);
 		}
 
 		// 2. Build $facet stage
@@ -134,7 +134,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 		aggregationPipeline.push(facetStage);
 
 		// 3. Execute aggregation
-		console.log('[Filters API] Executing aggregation pipeline...');
+		console.debug('[Filters API] Executing aggregation pipeline...');
 		const aggregationResult = await commodityCollection.aggregate(aggregationPipeline).toArray();
 
 		const formattedFilters: Record<string, FilterValueCount[]> = {};
@@ -143,7 +143,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 		// Check if aggregation returned any result (it should return one document with facets)
 		if (aggregationResult.length > 0) {
 			const facetResult = aggregationResult[0] as FacetResult;
-			console.log(`[Filters API] Aggregation returned ${Object.keys(facetResult).length} facets.`);
+			console.debug(`[Filters API] Aggregation returned ${Object.keys(facetResult).length} facets.`);
 
 			// 4. Process facet results
 			for (const [field, values] of Object.entries(facetResult)) {
@@ -177,15 +177,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 						return a.value.localeCompare(b.value);
 					});
 				} else {
-					// console.log(`[Filters API] Excluding filter key "${field}" because max count (${maxCount}) <= 15 and it has multiple values.`);
+					// console.debug(`[Filters API] Excluding filter key "${field}" because max count (${maxCount}) <= 15 and it has multiple values.`);
 				}
 			}
 		} else {
-			console.log('[Filters API] Aggregation returned no results.');
+			console.debug('[Filters API] Aggregation returned no results.');
 		}
 
 		// Return results
-		console.log(`[Filters API] Successfully processed. Returning totalDocuments: ${totalDocuments}, Filter keys: ${Object.keys(formattedFilters).join(', ')}`);
+		console.debug(`[Filters API] Successfully processed. Returning totalDocuments: ${totalDocuments}, Filter keys: ${Object.keys(formattedFilters).join(', ')}`);
 		return NextResponse.json({ filters: formattedFilters, totalDocuments, commonFields });
 	} catch (error) {
 		console.error('Failed to fetch filters:', error);

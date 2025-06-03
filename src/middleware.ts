@@ -1,8 +1,9 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { env } from './env.mjs';
-import type { SubdomainName } from './lib/utils';
+
+// import type { SubdomainName } from './lib/utils'; // Unused import
 import { getBaseUrl, subdomains } from './lib/utils';
+import { env } from './env.mjs';
 
 // Function to determine if the hostname corresponds to the main domain
 function isMainDomain(hostname: string): boolean {

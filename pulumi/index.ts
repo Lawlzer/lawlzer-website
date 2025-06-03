@@ -1,6 +1,6 @@
-import * as pulumi from '@pulumi/pulumi';
 import * as aws from '@pulumi/aws';
 import * as awsx from '@pulumi/awsx'; // Using awsx for simplified networking/load balancing
+import * as pulumi from '@pulumi/pulumi';
 
 function throwError(message: string): never {
 	throw new Error(message);
@@ -11,13 +11,13 @@ const config = new pulumi.Config();
 // Basic config values - can be set via `pulumi config set <key> <value>`
 const appName = config.get('appName') ?? pulumi.getProject(); // Default to Pulumi project name
 const appPort = config.getNumber('appPort') ?? throwError('appPort is required'); // Port your app listens on (from Dockerfile)
-console.log(`DEBUG: Using appPort: ${appPort}`); // Log appPort
+console.debug(`DEBUG: Using appPort: ${appPort}`); // Log appPort
 const cpu = config.getNumber('cpu') ?? 256; // Fargate CPU units (256 = 0.25 vCPU)
 const memory = config.getNumber('memory') ?? 512; // Fargate memory in MiB
 const desiredCount = config.getNumber('desiredCount') ?? 1; // Number of containers to run
 const targetArch = config.get('targetArch') ?? 'X86_64'; // Fargate CPU Architecture (match Dockerfile) - options: X86_64, ARM64
 const imageUri = config.get('image'); // Read the 'image' config value if provided
-console.log(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config value
+console.debug(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config value
 
 // Runtime environment variables from config (add others as needed)
 // The MongoDB URI should be stored securely, preferably in AWS Secrets Manager
@@ -26,7 +26,7 @@ console.log(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config va
 const mongoSecretArn = config.requireSecret('mongoSecretArn'); // Require this secret ARN in Pulumi config
 
 mongoSecretArn.apply((arn) => {
-	console.log(`DEBUG: Using mongoSecretArn (SSM Parameter ARN): ${arn}`);
+	console.info(`DEBUG: Using mongoSecretArn (SSM Parameter ARN): ${arn}`);
 }); // Log secret ARN
 
 // NEW: GitHub Configuration - Replace with your actual Org/Repo
@@ -53,7 +53,7 @@ const repo = new awsx.ecr.Repository('app-repo', {
 });
 // Use .apply() to log the resolved value of the Output
 repo.url.apply((url) => {
-	console.log(`DEBUG: ECR Repo URL: ${url}`);
+	console.info(`DEBUG: ECR Repo URL: ${url}`);
 });
 
 // --- Route 53 DNS --- (Removed as DNS is managed by Cloudflare)
@@ -77,7 +77,7 @@ const taskExecRole = new aws.iam.Role('task-exec-role', {
 });
 
 // Policy allowing the task execution role to read the specific Mongo secret (from SSM Parameter Store)
-const taskExecSecretPolicy = new aws.iam.RolePolicy('task-exec-secret-policy', {
+const _taskExecSecretPolicy = new aws.iam.RolePolicy('task-exec-secret-policy', {
 	name: `${appName}-AllowMongoSecretRead`,
 	role: taskExecRole.id,
 	// MODIFIED: Use pulumi.all to resolve dependencies before stringifying
@@ -108,7 +108,7 @@ new aws.iam.RolePolicyAttachment('task-exec-policy-attachment', {
 });
 
 taskExecRole.arn.apply((arn) => {
-	console.log(`DEBUG: Task Execution Role ARN: ${arn}`);
+	console.info(`DEBUG: Task Execution Role ARN: ${arn}`);
 }); // Log Task Exec Role ARN
 
 // 3. Application Task Role: Permissions for the application *inside* the container
@@ -123,7 +123,7 @@ const appTaskRole = new aws.iam.Role('app-task-role', {
 });
 
 appTaskRole.arn.apply((arn) => {
-	console.log(`DEBUG: Application Task Role ARN: ${arn}`);
+	console.info(`DEBUG: Application Task Role ARN: ${arn}`);
 }); // Log App Task Role ARN
 
 // 4. GitHub Actions Deployment Role: Assumed by the workflow via OIDC
@@ -288,7 +288,7 @@ const httpsTargetGroupResource = new aws.lb.TargetGroup(`${appName}-https-tg`, {
 
 // Log health check config
 httpsTargetGroupResource.healthCheck.apply((hc) => {
-	console.log(`DEBUG: Target Group Health Check Config: ${JSON.stringify(hc)}`);
+	console.info(`DEBUG: Target Group Health Check Config: ${JSON.stringify(hc)}`);
 });
 
 // --- Load Balancer (Updated for HTTPS) ---
@@ -381,10 +381,10 @@ const finalImageUriForLog = imageUri ?? pulumi.interpolate`${repo.url}:latest`;
 // Use .apply() if it's an Output, otherwise log directly
 if (pulumi.Output.isInstance(finalImageUriForLog)) {
 	finalImageUriForLog.apply((uri) => {
-		console.log(`DEBUG: Final image URI passed to container definition: ${uri}`);
+		console.info(`DEBUG: Final image URI passed to container definition: ${uri}`);
 	});
 } else {
-	console.log(`DEBUG: Final image URI passed to container definition: ${finalImageUriForLog}`);
+	console.info(`DEBUG: Final image URI passed to container definition: ${finalImageUriForLog}`);
 }
 
 // --- Outputs ---
@@ -402,3 +402,5 @@ export const taskDefinitionFamily = pulumi.interpolate`${appName}-service`; // a
 export const containerName = pulumi.interpolate`${appName}-container`; // Name given in taskDefinitionArgs
 // NEW: Export the ARN of the role GitHub Actions should assume
 export const githubActionsRoleArn = githubActionsRole.arn;
+
+console.info('Finished setting up Next.js app on ECS!');

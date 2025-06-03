@@ -1,8 +1,9 @@
-import React from 'react';
 import { render, screen, within } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import MainPage from './page';
+import React from 'react';
+import { describe, expect, it } from 'vitest';
 import { vi } from 'vitest';
+
+import MainPage from './page';
 
 // Mock getBaseUrl to avoid actual URL parsing in tests
 vi.mock('~/lib/utils', () => ({
@@ -10,7 +11,7 @@ vi.mock('~/lib/utils', () => ({
 		const protocol = 'http';
 		const hostname = 'dev.lawlzer';
 		let url = `${protocol}://${hostname}`;
-		if (subdomain) {
+		if (subdomain !== undefined && subdomain.trim() !== '') {
 			url = `${protocol}://${subdomain}.${hostname}`;
 		}
 		return url; // Return without trailing slash

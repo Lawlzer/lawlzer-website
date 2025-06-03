@@ -1,4 +1,4 @@
-import { QueryClient, type Query, defaultShouldDehydrateQuery } from '@tanstack/query-core';
+import { defaultShouldDehydrateQuery, type Query, QueryClient } from '@tanstack/query-core';
 import SuperJSON from 'superjson';
 
 export const createQueryClient = (): QueryClient =>

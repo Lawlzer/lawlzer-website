@@ -1,15 +1,18 @@
+import React from 'react';
+
+// import AuthProvider from './authProvider'; // Remove custom AuthProvider import
+// import { SessionProvider } from 'next-auth/react'; // Remove SessionProvider import
+// import { TRPCReactProvider } from '~/trpc/react'; // Remove TRPCReactProvider import
+import { Providers } from './providers'; // Import the new Providers component
+
 import '~/styles/globals.css'; // Assuming global styles are here
 
-import React from 'react';
 // import dynamic from 'next/dynamic'; // Remove dynamic import
 // import { cookies } from 'next/headers'; // REMOVED: No longer reading cookies server-side for styles
 // import { Auth0Provider } from '@auth0/nextjs-auth0'; // Remove Auth0Provider import
 // Removed import { headers } from 'next/headers';
 import Topbar from '~/components/Topbar'; // Import the Topbar component
-// import AuthProvider from './authProvider'; // Remove custom AuthProvider import
-// import { SessionProvider } from 'next-auth/react'; // Remove SessionProvider import
-// import { TRPCReactProvider } from '~/trpc/react'; // Remove TRPCReactProvider import
-import { Providers } from './providers'; // Import the new Providers component
+import { getSession } from '~/server/db/session'; // Import getSession function
 // import { ClientThemeInitializer } from '~/components/theme/ClientThemeInitializer'; // Import the new client wrapper - COMMENTED OUT
 // import Script from 'next/script'; // REMOVE next/script import
 
@@ -147,7 +150,7 @@ function getThemeInitializationScript(): string {
   `;
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }): React.JSX.Element {
+export default async function RootLayout({ children }: { children: React.ReactNode }): Promise<React.JSX.Element> {
 	// REMOVED: Server-side cookie reading and style object creation
 	// const cookieStore = cookies();
 	// const pageBg = ...;
@@ -158,21 +161,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
 	// REMOVED: Inline script string definition
 	// const themeScript = `...`;
 
+	// Fetch session for the Topbar
+	const session = await getSession();
+
 	// Return statement simplified: No inline styles needed on html/body from server
 	return (
-		<html lang='en' suppressHydrationWarning>
+		<html suppressHydrationWarning lang='en'>
 			<head>
 				{/* Add other head elements like meta tags, title (if not in page/layout), etc. */}
+				{/* eslint-disable-next-line react/no-danger */}
 				<script dangerouslySetInnerHTML={{ __html: getThemeInitializationScript() }} />
 				{/* <Script id="theme-init" strategy="beforeInteractive">
 					{getThemeInitializationScript()}
 				</Script> // REMOVED */}
 			</head>
-			<body className='flex min-h-screen flex-col relative'>
+			<body className='relative flex min-h-screen flex-col'>
 				{/* <ClientThemeInitializer /> // COMMENTED OUT: Initial theme now set by inline script */}
 				<Providers>
-					<Topbar />
-					<main className='absolute inset-x-0 bottom-0 top-16'>{children}</main>
+					<Topbar session={session} />
+					<main className='absolute inset-x-0 top-16 bottom-0'>{children}</main>
 				</Providers>
 			</body>
 		</html>

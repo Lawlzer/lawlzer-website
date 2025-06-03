@@ -1,8 +1,8 @@
-import { type Page, type Response, expect } from '@playwright/test';
-import type { Metadata } from 'next';
-import { env } from '~/env.mjs';
-import { db } from '~/server/db'; // Import Prisma client
+import { expect, type Page, type Response } from '@playwright/test';
 import type { User } from '@prisma/client';
+import type { Metadata } from 'next';
+
+import { db } from '~/server/db'; // Import Prisma client
 
 interface TestPageBasicsOptions {
 	/** Check if the page title matches the provided metadata title. */
@@ -60,14 +60,8 @@ export async function testPageBasics(page: Page, url: string, metadata: Metadata
 
 		// Try to wait for title to be set for client-side rendered apps
 		try {
-			await page.waitForFunction(
-				(expectedTitle) => {
-					return document.title?.includes(expectedTitle);
-				},
-				metadata.title,
-				{ timeout: 5000 }
-			);
-		} catch (e) {
+			await page.waitForFunction((expectedTitle) => document.title?.includes(expectedTitle), metadata.title, { timeout: 5000 });
+		} catch (_error) {
 			// If waiting for title times out, continue to our fallback checks
 			console.warn(`Waiting for title with "${metadata.title}" timed out. Falling back to content checks.`);
 		}
@@ -99,19 +93,17 @@ export async function testPageBasics(page: Page, url: string, metadata: Metadata
 	}
 
 	if (descriptionCheck) {
-		if (!metadata.description) throw new Error('Metadata description is required for descriptionCheck');
+		if (metadata.description === undefined || metadata.description === '') throw new Error('Metadata description is required for descriptionCheck');
 
 		// Try to get the description meta tag content
 		const descriptionContent = await page.locator('meta[name="description"]').getAttribute('content');
 
 		expect(descriptionContent, `${url}: Description meta tag should not be null`).not.toBeNull();
-		expect(descriptionContent, `${url}: Description meta tag content should match "${metadata.description}"`).toBe(metadata.description);
+		expect(descriptionContent!, `${url}: Description meta tag content should match "${metadata.description}"`).toBe(metadata.description);
 	}
 
 	if (noScrollbarCheck) {
-		const hasScrollbar = await page.evaluate(() => {
-			return document.documentElement.scrollHeight > document.documentElement.clientHeight;
-		});
+		const hasScrollbar = await page.evaluate(() => document.documentElement.scrollHeight > document.documentElement.clientHeight);
 		expect(hasScrollbar, `${url}: Expected no vertical scrollbar`).toBe(false);
 	}
 
@@ -138,7 +130,7 @@ interface SeededData {
  * Removes the test user and any associated sessions from the database.
  */
 export async function cleanupTestUserAndSession(): Promise<void> {
-	console.log(`Cleaning up test user ${TEST_USER_EMAIL}...`);
+	console.info(`Cleaning up test user ${TEST_USER_EMAIL}...`);
 	const user = await db.user.findUnique({
 		where: { email: TEST_USER_EMAIL },
 	});
@@ -152,9 +144,9 @@ export async function cleanupTestUserAndSession(): Promise<void> {
 		await db.user.delete({
 			where: { id: user.id },
 		});
-		console.log(`Cleaned up user ${user.id}.`);
+		console.info(`Cleaned up user ${user.id}.`);
 	} else {
-		console.log('Test user not found, no cleanup needed.');
+		console.info('Test user not found, no cleanup needed.');
 	}
 }
 
@@ -164,7 +156,7 @@ export async function cleanupTestUserAndSession(): Promise<void> {
  * @returns The created user and session token.
  */
 export async function seedTestUserAndSession(): Promise<SeededData> {
-	console.log('Seeding test user and session...');
+	console.info('Seeding test user and session...');
 	// Ensure clean slate first (in case previous cleanup failed)
 	await cleanupTestUserAndSession();
 
@@ -188,6 +180,6 @@ export async function seedTestUserAndSession(): Promise<SeededData> {
 		},
 	});
 
-	console.log(`Seeded user ${user.id} with session ${session.sessionToken}`);
+	console.info(`Seeded user ${user.id} with session ${session.sessionToken}`);
 	return { user, sessionToken: session.sessionToken };
 }

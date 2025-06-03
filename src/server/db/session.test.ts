@@ -1,8 +1,8 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Session, User } from '@prisma/client';
 import { cookies } from 'next/headers';
-import { db } from '~/server/db';
-import { getSession, getUserFromSession, createSession, destroySession } from './session';
-import type { User, Session } from '@prisma/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createSession, destroySession, getSession, getUserFromSession } from './session';
 
 // Mock dependencies
 vi.mock('next/headers', () => ({
@@ -10,18 +10,16 @@ vi.mock('next/headers', () => ({
 }));
 
 // Hoist mock definitions
-const { mockSessionFindUnique, mockSessionDelete, mockSessionCreate, mockSessionDeleteMany } = vi.hoisted(() => {
-	return {
-		mockSessionFindUnique: vi.fn(),
-		mockSessionDelete: vi.fn(),
-		mockSessionCreate: vi.fn(),
-		mockSessionDeleteMany: vi.fn(),
-	};
-});
+const { mockSessionFindUnique, mockSessionDelete, mockSessionCreate, mockSessionDeleteMany } = vi.hoisted(() => ({
+	mockSessionFindUnique: vi.fn(),
+	mockSessionDelete: vi.fn(),
+	mockSessionCreate: vi.fn(),
+	mockSessionDeleteMany: vi.fn(),
+}));
 
-vi.mock('~/server/db', () => {
+vi.mock('~/server/db', () =>
 	// Now these variables are guaranteed to be initialized
-	return {
+	({
 		db: {
 			session: {
 				findUnique: mockSessionFindUnique,
@@ -30,8 +28,8 @@ vi.mock('~/server/db', () => {
 				deleteMany: mockSessionDeleteMany,
 			},
 		},
-	};
-});
+	})
+);
 
 // Helper to mock cookies() behavior
 const mockCookies = (returnValue: { value: string } | undefined): void => {

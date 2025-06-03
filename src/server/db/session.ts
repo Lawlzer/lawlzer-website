@@ -1,5 +1,6 @@
-import { cookies } from 'next/headers';
 import type { User } from '@prisma/client';
+import { cookies } from 'next/headers';
+
 import { db } from '~/server/db';
 
 export interface SessionData {
@@ -47,7 +48,7 @@ export async function getSession(): Promise<SessionData | null> {
 	const cookieStore = await cookies();
 	const sessionToken = cookieStore.get('session_token')?.value;
 
-	if (!sessionToken) {
+	if (sessionToken === undefined || sessionToken === '') {
 		return null;
 	}
 

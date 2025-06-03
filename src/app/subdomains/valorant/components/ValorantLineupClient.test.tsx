@@ -1,12 +1,14 @@
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { Agent, Utility } from '../types';
+
 import ValorantLineupClient from './ValorantLineupClient';
-import type { Agent, Utility, Lineup, MapArea } from '../types';
 
 // Mock the next/image component
 vi.mock('next/image.js', () => ({
-	default: ({ src, alt, className, onClick }: any) => <img src={typeof src === 'object' ? '/mock-image-path.jpg' : src} alt={alt} className={className} onClick={onClick} data-testid='mock-image' />,
+	default: ({ src, alt, className, onClick }: any) => <img alt={alt} className={className} data-testid='mock-image' src={typeof src === 'object' ? '/mock-image-path.jpg' : src} onClick={onClick} />,
 }));
 
 // Mock map data

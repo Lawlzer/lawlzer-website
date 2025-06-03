@@ -1,6 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+
 import { env } from '../../../../env.mjs';
+
 import { getSessionDataByToken } from '~/server/db/session';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

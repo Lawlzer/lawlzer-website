@@ -1,8 +1,9 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
-import { env } from '~/env.mjs';
 import type { User } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+import { env } from '~/env.mjs';
 import { handleAndGenerateSessionToken } from '~/lib/auth';
 import { getBaseUrl } from '~/lib/utils';
 
@@ -121,7 +122,7 @@ async function getGitHubUser(access_token: string): Promise<GitHubUserInfo> {
 }
 
 async function upsertUser(githubUser: GitHubUserInfo, tokens: GitHubTokenResponse): Promise<User> {
-	if (!githubUser.email) {
+	if (githubUser.email === null || githubUser.email === undefined || githubUser.email === '') {
 		// This should ideally be caught earlier in getGitHubUser
 		throw new Error('Cannot upsert user without a verified email address.');
 	}
@@ -187,9 +188,9 @@ async function upsertUser(githubUser: GitHubUserInfo, tokens: GitHubTokenRespons
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-	const searchParams = request.nextUrl.searchParams;
+	const { searchParams } = request.nextUrl;
 	const code = searchParams.get('code');
-	const state = searchParams.get('state'); // Optional: verify state if you implemented it
+	const _state = searchParams.get('state'); // Optional: verify state if you implemented it
 
 	// Basic state verification example (replace with your actual state handling if needed)
 	// const storedState = request.cookies.get('github_oauth_state')?.value;
@@ -201,7 +202,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	// const response = NextResponse.next();
 	// response.cookies.delete('github_oauth_state');
 
-	if (!code) {
+	if (code === null || code === undefined || code === '') {
 		console.error('GitHub Callback Error: No code received.');
 		return NextResponse.redirect(new URL('/error/auth?error=no_code', request.url));
 	}

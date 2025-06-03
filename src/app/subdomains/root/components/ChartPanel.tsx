@@ -1,16 +1,23 @@
 import React from 'react';
-import ParentSize from '@visx/responsive/lib/components/ParentSize';
+
 import { TimeSeriesChart } from './TimeSeriesChart'; // Import the actual chart component
 
 // Define types needed from parent (consider moving to a types.ts file)
-type ChartPoint = { x: number; y: number };
-type RangePoint = { x: number; yMin: number; yMax: number };
+interface ChartPoint {
+	x: number;
+	y: number;
+}
+interface RangePoint {
+	x: number;
+	yMin: number;
+	yMax: number;
+}
 type TooltipPointData = ChartPoint & { year: number };
-type CombinedTooltipData = {
+interface CombinedTooltipData {
 	day: number;
 	points: TooltipPointData[];
 	range?: RangePoint | null;
-};
+}
 type FormattedChartData = {
 	datasets: { label: string; data: ChartPoint[]; color: string; isCurrentYear: boolean }[];
 	minMaxData: RangePoint[];
@@ -81,21 +88,22 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 	const shouldShowPanelContent = showCharts || isLoading || chartLimitExceeded || (isMobile && !canShowChartBasedOnFilters);
 
 	return (
-		<div className={`lg:col-span-3 bg-background p-4 rounded border border-border overflow-y-auto flex flex-col ${isMobile ? 'h-full' : ''}`}>
-			<h3 className='text-lg font-semibold mb-3 text-primary flex-shrink-0'>Raw Data Over Time</h3>
+		<div className={`bg-background border-border flex flex-col overflow-y-auto rounded border p-4 lg:col-span-3 ${isMobile ? 'h-full' : ''}`}>
+			<h3 className='text-primary mb-3 flex-shrink-0 text-lg font-semibold'>Raw Data Over Time</h3>
 
 			{shouldShowPanelContent ? (
-				<div className='flex-grow flex flex-col min-h-[400px]'>
+				<div className='flex min-h-[400px] flex-grow flex-col'>
 					{/* Chart Tabs */}
 					{!isLoading && !chartLimitExceeded && canShowChartBasedOnFilters && chartableFields.length > 0 ? (
-						<div className='flex space-x-2 mb-4 border-b border-border pb-2 overflow-x-auto flex-shrink-0'>
+						<div className='border-border mb-4 flex flex-shrink-0 space-x-2 overflow-x-auto border-b pb-2'>
 							{chartableFields.map((key) => (
 								<button
+									type='button'
 									key={key}
+									className={`rounded px-3 py-1 text-sm whitespace-nowrap transition-colors ${activeChartTab === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
 									onClick={() => {
 										handleChartTabChange(key);
 									}}
-									className={`px-3 py-1 text-sm rounded transition-colors whitespace-nowrap ${activeChartTab === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
 								>
 									{key.replace(/_/g, ' ')}
 								</button>
@@ -104,86 +112,86 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 					) : null}
 
 					{/* Message Area or Chart */}
-					{chartMessage && !(isMobile && mobileViewMode === 'chart') ? (
-						<div className={`flex-grow flex items-center justify-center min-h-[400px] bg-muted/20 rounded border border-border text-center text-muted-foreground p-4 ${isMobile ? 'text-base' : ''}`}>
+					{chartMessage !== null && !(isMobile && mobileViewMode === 'chart') ? (
+						<div className={`bg-muted/20 border-border text-muted-foreground flex min-h-[400px] flex-grow items-center justify-center rounded border p-4 text-center ${isMobile ? 'text-base' : ''}`}>
 							{chartLimitExceeded ? (
 								<div>
 									<p className='mb-2 text-lg font-medium'>Chart generation disabled</p>
 									<p>Dataset size ({chartDocumentCount} documents) exceeds the limit.</p>
 									<p className='mt-1'>Apply more specific filters to reduce the count.</p>
-									{isMobile && (
+									{isMobile ? (
 										<p className='mt-4'>
-											<button onClick={handleToggleMobileView} className='text-primary underline'>
+											<button type='button' className='text-primary underline' onClick={handleToggleMobileView}>
 												View Filters
 											</button>
 										</p>
-									)}
+									) : null}
 								</div>
 							) : (
 								<div>
 									<p>{chartMessage}</p>
-									{isMobile && !canShowChartBasedOnFilters && (
+									{isMobile && !canShowChartBasedOnFilters ? (
 										<p className='mt-4'>
-											<button onClick={handleToggleMobileView} className='text-primary underline'>
+											<button type='button' className='text-primary underline' onClick={handleToggleMobileView}>
 												View Filters
 											</button>
 										</p>
-									)}
+									) : null}
 								</div>
 							)}
 						</div>
-					) : activeChartTab && getFormattedChartData ? (
+					) : activeChartTab !== null && getFormattedChartData !== null ? (
 						// Render the actual chart component
-						<div className='flex-grow h-[400px] relative'>
+						<div className='relative h-[400px] flex-grow'>
 							<TimeSeriesChart
-								formattedData={getFormattedChartData}
+								TooltipInPortal={TooltipInPortal}
 								activeChartTab={activeChartTab}
-								hiddenDatasets={hiddenDatasets}
+								containerRef={containerRef}
+								formattedData={getFormattedChartData}
 								handleLegendClick={handleLegendClick}
+								handleTooltip={handleTooltip}
+								hiddenDatasets={hiddenDatasets}
+								hideTooltip={hideTooltip}
+								tooltipLeft={tooltipLeft}
+								tooltipOpen={tooltipOpen}
+								tooltipTop={tooltipTop}
 								isMobile={isMobile}
 								// Pass tooltip props
 								tooltipData={tooltipData}
-								tooltipLeft={tooltipLeft}
-								tooltipTop={tooltipTop}
-								tooltipOpen={tooltipOpen}
-								hideTooltip={hideTooltip}
-								handleTooltip={handleTooltip}
-								containerRef={containerRef}
-								TooltipInPortal={TooltipInPortal}
 							/>
 							{/* Changing Chart Tab Visual Overlay */}
 							{changingChartTabVisual ? (
-								<div className='absolute inset-0 bg-background/40 flex items-center justify-center z-20'>
+								<div className='bg-background/40 absolute inset-0 z-20 flex items-center justify-center'>
 									<p className='text-muted-foreground text-lg'>Switching chart...</p>
 								</div>
 							) : null}
 						</div>
 					) : (
 						// Fallback if chartMessage is null but chart can't render
-						<div className='flex-grow flex items-center justify-center text-muted-foreground'>Chart data not available.</div>
+						<div className='text-muted-foreground flex flex-grow items-center justify-center'>Chart data not available.</div>
 					)}
 				</div>
 			) : (
 				// Fallback message when panel content shouldn't show
-				<div className='flex-grow flex items-center justify-center min-h-[400px] bg-muted/20 rounded border border-border text-center text-muted-foreground p-4'>
+				<div className='bg-muted/20 border-border text-muted-foreground flex min-h-[400px] flex-grow items-center justify-center rounded border p-4 text-center'>
 					{totalDocuments === 0 ? 'No documents match the current filters.' : 'Select filters to view data.'}
-					{isMobile && (
+					{isMobile ? (
 						<p className='mt-4'>
-							<button onClick={handleToggleMobileView} className='text-primary underline'>
+							<button type='button' className='text-primary underline' onClick={handleToggleMobileView}>
 								View Filters
 							</button>
 						</p>
-					)}
+					) : null}
 				</div>
 			)}
 
 			{/* Data source disclaimer */}
-			<div className='mt-4 text-xs text-muted-foreground flex-shrink-0 border-t border-border pt-2'>
+			<div className='text-muted-foreground border-border mt-4 flex-shrink-0 border-t pt-2 text-xs'>
 				<p>
 					Filters show distinct values from the {totalDocuments} matching documents.
 					{chartLimitExceeded ? ' Charts disabled due to dataset size.' : canShowChartBasedOnFilters ? ` Charts display raw data points over time. ` /* Raw count removed as rawDataPoints isn't passed here */ : ' Apply all available filters to enable charts.'}
 					{getFormattedChartData !== null && hiddenDatasets.size > 0 && (
-						<span className='ml-1 text-muted-foreground/80'>
+						<span className='text-muted-foreground/80 ml-1'>
 							({hiddenDatasets.size} dataset{hiddenDatasets.size > 1 ? 's' : ''} hidden via legend)
 						</span>
 					)}

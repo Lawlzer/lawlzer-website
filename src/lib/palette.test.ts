@@ -1,7 +1,8 @@
 'use client';
 
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { setCookie, getCookie, COOKIE_KEYS, LIGHT_MODE_COLORS, PREDEFINED_PALETTES, getDefaultColors } from './palette';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { COOKIE_KEYS, getCookie, LIGHT_MODE_COLORS, PREDEFINED_PALETTES, setCookie } from './palette';
 
 // --- Mocks & Setup --- //
 
@@ -19,7 +20,7 @@ const mockDocumentCookie = (): {
 	getter: ReturnType<typeof vi.fn>;
 	setter: ReturnType<typeof vi.fn>;
 } => {
-	const cookieStore: { [key: string]: string } = {};
+	const cookieStore: Record<string, string> = {};
 	const getter = vi.fn(() =>
 		Object.entries(cookieStore)
 			.map(([key, value]) => `${key}=${value}`)

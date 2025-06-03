@@ -100,7 +100,7 @@ export function getDefaultColors(): typeof LIGHT_MODE_COLORS {
 function getBaseDomain(): string | null {
 	if (typeof window === 'undefined') return null; // Not in browser
 
-	const hostname = window.location.hostname;
+	const { hostname } = window.location;
 	if (hostname === 'localhost') {
 		return null; // No domain for localhost
 	}
@@ -116,22 +116,22 @@ function getBaseDomain(): string | null {
 }
 
 // Helper function to set cookies client-side, scoped to the base domain
-export function setCookie(name: string, value: string, days: number = 365): void {
+export function setCookie(name: string, value: string, days = 365): void {
 	if (typeof document === 'undefined') {
 		console.warn('Cannot set cookie outside browser environment');
 		return;
 	}
 	try {
 		let expires = '';
-		if (days) {
+		if (days > 0) {
 			const date = new Date();
 			date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
-			expires = '; expires=' + date.toUTCString();
+			expires = `; expires=${date.toUTCString()}`;
 		}
 		// Add domain based on current hostname for client-side setting
 		const domain = getBaseDomain();
 		// Setting domain=example.com makes it available to sub.example.com
-		const domainAttribute = domain ? `; domain=${domain}` : '';
+		const domainAttribute = domain !== null ? `; domain=${domain}` : '';
 		document.cookie = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
 	} catch (error) {
 		console.error('Failed to set cookie:', name, error);
@@ -144,7 +144,7 @@ export function getCookie(name: string): string | null {
 		return null; // document is not available (e.g., server-side rendering)
 	}
 	try {
-		const nameEQ = name + '=';
+		const nameEQ = `${name}=`;
 		const ca = document.cookie.split(';');
 		for (let c of ca) {
 			c = c.trimStart();

@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { testPageBasics } from '@testUtils/playwright/utils';
+import { expect, test } from '@playwright/test';
+
 import { pathToURLTestsOnly } from '~/lib/utils';
 // Import accessibility checker if available, e.g.:
 // import AxeBuilder from '@axe-core/playwright';
