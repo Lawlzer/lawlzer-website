@@ -169,7 +169,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 		<html suppressHydrationWarning lang='en'>
 			<head>
 				{/* Add other head elements like meta tags, title (if not in page/layout), etc. */}
-				{/* eslint-disable-next-line react/no-danger */}
+				{}
 				<script dangerouslySetInnerHTML={{ __html: getThemeInitializationScript() }} />
 				{/* <Script id="theme-init" strategy="beforeInteractive">
 					{getThemeInitializationScript()}
