@@ -3,10 +3,11 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
-import reactPlugin from 'eslint-plugin-react';
-import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import unusedImports from 'eslint-plugin-unused-imports';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import reactPlugin from 'eslint-plugin-react';
+
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
 const commit = process.env.LINT_STAGED_COMMIT === 'true';
 
@@ -285,108 +286,27 @@ export default tseslint.config(
 			'require-atomic-updates': 'error',
 			yoda: ['error', 'never'],
 
-			// React Rules
-			'react/boolean-prop-naming': ['off'], // Let developers choose their own naming conventions
-			'react/button-has-type': ['error'],
-			'react/default-props-match-prop-types': ['error'],
-			'react/destructuring-assignment': ['off'], // Let developers choose based on context
+			// React Rules (Essential only)
+			'react/jsx-uses-react': ['off'], // Not needed with React 17+
+			'react/react-in-jsx-scope': ['off'], // Not needed with React 17+
+			'react/prop-types': ['off'], // Using TypeScript
 			'react/display-name': ['error'],
-			'react/forbid-component-props': ['off'], // Too restrictive
-			'react/forbid-dom-props': ['off'], // Can be configured for specific props if needed
-			'react/forbid-elements': ['off'], // Can be configured for specific elements if needed
-			'react/forbid-foreign-prop-types': ['error'],
-			'react/forbid-prop-types': ['error', { forbid: ['any', 'array', 'object'] }],
-			'react/function-component-definition': ['off'], // Let developers choose their component style
-			'react/hook-use-state': ['error'],
-			'react/iframe-missing-sandbox': ['error'],
-			'react/jsx-boolean-value': ['error', 'never'],
-			'react/jsx-child-element-spacing': ['off'], // Prettier handles this
-			'react/jsx-closing-bracket-location': ['off'], // Prettier handles this
-			'react/jsx-closing-tag-location': ['off'], // Prettier handles this
-			'react/jsx-curly-brace-presence': ['error', { props: 'never', children: 'never', propElementValues: 'always' }],
-			'react/jsx-curly-newline': ['off'], // Prettier handles this
-			'react/jsx-curly-spacing': ['off'], // Prettier handles this
-			'react/jsx-equals-spacing': ['off'], // Prettier handles this
-			'react/jsx-filename-extension': ['error', { extensions: ['.tsx'] }],
-			'react/jsx-first-prop-new-line': ['off'], // Prettier handles this
-			'react/jsx-fragments': ['error', 'syntax'],
-			'react/jsx-handler-names': ['error'],
-			'react/jsx-indent': ['off'], // Prettier handles this
-			'react/jsx-indent-props': ['off'], // Prettier handles this
-			'react/jsx-key': ['error', { checkFragmentShorthand: true, checkKeyMustBeforeSpread: true, warnOnDuplicates: true }],
-			'react/jsx-max-depth': ['off'], // Trust developers to write readable code
-			'react/jsx-max-props-per-line': ['off'], // Prettier handles this
-			'react/jsx-newline': ['off'], // Too opinionated
-			'react/jsx-no-bind': ['off'], // Modern React handles this efficiently
-			'react/jsx-no-comment-textnodes': ['error'],
-			'react/jsx-no-constructed-context-values': ['error'],
+			'react/jsx-key': ['error'],
 			'react/jsx-no-duplicate-props': ['error'],
-			'react/jsx-no-leaked-render': ['error'],
-			'react/jsx-no-literals': ['off'], // Too restrictive
-			'react/jsx-no-script-url': ['error'],
-			'react/jsx-no-target-blank': ['error', { enforceDynamicLinks: 'always' }],
 			'react/jsx-no-undef': ['error'],
-			'react/jsx-no-useless-fragment': ['error'],
-			'react/jsx-one-expression-per-line': ['off'], // Let Prettier handle this
-			'react/jsx-pascal-case': ['error'],
-			'react/jsx-props-no-multi-spaces': ['off'], // Prettier handles this
-			'react/jsx-props-no-spreading': ['off'], // Spreading is useful
-			'react/jsx-sort-default-props': ['off'], // Can conflict with other rules
-			'react/jsx-sort-props': ['off'], // Can cause circular fixes with Prettier
-			'react/jsx-tag-spacing': ['off'], // Prettier handles this
-			'react/jsx-uses-react': ['off'], // Not needed with React 17+ JSX transform
-			'react/jsx-uses-vars': ['error'],
-			'react/jsx-wrap-multilines': ['off'], // Prettier handles this
-			'react/no-access-state-in-setstate': ['error'],
-			'react/no-adjacent-inline-elements': ['off'], // Formatter handles this
-			'react/no-array-index-key': ['error'],
-			'react/no-arrow-function-lifecycle': ['error'],
 			'react/no-children-prop': ['error'],
-			'react/no-danger': ['error'],
 			'react/no-danger-with-children': ['error'],
 			'react/no-deprecated': ['error'],
-			'react/no-did-mount-set-state': ['error'],
-			'react/no-did-update-set-state': ['error'],
 			'react/no-direct-mutation-state': ['error'],
 			'react/no-find-dom-node': ['error'],
-			'react/no-invalid-html-attribute': ['error'],
 			'react/no-is-mounted': ['error'],
-			'react/no-multi-comp': ['off'], // Allow multiple components in one file when it makes sense
-			'react/no-namespace': ['error'],
-			'react/no-object-type-as-default-prop': ['error'],
-			'react/no-redundant-should-component-update': ['error'],
 			'react/no-render-return-value': ['error'],
-			'react/no-set-state': ['off'], // setState is necessary
 			'react/no-string-refs': ['error'],
-			'react/no-this-in-sfc': ['error'],
-			'react/no-typos': ['error'],
 			'react/no-unescaped-entities': ['error'],
 			'react/no-unknown-property': ['error'],
-			'react/no-unsafe': ['error'],
-			'react/no-unstable-nested-components': ['error'],
-			'react/no-unused-class-component-methods': ['error'],
-			'react/no-unused-prop-types': ['error'],
-			'react/no-unused-state': ['error'],
-			'react/no-will-update-set-state': ['error'],
-			'react/prefer-es6-class': ['error', 'always'],
-			'react/prefer-exact-props': ['off'], // TypeScript handles this
-			'react/prefer-read-only-props': ['off'], // Use TypeScript readonly
-			'react/prefer-stateless-function': ['error'],
-			'react/prop-types': ['off'], // We use TypeScript
-			'react/react-in-jsx-scope': ['off'], // Not needed with React 17+ JSX transform
-			'react/require-default-props': ['off'], // TypeScript handles this
-			'react/require-optimization': ['off'], // Not always necessary
 			'react/require-render-return': ['error'],
-			'react/self-closing-comp': ['error'],
-			'react/sort-comp': ['off'], // Can conflict with formatting
-			'react/sort-default-props': ['off'], // Deprecated
-			'react/sort-prop-types': ['off'], // We use TypeScript
-			'react/state-in-constructor': ['error', 'never'],
-			'react/static-property-placement': ['error', 'static public field'],
-			'react/style-prop-object': ['error'],
-			'react/void-dom-elements-no-children': ['error'],
 
-			// React Hooks Rules (All errors for strictness)
+			// React Hooks Rules
 			'react-hooks/rules-of-hooks': ['error'],
 			'react-hooks/exhaustive-deps': ['error'],
 

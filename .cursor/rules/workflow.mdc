@@ -1,0 +1,165 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# AI Workflow Management
+
+## Plan Location
+- Current workflow: `./plans/current.md`
+- Archive completed: `./plans/archive/[YYYY-MM-DD]-[project-name].md`
+
+## Linting Requirements
+- Always run `npm run lint:eslint:commit` after completing tasks
+- Fix any linting errors before marking tasks as complete
+- Include "linted" in task notes when linting has been verified
+
+## Plan Template
+
+```markdown
+# [Task/Project Title]
+
+## 🎯 Overview
+[Brief description]
+
+**Purpose**: [Why needed]
+**Current**: [What exists]
+**Goal**: [Target state]
+
+## 📊 Status
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| [Task] | 🟢/🟡/🔴/🔵 | P0/P1/P2 | [Notes] |
+
+## 📋 Implementation
+
+### Phase 1: [Name] [Status]
+**Goal**: [What this accomplishes]
+
+- [ ] Task 1
+- [x] Task 2 (completed)
+
+## 📝 Notes
+[Important decisions and technical details]
+
+## 📊 Progress
+**Phase**: [Current phase]
+**Next**: [Next task]
+**Blockers**: [Any blockers]
+
+## ✅ Completed
+[What was done]
+- Details
+```
+
+## Real-World Example
+
+```markdown
+# E-commerce Cart Feature
+
+## 🎯 Overview
+Implementing shopping cart functionality for the online store
+
+**Purpose**: Allow users to add/remove items and checkout
+**Current**: Product catalog exists, no cart functionality
+**Goal**: Full cart with persistent storage and checkout flow
+
+## 📊 Status
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| Cart state management | 🟢 Complete | P0 | Using Redux |
+| Add to cart UI | 🟢 Complete | P0 | Button on product cards |
+| Cart drawer component | 🟡 In Progress | P0 | 70% done, styling left |
+| Persist cart to localStorage | 🔴 Not Started | P1 | For guest users |
+| Cart API endpoints | 🔴 Not Started | P1 | For logged-in users |
+| Checkout flow | 🔵 Blocked | P0 | Waiting for payment gateway credentials |
+
+## 📋 Implementation
+
+### Phase 1: Basic Cart UI 🟡 In Progress
+**Goal**: Users can add items and view cart
+
+- [x] Setup Redux store for cart
+- [x] Create addToCart action
+- [x] Add to cart buttons on products
+- [ ] Cart drawer with item list
+- [ ] Update quantities in cart
+- [ ] Remove items from cart
+
+### Phase 2: Cart Persistence 🔴 Not Started
+**Goal**: Cart survives page refresh
+
+- [ ] Save cart to localStorage on changes
+- [ ] Load cart from localStorage on app init
+- [ ] Sync cart with backend for logged-in users
+- [ ] Handle cart merging on login
+
+## 📝 Notes
+- Decided to use Redux over Context API for better devtools support
+- Cart drawer slides from right, 400px wide on desktop
+- Max quantity per item: 10
+- Free shipping threshold: $50
+
+## 📊 Progress
+**Phase**: Phase 1 - Basic Cart UI
+**Next**: Complete cart drawer styling
+**Blockers**: Payment gateway credentials needed for checkout
+
+## ✅ Completed
+### 2024-01-19 - Cart State Setup
+- Implemented Redux store with cart slice
+- Added actions: addToCart, updateQuantity, removeFromCart
+- Connected product cards to dispatch addToCart
+
+### 2024-01-20 - Add to Cart UI
+- Created AddToCartButton component with loading state
+- Added success toast notification
+- Implemented quantity selector for variable products
+```
+
+## Update Protocol
+
+### When
+- After completing tasks
+- Starting new phases
+- Encountering blockers
+- Making key decisions
+- After linting passes
+
+### How
+1. Check completed: `- [x]`
+2. Update status emojis
+3. Run `npm run lint:eslint:commit`
+4. Fix any linting errors
+5. Document completed work
+
+### Example Update Flow
+```markdown
+# Before: Starting a task
+| Cart drawer component | 🔴 Not Started | P0 | UI component |
+- [ ] Cart drawer with item list
+
+# After: Task completed
+| Cart drawer component | 🟢 Complete | P0 | Slide-out drawer done |
+- [x] Cart drawer with item list
+
+## ✅ Completed
+### 2024-01-20 - Cart Drawer Implementation
+- Created CartDrawer component with animations
+- Added item list with images and prices
+- Implemented slide-out animation from right
+```
+
+## Status Legend
+- 🟢 Complete
+- 🟡 In Progress
+- 🔴 Not Started
+- 🔵 Blocked
+
+## Archive Example
+```bash
+# When project is complete:
+mv ./plans/current.md ./plans/archive/2024-01-25-ecommerce-cart.md
+```
