@@ -179,7 +179,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				{/* <ClientThemeInitializer /> // COMMENTED OUT: Initial theme now set by inline script */}
 				<Providers>
 					<Topbar session={session} />
-					<main className='absolute inset-x-0 top-16 bottom-0'>{children}</main>
+					<main className='flex-1 pt-16'>{children}</main>
 				</Providers>
 			</body>
 		</html>

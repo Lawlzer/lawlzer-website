@@ -16,24 +16,26 @@ import type { SessionData } from '~/server/db/session'; // Import SessionData ty
 const Topbar = ({ session }: { session: SessionData | null }): React.JSX.Element => {
 	const baseUrl = getBaseUrl(); // todo these can be generated on demand
 
-	// Define button style with proper CSS variables from the theme system
-	const buttonClass = 'px-4 py-2 border rounded-md transition-colors hover:opacity-90 bg-[var(--page-background)] text-[var(--primary-text-color)] border-[var(--custom-border-color)]';
+	// Define modern navigation link styles
+	const linkClass = 'relative px-4 py-2 text-sm font-medium text-secondary-text transition-all hover:text-primary after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all hover:after:w-full';
 
 	return (
-		<nav className='bg-secondary text-secondary-foreground border-border h-16 border-b p-4'>
-			<div className='flex h-full w-full items-start justify-between'>
-				<div className='flex flex-wrap space-x-4'>
-					<ProtectedLink className={buttonClass} href={baseUrl}>
+		<nav className='fixed top-0 left-0 right-0 z-40 h-16 bg-background/80 backdrop-blur-md border-b border-border'>
+			<div className='mx-auto flex h-full max-w-7xl items-center justify-between px-6'>
+				{/* Navigation Links */}
+				<div className='flex items-center space-x-1'>
+					<ProtectedLink className={linkClass} href={baseUrl}>
 						Home
 					</ProtectedLink>
 					{subdomains.map((subdomain) => (
-						<ProtectedLink key={subdomain.name} className={buttonClass} href={getBaseUrl(subdomain.name)}>
+						<ProtectedLink key={subdomain.name} className={linkClass} href={getBaseUrl(subdomain.name)}>
 							{subdomain.name.charAt(0).toUpperCase() + subdomain.name.slice(1)}
 						</ProtectedLink>
 					))}
 				</div>
-				<div>
-					{/* Pass session data (which can be null) as initialSession prop */}
+
+				{/* Auth Button */}
+				<div className='flex items-center'>
 					<AuthButton initialSession={session} />
 				</div>
 			</div>
