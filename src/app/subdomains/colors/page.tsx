@@ -33,9 +33,9 @@ export default function ColorsPage(): JSX.Element {
 	const router = useRouter();
 	const pathname = usePathname();
 
-	const [paletteName, setPaletteName] = useState<string | null>(null);
+	const [_paletteName, setPaletteName] = useState<string | null>(null);
 
-	const [isClient, setIsClient] = useState<boolean>(false);
+	const [_isClient, setIsClient] = useState<boolean>(false);
 	const [initialDefaults, setInitialDefaults] = useState<ColorPalette>(LIGHT_MODE_COLORS);
 
 	// Determine defaults on client-side mount

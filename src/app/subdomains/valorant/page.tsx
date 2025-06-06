@@ -7,7 +7,7 @@ import ValorantLineupClient from './components/ValorantLineupClient';
 
 export default function ValorantPage(): JSX.Element {
 	return (
-		<div className='flex h-full w-full flex-col'>
+		<div className='flex h-screen w-full flex-col'>
 			<ValorantLineupClient />
 		</div>
 	);

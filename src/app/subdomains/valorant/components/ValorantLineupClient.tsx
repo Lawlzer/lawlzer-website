@@ -69,19 +69,10 @@ const CustomButton = ({ buttonText, isSelected, onClick, disabled }: { disabled?
 	<button
 		type='button'
 		disabled={!!disabled}
-		className={`${
-			// Use theme colors with better contrast
-			disabled ? 'text-secondary-text border-border cursor-not-allowed disabled:opacity-50' : isSelected ? 'font-bold shadow-md' : 'bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground'
-		} rounded-md border-2 px-4 py-2 font-medium transition-colors duration-200`}
-		style={
-			isSelected && !disabled
-				? {
-						backgroundColor: 'var(--primary)',
-						color: 'var(--primary-text-color)', // Use primary-text-color instead of primary-foreground
-						borderColor: 'var(--primary)',
-					}
-				: undefined
-		}
+		className={`
+			relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
+			${disabled ? 'cursor-not-allowed opacity-40 bg-secondary text-secondary-text' : isSelected ? 'bg-primary text-primary-foreground shadow-md transform scale-105 ring-2 ring-primary/30' : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground hover:shadow-sm'}
+		`}
 		onClick={onClick}
 	>
 		{buttonText}
@@ -399,56 +390,72 @@ const ValorantLineupClient = (): React.JSX.Element => {
 
 			{/* Control Panel (Sidebar) */}
 			{/* Added responsive classes: hidden on small screens unless open, fixed position overlay when open on small screens */}
-			<div className={`// Base styles for content border-border bg-card // Mobile: Hidden or Fixed Overlay z-20 flex max-w-md flex-shrink-0 flex-col items-stretch overflow-y-auto border-r p-4 ${isSidebarOpen ? 'fixed inset-y-0 left-0 w-full shadow-lg' : 'hidden'} // Desktop: Static, specific widths, display flex md:static md:z-auto md:flex md:w-96 md:shadow-none lg:w-[480px]`}>
+			<div
+				className={`
+				flex flex-shrink-0 flex-col overflow-y-auto border-r border-border bg-background p-6
+				${isSidebarOpen ? 'fixed inset-y-0 left-0 z-20 w-full shadow-xl' : 'hidden'}
+				md:static md:z-auto md:flex md:w-96 md:shadow-none lg:w-[420px]
+			`}
+			>
 				{/* Close button inside sidebar for mobile */}
 				<button
 					type='button'
 					aria-label='Close sidebar'
-					className='text-secondary-text hover:text-foreground absolute top-2 right-2 md:hidden'
+					className='absolute top-4 right-4 text-secondary-text hover:text-foreground md:hidden'
 					onClick={() => {
 						setIsSidebarOpen(false);
 					}}
 				>
 					<XIcon className='h-6 w-6' />
 				</button>
-				<h2 className='text-foreground mb-4 text-center text-lg font-semibold'>Controls</h2> {/* Added title */}
-				{/* Maps */}
-				<div className='mb-4 flex flex-wrap justify-center gap-2'>
-					{/* Use availableMaps derived from mapData */}
-					{availableMaps.map((thisMap) => (
-						<CustomButton
-							key={thisMap}
-							buttonText={thisMap}
-							isSelected={thisMap === map}
-							onClick={() => {
-								setMap(thisMap);
-							}}
-						/>
-					))}
-				</div>
-				{/* Agents */}
-				<div className='mb-4 flex flex-wrap justify-center gap-2'>
-					{agents.map((agentName) => {
-						const lineupsExist = doesAgentHaveLineupsForMap(agentName, map);
-						return (
+
+				<h2 className='mb-6 text-2xl font-bold text-primary'>Controls</h2>
+
+				{/* Maps Section */}
+				<div className='mb-6'>
+					<h3 className='mb-3 text-sm font-semibold uppercase tracking-wide text-secondary-text'>Select Map</h3>
+					<div className='flex flex-wrap gap-2'>
+						{availableMaps.map((thisMap) => (
 							<CustomButton
-								key={agentName}
-								buttonText={agentName}
-								disabled={!lineupsExist}
-								isSelected={agentName === agent}
+								key={thisMap}
+								buttonText={thisMap}
+								isSelected={thisMap === map}
 								onClick={() => {
-									if (!lineupsExist || agentName === agent) return; // Don't do anything if disabled or already selected
-									setAgent(agentName);
-									// Utility and points reset handled by useEffect for map change
+									setMap(thisMap);
 								}}
 							/>
-						);
-					})}
+						))}
+					</div>
 				</div>
-				{/* Utilities */}
-				<div className='mb-4 flex flex-wrap justify-center gap-2'>
-					{agent && mapData[map]
-						? agentUtilityMap[agent].map((localUtility) => {
+
+				{/* Agents Section */}
+				<div className='mb-6'>
+					<h3 className='mb-3 text-sm font-semibold uppercase tracking-wide text-secondary-text'>Select Agent</h3>
+					<div className='flex flex-wrap gap-2'>
+						{agents.map((agentName) => {
+							const lineupsExist = doesAgentHaveLineupsForMap(agentName, map);
+							return (
+								<CustomButton
+									key={agentName}
+									buttonText={agentName}
+									disabled={!lineupsExist}
+									isSelected={agentName === agent}
+									onClick={() => {
+										if (!lineupsExist || agentName === agent) return;
+										setAgent(agentName);
+									}}
+								/>
+							);
+						})}
+					</div>
+				</div>
+
+				{/* Utilities Section */}
+				{agent && mapData[map] && (
+					<div className='mb-6'>
+						<h3 className='mb-3 text-sm font-semibold uppercase tracking-wide text-secondary-text'>Select Utility</h3>
+						<div className='flex flex-wrap gap-2'>
+							{agentUtilityMap[agent].map((localUtility) => {
 								const hasLineups = mapData[map].lineups.some((lineup: Lineup<any, any>) => lineup.agent === agent && lineup.util === localUtility);
 								return (
 									<CustomButton
@@ -457,127 +464,128 @@ const ValorantLineupClient = (): React.JSX.Element => {
 										disabled={!hasLineups}
 										isSelected={localUtility === utility}
 										onClick={() => {
-											if (!hasLineups || localUtility === utility) return; // Don't do anything if disabled or already selected
+											if (!hasLineups || localUtility === utility) return;
 											setUtility(localUtility);
-											resetLineup(); // Reset points when utility changes, effect won't catch this
+											resetLineup();
 										}}
 									/>
 								);
-							})
-						: null}
-				</div>
-				{/* Lineup Direction */}
-				<div className='mb-4 flex flex-wrap justify-center gap-2'>
-					<CustomButton
-						buttonText='Utility ➔ Agent'
-						isSelected={lineupDirection === 'destinationToStart'}
-						onClick={() => {
-							if (lineupDirection !== 'destinationToStart') {
-								setLineupDirection('destinationToStart');
-								resetLineup();
-							}
-						}}
-					/>
-					<CustomButton
-						buttonText='Agent ➔ Utility'
-						isSelected={lineupDirection === 'startToDestination'}
-						onClick={() => {
-							if (lineupDirection !== 'startToDestination') {
-								setLineupDirection('startToDestination');
-								resetLineup();
-							}
-						}}
-					/>
-				</div>
-				{/* Image/video sources container */}
-				{/* This outer div controls visibility based on screen size / sidebar state */}
-				<div className={`flex min-h-0 flex-grow flex-col overflow-y-auto ${isSidebarOpen ? 'block' : 'hidden md:block'}`}>
-					{/* Render images component */}
-					{/* LineupImagesDisplay returns null if no images */}
-					{/* Pass onImageClick to enable desktop fullscreen zoom */}
-					<LineupImagesDisplay images={bottomleftImageVideo} onImageClick={setFullscreen} />
+							})}
+						</div>
+					</div>
+				)}
 
-					{/* Placeholder: Show only when images are absent AND this container is supposed to be visible */}
-					{(!bottomleftImageVideo || bottomleftImageVideo.length === 0) && (
-						<div className='text-secondary-text flex h-full flex-grow items-center justify-center p-4 text-center'>
-							{' '}
-							{/* Added flex-grow and padding/text-center */}
-							Select a start and end point to see lineup images.
+				{/* Lineup Direction Section */}
+				<div className='mb-6'>
+					<h3 className='mb-3 text-sm font-semibold uppercase tracking-wide text-secondary-text'>Direction</h3>
+					<div className='flex flex-wrap gap-2'>
+						<CustomButton
+							buttonText='Utility → Agent'
+							isSelected={lineupDirection === 'destinationToStart'}
+							onClick={() => {
+								if (lineupDirection !== 'destinationToStart') {
+									setLineupDirection('destinationToStart');
+									resetLineup();
+								}
+							}}
+						/>
+						<CustomButton
+							buttonText='Agent → Utility'
+							isSelected={lineupDirection === 'startToDestination'}
+							onClick={() => {
+								if (lineupDirection !== 'startToDestination') {
+									setLineupDirection('startToDestination');
+									resetLineup();
+								}
+							}}
+						/>
+					</div>
+				</div>
+
+				{/* Lineup Images Section */}
+				<div className={`mt-6 flex min-h-0 flex-grow flex-col ${isSidebarOpen ? 'block' : 'hidden md:block'}`}>
+					{bottomleftImageVideo && bottomleftImageVideo.length > 0 ? (
+						<>
+							<h3 className='mb-3 text-sm font-semibold uppercase tracking-wide text-secondary-text'>Lineup Steps</h3>
+							<div className='flex-grow overflow-hidden rounded-lg border border-border bg-secondary/30'>
+								<LineupImagesDisplay images={bottomleftImageVideo} onImageClick={setFullscreen} />
+							</div>
+						</>
+					) : (
+						<div className='flex flex-grow items-center justify-center rounded-lg border border-dashed border-border bg-secondary/10 p-8'>
+							<p className='text-center text-sm text-secondary-text'>Select a start and end point on the map to see lineup images</p>
 						</div>
 					)}
 				</div>
 			</div>
 
-			{/* Map Display Area - Wrapped with TransformWrapper */}
-			{/* Adjusted padding based on multi-breakpoint sidebar */}
-			{/* Added relative positioning for the mobile overlay */}
-			<div className='bg-background relative flex flex-grow items-center justify-center overflow-hidden'>
-				{/* Conditional rendering based on map data and SVG component */}
-				{CurrentMapSvgComponent ? (
-					<TransformWrapper centerOnInit initialScale={1} maxScale={5} minScale={0.5} panning={{ velocityDisabled: true }}>
-						{() => (
-							<>
-								{/* Zoom/Pan Controls Overlay - REMOVED */}
-								{/* Adjusted position based on new sidebar width (w-80) */}
-								{/* 
-								<div className='absolute top-2 right-2 z-10 flex flex-col gap-1 md:right-[calc(theme(spacing.80)+0.5rem)]'>
-									{' '}
-									<button
-										onClick={() => {
-											zoomIn();
+			{/* Map Display Area */}
+			<div className='relative flex-1 min-h-0 bg-secondary/5'>
+				{/* Map Viewport */}
+				<div className='h-full flex items-center justify-center'>
+					{CurrentMapSvgComponent ? (
+						<TransformWrapper centerOnInit initialScale={1} maxScale={5} minScale={0.5} panning={{ velocityDisabled: true }}>
+							{({ zoomIn, zoomOut, resetTransform }) => (
+								<>
+									{/* Zoom Controls */}
+									<div className='absolute bottom-4 right-4 z-10 flex flex-col gap-2'>
+										<button
+											onClick={() => {
+												zoomIn();
+											}}
+											className='bg-background/90 backdrop-blur-sm rounded-lg p-2 shadow-md hover:bg-background transition-all hover:scale-110'
+											aria-label='Zoom in'
+										>
+											<svg className='h-5 w-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+												<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 6v12m6-6H6' />
+											</svg>
+										</button>
+										<button
+											onClick={() => {
+												zoomOut();
+											}}
+											className='bg-background/90 backdrop-blur-sm rounded-lg p-2 shadow-md hover:bg-background transition-all hover:scale-110'
+											aria-label='Zoom out'
+										>
+											<svg className='h-5 w-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+												<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M18 12H6' />
+											</svg>
+										</button>
+										<button
+											onClick={() => {
+												resetTransform();
+											}}
+											className='bg-background/90 backdrop-blur-sm rounded-lg p-2 shadow-md hover:bg-background transition-all hover:scale-110'
+											aria-label='Reset zoom'
+										>
+											<svg className='h-5 w-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+												<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4' />
+											</svg>
+										</button>
+									</div>
+
+									<TransformComponent
+										wrapperStyle={{ width: '100%', height: '100%' }}
+										contentStyle={{
+											width: '100%',
+											height: '100%',
+											display: 'flex',
+											justifyContent: 'center',
+											alignItems: 'center',
 										}}
-										className='rounded bg-card p-1 text-foreground shadow hover:bg-accent'
 									>
-										<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 6v12m6-6H6' />
-										</svg>
-									</button>
-									<button
-										onClick={() => {
-											zoomOut();
-										}}
-										className='rounded bg-card p-1 text-foreground shadow hover:bg-accent'
-									>
-										<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M18 12H6' />
-										</svg>
-									</button>
-									<button
-										onClick={() => {
-											resetTransform();
-										}}
-										className='rounded bg-card p-1 text-foreground shadow hover:bg-accent'
-									>
-										<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 4v5h5M20 20v-5h-5M4 20l16-16' />
-										</svg>
-									</button>
-								</div>
-								 */}
-								<TransformComponent
-									wrapperStyle={{ width: '100%', height: '100%' }}
-									contentStyle={{
-										width: '100%',
-										height: '100%',
-										display: 'flex',
-										justifyContent: 'center',
-										alignItems: 'center',
-									}}
-								>
-									<CurrentMapSvgComponent
-										// The parent div already centers. object-contain scales the SVG within its box.
-										className='max-h-full max-w-full object-contain' // Adjust classes for direct flex child
-										newBuildFrom={buildFromAreas}
-										newBuildTo={buildToAreas}
-									/>
-								</TransformComponent>
-							</>
-						)}
-					</TransformWrapper>
-				) : (
-					// Placeholder or loading state if map/SVG isn't ready
-					<p className='text-foreground'>Loading map...</p>
-				)}
+										<CurrentMapSvgComponent className='max-h-full max-w-full object-contain' newBuildFrom={buildFromAreas} newBuildTo={buildToAreas} />
+									</TransformComponent>
+								</>
+							)}
+						</TransformWrapper>
+					) : (
+						<div className='flex flex-col items-center justify-center'>
+							<div className='mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent'></div>
+							<p className='text-secondary-text'>Loading map...</p>
+						</div>
+					)}
+				</div>
 			</div>
 
 			{/* Mobile Fullscreen Lineup Overlay */}
