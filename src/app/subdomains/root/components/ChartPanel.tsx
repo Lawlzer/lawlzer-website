@@ -1,5 +1,7 @@
+import { motion } from 'framer-motion';
 import React from 'react';
 
+import { ChartPanelSkeleton } from './SkeletonLoader';
 import { TimeSeriesChart } from './TimeSeriesChart'; // Import the actual chart component
 
 // Define types needed from parent (consider moving to a types.ts file)
@@ -88,61 +90,109 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 	const shouldShowPanelContent = showCharts || isLoading || chartLimitExceeded || (isMobile && !canShowChartBasedOnFilters);
 
 	return (
-		<div className={`bg-background border-border flex flex-col overflow-y-auto rounded border p-4 lg:col-span-3 ${isMobile ? 'h-full' : ''}`}>
-			<h3 className='text-primary mb-3 flex-shrink-0 text-lg font-semibold'>Raw Data Over Time</h3>
+		<motion.div className={`relative flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/95 to-card/98 shadow-lg ${isMobile ? 'h-full' : ''}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+			{/* Enhanced Header */}
+			<div className='border-b border-border/30 bg-gradient-to-r from-muted/20 via-muted/30 to-muted/20 px-4 py-3.5'>
+				<div className='flex items-center justify-between'>
+					<h3 className='flex items-center gap-2.5 text-lg font-semibold text-foreground'>
+						<motion.div className='flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10' whileHover={{ scale: 1.1, rotate: -10 }} transition={{ type: 'spring', stiffness: 200 }}>
+							<svg className='h-5 w-5 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z' />
+							</svg>
+						</motion.div>
+						Data Visualization
+					</h3>
+					{activeChartTab !== null && activeChartTab !== '' && (
+						<motion.span className='flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary' initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 300 }}>
+							<svg className='h-3 w-3' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
+							</svg>
+							{activeChartTab.replace(/_/g, ' ')}
+						</motion.span>
+					)}
+				</div>
+			</div>
 
 			{shouldShowPanelContent ? (
-				<div className='flex min-h-[400px] flex-grow flex-col'>
-					{/* Chart Tabs */}
+				<div className='flex min-h-[450px] flex-grow flex-col'>
+					{/* Enhanced Chart Tabs */}
 					{!isLoading && !chartLimitExceeded && canShowChartBasedOnFilters && chartableFields.length > 0 ? (
-						<div className='border-border mb-4 flex flex-shrink-0 space-x-2 overflow-x-auto border-b pb-2'>
-							{chartableFields.map((key) => (
-								<button
-									type='button'
-									key={key}
-									className={`rounded px-3 py-1 text-sm whitespace-nowrap transition-colors ${activeChartTab === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
-									onClick={() => {
-										handleChartTabChange(key);
-									}}
-								>
-									{key.replace(/_/g, ' ')}
-								</button>
-							))}
-						</div>
+						<motion.div className='border-b border-border/30 bg-gradient-to-r from-muted/10 via-muted/20 to-muted/10' initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+							<div className='flex space-x-2 overflow-x-auto p-2.5'>
+								{chartableFields.map((key, index) => (
+									<motion.button
+										type='button'
+										key={key}
+										className={`group relative whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all ${activeChartTab === key ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:shadow-sm'}`}
+										onClick={() => {
+											handleChartTabChange(key);
+										}}
+										initial={{ opacity: 0, x: -20 }}
+										animate={{ opacity: 1, x: 0 }}
+										transition={{ delay: index * 0.05, type: 'spring', stiffness: 200 }}
+										whileHover={{ scale: 1.05 }}
+										whileTap={{ scale: 0.95 }}
+									>
+										{key.replace(/_/g, ' ')}
+										{activeChartTab === key && <motion.div className='absolute inset-0 -z-10 rounded-xl bg-primary' layoutId='active-chart-tab' transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />}
+									</motion.button>
+								))}
+							</div>
+						</motion.div>
 					) : null}
 
-					{/* Message Area or Chart */}
-					{chartMessage !== null && !(isMobile && mobileViewMode === 'chart') ? (
-						<div className={`bg-muted/20 border-border text-muted-foreground flex min-h-[400px] flex-grow items-center justify-center rounded border p-4 text-center ${isMobile ? 'text-base' : ''}`}>
-							{chartLimitExceeded ? (
-								<div>
-									<p className='mb-2 text-lg font-medium'>Chart generation disabled</p>
-									<p>Dataset size ({chartDocumentCount} documents) exceeds the limit.</p>
-									<p className='mt-1'>Apply more specific filters to reduce the count.</p>
-									{isMobile ? (
-										<p className='mt-4'>
-											<button type='button' className='text-primary underline' onClick={handleToggleMobileView}>
-												View Filters
-											</button>
+					{/* Enhanced Message Area or Chart */}
+					{isLoading ? (
+						<motion.div className='flex-grow p-8' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+							<ChartPanelSkeleton />
+						</motion.div>
+					) : chartMessage !== null && !(isMobile && mobileViewMode === 'chart') ? (
+						<motion.div className={`flex min-h-[450px] flex-grow items-center justify-center p-8 ${isMobile ? 'text-base' : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+							<div className='text-center'>
+								{chartLimitExceeded ? (
+									<>
+										<motion.div className='mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-destructive/20 to-destructive/10 shadow-lg' animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 3, repeat: Infinity }}>
+											<svg className='h-10 w-10 text-destructive' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+												<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' />
+											</svg>
+										</motion.div>
+										<h4 className='mb-2 text-xl font-semibold text-foreground'>Chart Generation Disabled</h4>
+										<p className='mb-2 text-base text-muted-foreground'>
+											Dataset size (<span className='font-mono font-semibold'>{chartDocumentCount.toLocaleString()}</span> documents) exceeds the limit.
 										</p>
-									) : null}
-								</div>
-							) : (
-								<div>
-									<p>{chartMessage}</p>
-									{isMobile && !canShowChartBasedOnFilters ? (
-										<p className='mt-4'>
-											<button type='button' className='text-primary underline' onClick={handleToggleMobileView}>
+										<p className='text-sm text-muted-foreground'>Apply more specific filters to reduce the count.</p>
+										{isMobile && (
+											<motion.button type='button' className='mt-6 inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20' onClick={handleToggleMobileView} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+												<svg className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+													<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' />
+												</svg>
 												View Filters
-											</button>
-										</p>
-									) : null}
-								</div>
-							)}
-						</div>
+											</motion.button>
+										)}
+									</>
+								) : (
+									<>
+										<motion.div className='mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-muted/50 to-muted/30' animate={{ rotate: [0, 360] }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}>
+											<svg className='h-10 w-10 text-muted-foreground' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+												<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
+											</svg>
+										</motion.div>
+										<p className='text-base font-medium text-muted-foreground'>{chartMessage}</p>
+										{isMobile && !canShowChartBasedOnFilters && (
+											<motion.button type='button' className='mt-6 inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20' onClick={handleToggleMobileView} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+												<svg className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+													<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' />
+												</svg>
+												View Filters
+											</motion.button>
+										)}
+									</>
+								)}
+							</div>
+						</motion.div>
 					) : activeChartTab !== null && getFormattedChartData !== null ? (
 						// Render the actual chart component
-						<div className='relative h-[400px] flex-grow'>
+						<motion.div className='relative h-[450px] flex-grow bg-gradient-to-br from-background/20 to-background/5' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
 							<TimeSeriesChart
 								TooltipInPortal={TooltipInPortal}
 								activeChartTab={activeChartTab}
@@ -159,44 +209,79 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 								// Pass tooltip props
 								tooltipData={tooltipData}
 							/>
-							{/* Changing Chart Tab Visual Overlay */}
+							{/* Enhanced Changing Chart Tab Visual Overlay */}
 							{changingChartTabVisual ? (
-								<div className='bg-background/40 absolute inset-0 z-20 flex items-center justify-center'>
-									<p className='text-muted-foreground text-lg'>Switching chart...</p>
-								</div>
+								<motion.div className='absolute inset-0 z-20 flex items-center justify-center bg-background/70 backdrop-blur-md' initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+									<div className='flex flex-col items-center gap-4'>
+										<motion.div className='h-12 w-12 rounded-full border-3 border-primary/30 border-t-primary' animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
+										<p className='text-sm font-medium text-muted-foreground'>Switching chart...</p>
+									</div>
+								</motion.div>
 							) : null}
-						</div>
+						</motion.div>
 					) : (
 						// Fallback if chartMessage is null but chart can't render
-						<div className='text-muted-foreground flex flex-grow items-center justify-center'>Chart data not available.</div>
+						<div className='flex flex-grow items-center justify-center text-muted-foreground'>
+							<div className='text-center'>
+								<svg className='mx-auto mb-3 h-12 w-12 text-muted-foreground/50' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+									<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
+								</svg>
+								<p className='text-sm'>Chart data not available.</p>
+							</div>
+						</div>
 					)}
 				</div>
 			) : (
-				// Fallback message when panel content shouldn't show
-				<div className='bg-muted/20 border-border text-muted-foreground flex min-h-[400px] flex-grow items-center justify-center rounded border p-4 text-center'>
-					{totalDocuments === 0 ? 'No documents match the current filters.' : 'Select filters to view data.'}
-					{isMobile ? (
-						<p className='mt-4'>
-							<button type='button' className='text-primary underline' onClick={handleToggleMobileView}>
+				// Enhanced fallback message when panel content shouldn't show
+				<motion.div className='flex min-h-[450px] flex-grow items-center justify-center p-8' initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+					<div className='text-center'>
+						<motion.div className='mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-muted/50 to-muted/30' animate={{ rotate: [0, -10, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity, repeatDelay: 2 }}>
+							<svg className='h-10 w-10 text-muted-foreground' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' />
+							</svg>
+						</motion.div>
+						<p className='text-base font-medium text-muted-foreground'>{totalDocuments === 0 ? 'No documents match the current filters.' : 'Select filters to view data.'}</p>
+						{isMobile && (
+							<motion.button type='button' className='mt-6 inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20' onClick={handleToggleMobileView} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+								<svg className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+									<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' />
+								</svg>
 								View Filters
-							</button>
-						</p>
-					) : null}
-				</div>
+							</motion.button>
+						)}
+					</div>
+				</motion.div>
 			)}
 
-			{/* Data source disclaimer */}
-			<div className='text-muted-foreground border-border mt-4 flex-shrink-0 border-t pt-2 text-xs'>
-				<p>
-					Filters show distinct values from the {totalDocuments} matching documents.
-					{chartLimitExceeded ? ' Charts disabled due to dataset size.' : canShowChartBasedOnFilters ? ` Charts display raw data points over time. ` /* Raw count removed as rawDataPoints isn't passed here */ : ' Apply all available filters to enable charts.'}
+			{/* Enhanced Footer */}
+			<motion.div className='border-t border-border/30 bg-gradient-to-r from-muted/10 to-muted/20 px-4 py-2.5' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+				<p className='flex items-center gap-3 text-xs text-muted-foreground'>
+					<span className='flex items-center gap-1.5'>
+						<svg className='h-3.5 w-3.5 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' />
+						</svg>
+						<span className='font-medium'>Data Source:</span>
+						<span className='font-mono font-semibold'>{totalDocuments.toLocaleString()}</span> documents
+					</span>
+					{chartLimitExceeded && (
+						<span className='flex items-center gap-1.5 text-destructive'>
+							<motion.span className='inline-block h-2 w-2 rounded-full bg-destructive' animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }} />
+							Charts disabled (limit exceeded)
+						</span>
+					)}
+					{!chartLimitExceeded && canShowChartBasedOnFilters && showCharts && (
+						<span className='flex items-center gap-1.5'>
+							<motion.span className='inline-block h-2 w-2 rounded-full bg-green-500' animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }} />
+							Real-time visualization
+						</span>
+					)}
 					{getFormattedChartData !== null && hiddenDatasets.size > 0 && (
-						<span className='text-muted-foreground/80 ml-1'>
-							({hiddenDatasets.size} dataset{hiddenDatasets.size > 1 ? 's' : ''} hidden via legend)
+						<span className='ml-auto opacity-70'>
+							{hiddenDatasets.size} dataset{hiddenDatasets.size > 1 ? 's' : ''} hidden
 						</span>
 					)}
 				</p>
-			</div>
-		</div>
+			</motion.div>
+		</motion.div>
 	);
 };
