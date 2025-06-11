@@ -15,7 +15,9 @@ export default defineConfig({
 			provider: 'v8', // or 'istanbul'
 			reporter: ['text', 'json', 'html'],
 		},
-		env: {}, // Assign the loaded environment variables
+		env: {
+			NODE_ENV: 'test',
+		}, // Assign the loaded environment variables
 		exclude: [
 			'**/node_modules/**',
 			'**/dist/**',
