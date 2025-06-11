@@ -104,7 +104,26 @@ describe('Palette Library Functions', () => {
 			expect(cookieSetterMock).not.toHaveBeenCalledWith(expect.stringContaining('domain='));
 		});
 
-		// TODO: Add test for error handling if needed
+		it('should handle setting a cookie when document.cookie setter fails', async () => {
+			// Mock console.error to suppress expected error output
+			const { mockConsoleError } = await import('testUtils/unit/console.helpers');
+			const consoleMock = mockConsoleError();
+
+			// Make the setter throw an error
+			cookieSetterMock.mockImplementation(() => {
+				throw new Error('Cannot set cookie');
+			});
+
+			// Should not throw, just fail silently
+			expect(() => setCookie('testKey', 'testValue')).not.toThrow();
+			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
+
+			// Verify console.error was called with the expected error
+			expect(consoleMock.spy).toHaveBeenCalledWith('Failed to set cookie:', 'testKey', expect.any(Error));
+
+			// Restore console.error
+			consoleMock.restore();
+		});
 	});
 
 	describe('getCookie', () => {
@@ -144,8 +163,6 @@ describe('Palette Library Functions', () => {
 			// Restore document
 			global.document = originalDocument;
 		});
-
-		// TODO: Add test for error handling if needed
 	});
 
 	describe('Constants', () => {

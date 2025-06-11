@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 
 // import AuthProvider from './authProvider'; // Remove custom AuthProvider import
@@ -12,6 +13,7 @@ import '~/styles/globals.css'; // Assuming global styles are here
 // import { Auth0Provider } from '@auth0/nextjs-auth0'; // Remove Auth0Provider import
 // Removed import { headers } from 'next/headers';
 import Topbar from '~/components/Topbar'; // Import the Topbar component
+import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl for dynamic URLs
 import { getSession } from '~/server/db/session'; // Import getSession function
 // import { ClientThemeInitializer } from '~/components/theme/ClientThemeInitializer'; // Import the new client wrapper - COMMENTED OUT
 // import Script from 'next/script'; // REMOVE next/script import
@@ -150,6 +152,57 @@ function getThemeInitializationScript(): string {
   `;
 }
 
+// SEO Metadata
+const baseUrl = getBaseUrl();
+export const metadata: Metadata = {
+	title: 'Kevin Porter - Full Stack Developer',
+	description: 'Full-stack developer passionate about creating elegant solutions to complex problems. Specializing in TypeScript, React, and modern web technologies.',
+	keywords: ['Kevin Porter', 'Full Stack Developer', 'TypeScript', 'React', 'Next.js', 'Web Development'],
+	authors: [{ name: 'Kevin Porter' }],
+	creator: 'Kevin Porter',
+	publisher: 'Kevin Porter',
+	metadataBase: new URL(baseUrl),
+	openGraph: {
+		title: 'Kevin Porter - Full Stack Developer',
+		description: 'Full-stack developer passionate about creating elegant solutions to complex problems. Specializing in TypeScript, React, and modern web technologies.',
+		url: baseUrl,
+		siteName: 'Kevin Porter Portfolio',
+		type: 'website',
+		locale: 'en_US',
+		images: [
+			{
+				url: '/og-image.png', // You'll need to add this image
+				width: 1200,
+				height: 630,
+				alt: 'Kevin Porter - Full Stack Developer',
+			},
+		],
+	},
+	twitter: {
+		card: 'summary_large_image',
+		title: 'Kevin Porter - Full Stack Developer',
+		description: 'Full-stack developer passionate about creating elegant solutions to complex problems.',
+		images: ['/og-image.png'],
+	},
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			'max-video-preview': -1,
+			'max-image-preview': 'large',
+			'max-snippet': -1,
+		},
+	},
+	icons: {
+		icon: '/favicon.ico',
+		shortcut: '/favicon-16x16.png',
+		apple: '/apple-touch-icon.png',
+	},
+	manifest: '/manifest.json',
+};
+
 export default async function RootLayout({ children }: { children: React.ReactNode }): Promise<React.JSX.Element> {
 	// REMOVED: Server-side cookie reading and style object creation
 	// const cookieStore = cookies();
@@ -171,15 +224,45 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				{/* Add other head elements like meta tags, title (if not in page/layout), etc. */}
 				{}
 				<script dangerouslySetInnerHTML={{ __html: getThemeInitializationScript() }} />
-				{/* <Script id="theme-init" strategy="beforeInteractive">
-					{getThemeInitializationScript()}
-				</Script> // REMOVED */}
+				{/* Resource Hints for Performance */}
+				<link rel='dns-prefetch' href='https://fonts.googleapis.com' />
+				<link rel='preconnect' href='https://fonts.googleapis.com' />
+				<link rel='preconnect' href='https://fonts.gstatic.com' crossOrigin='anonymous' />
+				{/* Structured Data for SEO */}
+				<script
+					type='application/ld+json'
+					dangerouslySetInnerHTML={{
+						__html: JSON.stringify({
+							'@context': 'https://schema.org',
+							'@type': 'Person',
+							name: 'Kevin Porter',
+							url: baseUrl,
+							sameAs: ['https://github.com/lawlzer', 'https://linkedin.com/in/lawlzer'],
+							jobTitle: 'Full Stack Developer',
+							description: 'Full-stack developer passionate about creating elegant solutions to complex problems. Specializing in TypeScript, React, and modern web technologies.',
+							knowsAbout: ['TypeScript', 'React', 'Next.js', 'Node.js', 'Web Development', 'Full Stack Development'],
+							alumniOf: {
+								'@type': 'Organization',
+								name: 'Self-taught',
+							},
+						}),
+					}}
+				/>
 			</head>
 			<body className='relative flex min-h-screen flex-col'>
+				{/* Skip Links for Accessibility */}
+				<a href='#main-content' className='sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none'>
+					Skip to main content
+				</a>
+				<a href='#navigation' className='sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-32 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none'>
+					Skip to navigation
+				</a>
 				{/* <ClientThemeInitializer /> // COMMENTED OUT: Initial theme now set by inline script */}
 				<Providers>
 					<Topbar session={session} />
-					<main className='flex-1 pt-16'>{children}</main>
+					<main id='main-content' className='flex-1 pt-16'>
+						{children}
+					</main>
 				</Providers>
 			</body>
 		</html>
