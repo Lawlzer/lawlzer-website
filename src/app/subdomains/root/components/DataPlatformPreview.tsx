@@ -6,9 +6,10 @@ import { localPoint } from '@visx/event';
 import { defaultStyles as defaultTooltipStyles, useTooltip, useTooltipInPortal } from '@visx/tooltip';
 import type { NumberValue } from '@visx/vendor/d3-scale';
 import { addDays, format as formatDateFns, getDayOfYear as dfnsGetDayOfYear, getYear } from 'date-fns';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { ChartPanel } from './ChartPanel'; // Import the chart panel
 import { FilterPanel } from './FilterPanel'; // Import the new component
@@ -127,6 +128,8 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	const [hiddenDatasets, setHiddenDatasets] = useState<Set<string>>(new Set());
 	// NEW: State for mobile view
 	const [mobileViewMode, setMobileViewMode] = useState<'chart' | 'filters'>('filters');
+	// NEW: State for showing project info
+	const [showProjectInfo, setShowProjectInfo] = useState<boolean>(false);
 
 	// --- Hooks ---
 	const isMobile = useMediaQuery('(max-width: 1023px)'); // Tailwind's lg breakpoint
@@ -221,9 +224,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		console.debug('[fetchFiltersAndCount] Triggered');
 		setLoadingFilters(true);
 		setError(null);
-		setRawDataPoints(undefined); // Clear raw data when filters change
-		setChartLimitExceeded(false);
-		setActiveChartTab(null);
+		// Don't clear existing data - let chart data update separately
 
 		try {
 			const params = new URLSearchParams();
@@ -249,8 +250,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 			setAvailableFilters(null);
 			setTotalDocuments(0);
 			setCommonFields(null);
-			setRawDataPoints(undefined);
-			setChartLimitExceeded(false);
+			// Don't reset chart data on filter fetch error
 		} finally {
 			setLoadingFilters(false);
 		}
@@ -293,25 +293,23 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	}, [availableFilters, activeFilters, loadingFilters]);
 
 	// --- Effects ---
-	// Fetch filters when activeFilters change
+	// Fetch filters when component mounts or when activeFilters change
 	useEffect(() => {
-		console.debug('Effect 1: Filters');
-		// Reset mobile view to filters when filters change significantly
-		if (isMobile) {
-			setMobileViewMode('filters');
-		}
+		console.debug('Effect 1: Filters Fetch - Triggered by mount or filter change');
 		void fetchFiltersAndCount();
-	}, [fetchFiltersAndCount, isMobile]); // Add isMobile dependency
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [activeFilters]); // Run when activeFilters change
 
-	// Fetch chart data when activeFilters change or when filters finish loading
+	// Fetch chart data when activeFilters change
 	useEffect(() => {
-		console.debug('Effect 2: Chart Data - Triggered by filter change or loading state');
-		if (!loadingFilters) {
+		console.debug('Effect 2: Chart Data - Triggered by filter change');
+		// Don't fetch chart data until we have the initial filters loaded
+		if (!loadingFilters && availableFilters !== null) {
 			void fetchChartData();
 		}
-	}, [activeFilters, loadingFilters, fetchChartData]); // Triggered by activeFilters (via fetchChartData dep) or loadingFilters change
+	}, [activeFilters, loadingFilters, availableFilters, fetchChartData]);
 
-	// NEW Effect: Switch to chart view on mobile when ready
+	// Handle mobile view switching
 	useEffect(() => {
 		if (isMobile && canShowChartBasedOnFilters && !loadingFilters && !loadingChartData && !chartLimitExceeded && chartableFields.length > 0) {
 			// Only switch if we can actually show *something* in the chart panel
@@ -320,7 +318,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		}
 		// Intentionally don't switch back automatically if filters become incomplete
 		// User must use the button or clear filters to go back
-	}, [isMobile, canShowChartBasedOnFilters, loadingFilters, loadingChartData, chartLimitExceeded, chartableFields.length]); // Add dependencies
+	}, [isMobile, canShowChartBasedOnFilters, loadingFilters, loadingChartData, chartLimitExceeded, chartableFields.length]);
 
 	// --- Event Handlers ---
 
@@ -659,178 +657,274 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	// --- Render Logic ---
 
 	return (
-		// Fixed modal wrapper with backdrop
-		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4' onClick={onClose}>
-			<motion.div
-				initial={{ scale: 0.9, opacity: 0 }}
-				animate={{ scale: 1, opacity: 1 }}
-				exit={{ scale: 0.9, opacity: 0 }}
-				transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-				className='relative flex max-h-[90vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-background shadow-2xl'
-				onClick={(e) => {
-					e.stopPropagation();
-				}}
-			>
-				{/* Close button */}
-				<button aria-label='Close' className='absolute top-4 right-4 z-10 rounded-lg bg-secondary/80 p-2 text-foreground backdrop-blur-sm transition-all hover:bg-secondary hover:scale-110' onClick={onClose}>
-					<svg className='h-5 w-5' fill='none' stroke='currentColor' strokeWidth={2} viewBox='0 0 24 24'>
-						<path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
-					</svg>
-				</button>
+		<>
+			{/* Fixed modal wrapper with backdrop */}
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4' onClick={onClose}>
+				<motion.div
+					initial={{ scale: 0.9, opacity: 0 }}
+					animate={{ scale: 1, opacity: 1 }}
+					exit={{ scale: 0.9, opacity: 0 }}
+					transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+					className='relative flex h-[calc(100vh-2rem)] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-background shadow-2xl'
+					onClick={(e) => {
+						e.stopPropagation();
+					}}
+				>
+					{/* Close button */}
+					<button aria-label='Close' className='absolute top-4 right-4 z-10 rounded-lg bg-secondary/80 p-2 text-foreground backdrop-blur-sm transition-all hover:bg-secondary hover:scale-110' onClick={onClose}>
+						<svg className='h-5 w-5' fill='none' stroke='currentColor' strokeWidth={2} viewBox='0 0 24 24'>
+							<path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
+						</svg>
+					</button>
 
-				{/* Original component content */}
-				<div className='h-full w-full overflow-y-auto'>
-					{/* Header */}
-					<div className='sticky top-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent backdrop-blur-xl border-b border-border/50'>
-						<div className='px-6 py-4 sm:px-8 sm:py-6'>
-							<div className='flex items-center justify-between'>
-								<motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className='flex items-center gap-4'>
-									<div className='p-3 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg'>
-										<ChartBarIcon className='h-6 w-6' />
+					{/* Original component content */}
+					<div className='flex flex-col h-full w-full'>
+						{/* Header */}
+						<div className='flex-shrink-0 bg-gradient-to-b from-background via-background/95 to-transparent backdrop-blur-xl border-b border-border/50'>
+							<div className='px-3 py-2 sm:px-4 sm:py-2.5'>
+								<div className='flex items-center justify-between'>
+									<motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className='flex items-center gap-3'>
+										<div className='p-2 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg'>
+											<ChartBarIcon className='h-5 w-5' />
+										</div>
+										<div>
+											<h2 className='text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent'>Data Platform</h2>
+											<p className='text-xs text-secondary-text'>Explore agricultural data with dynamic filters</p>
+										</div>
+									</motion.div>
+									<motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className='flex items-center gap-1.5'>
+										<div className='flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20'>
+											<div className='h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse' />
+											<span className='text-[11px] font-medium text-emerald-600'>Live</span>
+										</div>
+										<button
+											type='button'
+											onClick={() => {
+												setShowProjectInfo(!showProjectInfo);
+											}}
+											className='flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors'
+										>
+											<svg className='h-3.5 w-3.5 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+												<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
+											</svg>
+											<span className='text-[11px] font-medium text-primary'>About</span>
+										</button>
+									</motion.div>
+								</div>
+
+								{/* Stats bar */}
+								<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className='mt-2 grid grid-cols-3 gap-2'>
+									<div className='flex items-center gap-2 p-2 rounded-md bg-card border border-border'>
+										<div className='p-1.5 rounded bg-primary/10'>
+											<DocumentTextIcon className='h-3.5 w-3.5 text-primary' />
+										</div>
+										<div>
+											<p className='text-[10px] text-secondary-text'>Documents</p>
+											<p className='text-sm font-semibold text-foreground'>{totalDocuments.toLocaleString()}</p>
+										</div>
 									</div>
-									<div>
-										<h2 className='text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent'>Data Platform</h2>
-										<p className='text-sm text-secondary-text mt-0.5'>Explore agricultural data with dynamic filters</p>
+									<div className='flex items-center gap-2 p-2 rounded-md bg-card border border-border'>
+										<div className='p-1.5 rounded bg-blue-500/10'>
+											<FunnelIcon className='h-3.5 w-3.5 text-blue-500' />
+										</div>
+										<div>
+											<p className='text-[10px] text-secondary-text'>Filters</p>
+											<p className='text-sm font-semibold text-foreground'>{Object.keys(activeFilters).length}</p>
+										</div>
 									</div>
-								</motion.div>
-								<motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className='flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20'>
-									<div className='h-2 w-2 rounded-full bg-emerald-500 animate-pulse' />
-									<span className='text-xs font-medium text-emerald-600'>Live Data</span>
+									<div className='flex items-center gap-2 p-2 rounded-md bg-card border border-border'>
+										<div className='p-1.5 rounded bg-green-500/10'>
+											<SparklesIcon className='h-3.5 w-3.5 text-green-500' />
+										</div>
+										<div>
+											<p className='text-[10px] text-secondary-text'>Status</p>
+											<p className='text-[11px] font-medium text-green-600'>{loadingFilters || loadingChartData ? 'Updating...' : 'Ready'}</p>
+										</div>
+									</div>
 								</motion.div>
 							</div>
+						</div>
 
-							{/* Stats bar */}
-							<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className='mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3'>
-								<div className='flex items-center gap-3 p-3 rounded-lg bg-card border border-border'>
-									<div className='p-2 rounded-lg bg-primary/10'>
-										<DocumentTextIcon className='h-4 w-4 text-primary' />
+						{/* Content area */}
+						<div className={`flex-1 overflow-hidden p-2 sm:p-3 ${isMobile ? '' : ''}`}>
+							{isMobile ? (
+								// Mobile View: Show one panel at a time
+								<div className='h-full w-full'>
+									{mobileViewMode === 'filters' ? (
+										<FilterPanel
+											activeFilters={activeFilters}
+											availableFilters={availableFilters} // Pass needed prop
+											commonFields={commonFields}
+											error={error}
+											handleClearFilters={handleClearFilters}
+											handleFilterToggle={handleFilterToggle}
+											hasFilterData={hasFilterData}
+											isFilterActive={isFilterActive}
+											isLoading={loadingFilters} // Pass specific loading state
+											isMobile={isMobile}
+											sortedFilterEntries={sortedFilterEntries}
+											totalDocuments={totalDocuments}
+											searchTerm=''
+											showAllStates={{}}
+										/>
+									) : (
+										// Pass props needed by ChartPanel
+										<ChartPanel
+											TooltipInPortal={TooltipInPortal}
+											activeChartTab={activeChartTab}
+											canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+											changingChartTabVisual={changingChartTabVisual}
+											chartDocumentCount={chartDocumentCount}
+											chartLimitExceeded={chartLimitExceeded}
+											chartMessage={chartMessage}
+											chartableFields={chartableFields}
+											containerRef={containerRef}
+											error={error}
+											getFormattedChartData={getFormattedChartData} // Pass the memoized data
+											handleChartTabChange={handleChartTabChange}
+											handleToggleMobileView={handleToggleMobileView}
+											handleTooltip={handleTooltip}
+											hiddenDatasets={hiddenDatasets}
+											hideTooltip={hideTooltip}
+											isLoading={loadingChartData} // Use chart loading state
+											isMobile={isMobile}
+											mobileViewMode={mobileViewMode}
+											showCharts={showCharts}
+											tooltipLeft={tooltipLeft}
+											tooltipOpen={tooltipOpen}
+											tooltipTop={tooltipTop}
+											totalDocuments={totalDocuments} // Pass total documents
+											handleLegendClick={handleLegendClick}
+											// Pass tooltip props
+											tooltipData={tooltipData}
+										/>
+									)}
+								</div>
+							) : (
+								// Desktop View: Show both panels side-by-side
+								<div className='grid grid-cols-1 gap-2 lg:gap-3 lg:grid-cols-4 h-full overflow-hidden'>
+									{/* Filter Panel */}
+									<div className='lg:col-span-1 h-full overflow-hidden'>
+										<FilterPanel activeFilters={activeFilters} availableFilters={availableFilters} commonFields={commonFields} error={error} handleClearFilters={handleClearFilters} handleFilterToggle={handleFilterToggle} hasFilterData={hasFilterData} isFilterActive={isFilterActive} isLoading={loadingFilters} isMobile={isMobile} sortedFilterEntries={sortedFilterEntries} totalDocuments={totalDocuments} searchTerm='' showAllStates={{}} />
 									</div>
-									<div>
-										<p className='text-xs text-secondary-text'>Total Documents</p>
-										<p className='text-lg font-semibold text-foreground'>{totalDocuments.toLocaleString()}</p>
+									{/* Chart Panel */}
+									<div className='lg:col-span-3 h-full overflow-hidden'>
+										<ChartPanel
+											TooltipInPortal={TooltipInPortal}
+											activeChartTab={activeChartTab}
+											canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+											changingChartTabVisual={changingChartTabVisual}
+											chartDocumentCount={chartDocumentCount}
+											chartLimitExceeded={chartLimitExceeded}
+											chartMessage={chartMessage}
+											chartableFields={chartableFields}
+											containerRef={containerRef}
+											error={error}
+											getFormattedChartData={getFormattedChartData}
+											handleChartTabChange={handleChartTabChange}
+											handleToggleMobileView={handleToggleMobileView}
+											handleTooltip={handleTooltip}
+											hiddenDatasets={hiddenDatasets}
+											hideTooltip={hideTooltip}
+											isLoading={loadingChartData}
+											isMobile={isMobile}
+											mobileViewMode={mobileViewMode}
+											showCharts={showCharts}
+											tooltipLeft={tooltipLeft}
+											tooltipOpen={tooltipOpen}
+											tooltipTop={tooltipTop}
+											totalDocuments={totalDocuments}
+											handleLegendClick={handleLegendClick}
+											// Pass tooltip props
+											tooltipData={tooltipData}
+										/>
 									</div>
 								</div>
-								<div className='flex items-center gap-3 p-3 rounded-lg bg-card border border-border'>
-									<div className='p-2 rounded-lg bg-blue-500/10'>
-										<FunnelIcon className='h-4 w-4 text-blue-500' />
-									</div>
-									<div>
-										<p className='text-xs text-secondary-text'>Active Filters</p>
-										<p className='text-lg font-semibold text-foreground'>{Object.keys(activeFilters).length}</p>
-									</div>
-								</div>
-								<div className='flex items-center gap-3 p-3 rounded-lg bg-card border border-border'>
-									<div className='p-2 rounded-lg bg-green-500/10'>
-										<SparklesIcon className='h-4 w-4 text-green-500' />
-									</div>
-									<div>
-										<p className='text-xs text-secondary-text'>Status</p>
-										<p className='text-sm font-medium text-green-600'>{loadingFilters || loadingChartData ? 'Updating...' : 'Ready'}</p>
-									</div>
-								</div>
-							</motion.div>
+							)}
 						</div>
 					</div>
-
-					{/* Content area */}
-					<div className={`flex-1 p-6 ${isMobile ? '' : 'min-h-[500px]'}`}>
-						{isMobile ? (
-							// Mobile View: Show one panel at a time
-							<div className='h-full w-full'>
-								{mobileViewMode === 'filters' ? (
-									<FilterPanel
-										activeFilters={activeFilters}
-										availableFilters={availableFilters} // Pass needed prop
-										commonFields={commonFields}
-										error={error}
-										handleClearFilters={handleClearFilters}
-										handleFilterToggle={handleFilterToggle}
-										hasFilterData={hasFilterData}
-										isFilterActive={isFilterActive}
-										isLoading={loadingFilters} // Pass specific loading state
-										isMobile={isMobile}
-										sortedFilterEntries={sortedFilterEntries}
-										totalDocuments={totalDocuments}
-										searchTerm=''
-										showAllStates={{}}
-									/>
-								) : (
-									// Pass props needed by ChartPanel
-									<ChartPanel
-										TooltipInPortal={TooltipInPortal}
-										activeChartTab={activeChartTab}
-										canShowChartBasedOnFilters={canShowChartBasedOnFilters}
-										changingChartTabVisual={changingChartTabVisual}
-										chartDocumentCount={chartDocumentCount}
-										chartLimitExceeded={chartLimitExceeded}
-										chartMessage={chartMessage}
-										chartableFields={chartableFields}
-										containerRef={containerRef}
-										error={error}
-										getFormattedChartData={getFormattedChartData} // Pass the memoized data
-										handleChartTabChange={handleChartTabChange}
-										handleToggleMobileView={handleToggleMobileView}
-										handleTooltip={handleTooltip}
-										hiddenDatasets={hiddenDatasets}
-										hideTooltip={hideTooltip}
-										isLoading={loadingChartData} // Use chart loading state
-										isMobile={isMobile}
-										mobileViewMode={mobileViewMode}
-										showCharts={showCharts}
-										tooltipLeft={tooltipLeft}
-										tooltipOpen={tooltipOpen}
-										tooltipTop={tooltipTop}
-										totalDocuments={totalDocuments} // Pass total documents
-										handleLegendClick={handleLegendClick}
-										// Pass tooltip props
-										tooltipData={tooltipData}
-									/>
-								)}
-							</div>
-						) : (
-							// Desktop View: Show both panels side-by-side
-							<div className='grid grid-cols-1 gap-6 lg:grid-cols-4 h-full'>
-								{/* Filter Panel */}
-								<div className='lg:col-span-1'>
-									<FilterPanel activeFilters={activeFilters} availableFilters={availableFilters} commonFields={commonFields} error={error} handleClearFilters={handleClearFilters} handleFilterToggle={handleFilterToggle} hasFilterData={hasFilterData} isFilterActive={isFilterActive} isLoading={loadingFilters} isMobile={isMobile} sortedFilterEntries={sortedFilterEntries} totalDocuments={totalDocuments} searchTerm='' showAllStates={{}} />
-								</div>
-								{/* Chart Panel */}
-								<div className='lg:col-span-3'>
-									<ChartPanel
-										TooltipInPortal={TooltipInPortal}
-										activeChartTab={activeChartTab}
-										canShowChartBasedOnFilters={canShowChartBasedOnFilters}
-										changingChartTabVisual={changingChartTabVisual}
-										chartDocumentCount={chartDocumentCount}
-										chartLimitExceeded={chartLimitExceeded}
-										chartMessage={chartMessage}
-										chartableFields={chartableFields}
-										containerRef={containerRef}
-										error={error}
-										getFormattedChartData={getFormattedChartData}
-										handleChartTabChange={handleChartTabChange}
-										handleToggleMobileView={handleToggleMobileView}
-										handleTooltip={handleTooltip}
-										hiddenDatasets={hiddenDatasets}
-										hideTooltip={hideTooltip}
-										isLoading={loadingChartData}
-										isMobile={isMobile}
-										mobileViewMode={mobileViewMode}
-										showCharts={showCharts}
-										tooltipLeft={tooltipLeft}
-										tooltipOpen={tooltipOpen}
-										tooltipTop={tooltipTop}
-										totalDocuments={totalDocuments}
-										handleLegendClick={handleLegendClick}
-										// Pass tooltip props
-										tooltipData={tooltipData}
-									/>
-								</div>
-							</div>
-						)}
-					</div>
-				</div>
+				</motion.div>
 			</motion.div>
-		</motion.div>
+
+			{/* Project Info Modal */}
+			<AnimatePresence>
+				{showProjectInfo && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.2 }}
+						className='fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4'
+						onClick={() => {
+							setShowProjectInfo(false);
+						}}
+					>
+						<motion.div
+							initial={{ scale: 0.9, opacity: 0 }}
+							animate={{ scale: 1, opacity: 1 }}
+							exit={{ scale: 0.9, opacity: 0 }}
+							transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+							className='relative w-full max-w-2xl rounded-xl bg-background shadow-2xl border border-border'
+							onClick={(e) => {
+								e.stopPropagation();
+							}}
+						>
+							{/* Close button */}
+							<button
+								type='button'
+								className='absolute top-3 right-3 rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors'
+								onClick={() => {
+									setShowProjectInfo(false);
+								}}
+							>
+								<svg className='h-5 w-5' fill='none' stroke='currentColor' strokeWidth={2} viewBox='0 0 24 24'>
+									<path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
+								</svg>
+							</button>
+
+							{/* Content */}
+							<div className='p-6'>
+								<h3 className='text-lg font-semibold text-foreground mb-4 flex items-center gap-2'>
+									<SparklesIcon className='h-5 w-5 text-primary' />
+									Why This Project Was Unique
+								</h3>
+								<div className='space-y-3 text-sm text-muted-foreground'>
+									<div className='flex items-start gap-3'>
+										<div className='h-2 w-2 rounded-full bg-primary mt-1.5 flex-shrink-0' />
+										<p>
+											<span className='font-medium text-foreground'>Complex Data Integration:</span> Built for a trading firm, this platform dynamically handled data from hundreds of USDA APIs with unique formats.
+										</p>
+									</div>
+									<div className='flex items-start gap-3'>
+										<div className='h-2 w-2 rounded-full bg-primary mt-1.5 flex-shrink-0' />
+										<p>
+											<span className='font-medium text-foreground'>Intelligent Mongoose Schema:</span> Instead of handling 50+ APIs individually, we created a universal &quot;Data Platform&quot; that accepted any data structure, and dynamically implemented searching & filtering.
+										</p>
+									</div>
+									<div className='flex items-start gap-3'>
+										<div className='h-2 w-2 rounded-full bg-primary mt-1.5 flex-shrink-0' />
+										<p>
+											<span className='font-medium text-foreground'>Massive Scale:</span> Contained a total of ~2 billion MongoDB documents with complex aggregation queries, while maintaining sub-second response times through caching.
+										</p>
+									</div>
+									<div className='flex items-start gap-3'>
+										<div className='h-2 w-2 rounded-full bg-primary mt-1.5 flex-shrink-0' />
+										<p>
+											<span className='font-medium text-foreground'>High Performance:</span> Intelligently scraped over 1,000 pages per hour, ensuring traders had access to data within ~3 minutes of publication.
+										</p>
+									</div>
+									<div className='flex items-start gap-3'>
+										<div className='h-2 w-2 rounded-full bg-primary mt-1.5 flex-shrink-0' />
+										<p className='italic'>
+											<span className='font-medium text-foreground'>Note:</span> This demo is a HEAVILY simplified version showcasing the core concepts. The production system handled far greater complexity with real-time data streams, better filtering, advanced filtering.
+										</p>
+									</div>
+								</div>
+							</div>
+						</motion.div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</>
 	);
 }

@@ -64,6 +64,8 @@ const getYAxisLabel = (dataType: string): string => {
 	if (/count|number|quantity|total|frequency/i.test(dataType)) return formattedName;
 	if (/percentage|ratio|rate|share/i.test(dataType)) return `${formattedName} (%)`;
 	if (/size|weight|height|width|length|duration|age/i.test(dataType)) return formattedName;
+	// Special case for "head" to indicate it's a count
+	if (dataType.toLowerCase() === 'head') return `${formattedName} (Count)`;
 	return formattedName;
 };
 
@@ -127,9 +129,30 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 					minY = 0;
 					maxY = 1;
 				}
-				const yPadding = (maxY - minY) * 0.1 === 0 ? 1 : (maxY - minY) * 0.1;
+
+				// Improve Y-axis scaling for small-range fields
+				const range = maxY - minY;
+				let yPadding: number;
+
+				// For fields with small absolute ranges (like "head" with 50-500 range)
+				if (activeChartTab.toLowerCase() === 'head' || range < 1000) {
+					// Use percentage-based padding for better visualization
+					yPadding = range * 0.15; // 15% padding for small ranges
+					// Ensure minimum padding for very small ranges
+					if (yPadding < 10) yPadding = 10;
+				} else {
+					// Standard 10% padding for large ranges
+					yPadding = range * 0.1;
+					if (yPadding === 0) yPadding = 1;
+				}
+
+				// Apply padding with special handling for negative values
 				minY = minY < 0 ? minY - yPadding : Math.max(0, minY - yPadding);
 				maxY += yPadding;
+
+				// For small-range fields, ensure we have enough tick marks for readability
+				const numYTicks = range < 1000 ? 8 : 5;
+
 				const yScale = scaleLinear<number>({ domain: [minY, maxY], range: [innerHeight, 0], nice: true });
 
 				// Prepare legend items
@@ -212,7 +235,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 								/>
 								<AxisLeft
 									label={getYAxisLabel(activeChartTab)}
-									numTicks={5}
+									numTicks={numYTicks}
 									scale={yScale}
 									stroke='#333'
 									tickStroke='#333'
@@ -229,6 +252,19 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 										textAnchor: 'end',
 										dx: '-0.25em',
 										dy: '0.25em',
+									}}
+									tickFormat={(value) => {
+										// Format tick labels based on the data range
+										const num = typeof value === 'number' ? value : value.valueOf();
+										if (activeChartTab.toLowerCase() === 'head' || range < 1000) {
+											// Show full numbers for small ranges
+											return Math.round(num).toString();
+										} else if (num >= 1000000) {
+											return `${(num / 1000000).toFixed(1)}M`;
+										} else if (num >= 1000) {
+											return `${(num / 1000).toFixed(0)}K`;
+										}
+										return num.toFixed(0);
 									}}
 								/>
 
