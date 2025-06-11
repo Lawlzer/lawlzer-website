@@ -33,7 +33,7 @@ export default defineConfig({
 	updateSnapshots: 'missing',
 	metadata: {},
 	use: {
-		baseURL: process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:3000',
+		baseURL: process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://dev.localhost:3000',
 		trace: Boolean(process.env.CI) ? 'retain-on-failure' : 'on',
 		headless: true,
 		viewport: { width: 1280, height: 720 },
@@ -86,18 +86,17 @@ export default defineConfig({
 						: []),
 				]),
 	],
-	webServer: [
-		{
-			command: process.env.PLAYWRIGHT_BACKEND_URL !== undefined && process.env.PLAYWRIGHT_BACKEND_URL.trim() !== '' ? '' : 'npm run dev',
-			url: process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:3000',
-		},
-		...(Boolean(process.env.GITHUB_ACTIONS) || Boolean(process.env.CI)
-			? []
+	webServer:
+		process.env.PLAYWRIGHT_BACKEND_URL !== undefined && process.env.PLAYWRIGHT_BACKEND_URL !== ''
+			? undefined // Don't start a server if URL is provided
 			: [
 					{
-						command: process.env.PLAYWRIGHT_DATABASE_URL !== undefined && process.env.PLAYWRIGHT_DATABASE_URL.trim() !== '' ? '' : 'docker-compose up database -d',
-						url: process.env.PLAYWRIGHT_DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/site',
+						command: 'npm run dev',
+						url: 'http://dev.localhost:3000',
+						timeout: 120000, // Increase timeout to 2 minutes
+						reuseExistingServer: true, // Always reuse existing server if available
+						stdout: 'pipe',
+						stderr: 'pipe',
 					},
-				]),
-	],
+				],
 });
