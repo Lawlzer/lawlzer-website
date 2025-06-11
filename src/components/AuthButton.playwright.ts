@@ -7,7 +7,7 @@ test.describe('AuthButton', () => {
 		await page.waitForLoadState('networkidle');
 
 		// Check if login button is visible
-		const loginButton = page.getByRole('button', { name: /login/i });
+		const loginButton = page.getByRole('button', { name: /sign in/i });
 		await expect(loginButton).toBeVisible();
 
 		// Click button to see login options
