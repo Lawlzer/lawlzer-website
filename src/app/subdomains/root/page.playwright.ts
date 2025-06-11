@@ -19,7 +19,7 @@ test('homepage loads healthily', async ({ page }) => {
 	// The title would need to be set via a document.title assignment or Head component
 
 	// 2. Check main heading visibility (this is working correctly)
-	await expect(page.getByRole('heading', { name: /Welcome!/i })).toBeVisible();
+	await expect(page.locator('h1').filter({ hasText: 'Kevin Porter' })).toBeVisible();
 
 	// 3. Check that key content is present
 	await expect(page.getByText('Kevin Porter')).toBeVisible();

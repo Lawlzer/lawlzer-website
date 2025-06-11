@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { vi } from 'vitest';
@@ -18,55 +18,74 @@ vi.mock('~/lib/utils', () => ({
 	}),
 }));
 
+// Mock DataPlatformPreview to avoid lazy loading issues
+vi.mock('./components/DataPlatformPreview', () => ({
+	default: () => <div data-testid='data-platform-preview'>Data Platform Preview</div>,
+}));
+
 describe('MainPage', () => {
-	it('renders the main heading', () => {
+	it('should render the page title', () => {
 		render(<MainPage />);
-		const heading = screen.getByRole('heading', { name: /Welcome!/i });
-		expect(heading).toBeInTheDocument();
+
+		// Debug output removed - was causing linter error
+
+		// Look for the main heading with both parts
+		expect(screen.getByText(/Hi, I'm/i)).toBeInTheDocument();
+		expect(screen.getByText(/Kevin Porter/i)).toBeInTheDocument();
 	});
 
-	it('renders the introduction text with profile links', () => {
+	it('should render the introduction text', () => {
 		render(<MainPage />);
-		expect(screen.getByText(/The website of/i)).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: /Kevin Porter/i })).toHaveAttribute('href', 'https://www.linkedin.com/in/kevin-porter-6a80b7210/');
-		expect(screen.getByRole('link', { name: /Lawlzer/i })).toHaveAttribute('href', 'https://github.com/Lawlzer');
+
+		expect(screen.getByText(/I'm a full-stack developer passionate about creating elegant solutions to complex problems/i)).toBeInTheDocument();
 	});
 
-	it('renders the "View Source on GitHub" link', () => {
+	it('should render stats', () => {
 		render(<MainPage />);
-		const githubLink = screen.getByRole('link', { name: /View Source Code on GitHub/i });
-		expect(githubLink).toBeInTheDocument();
-		expect(githubLink).toHaveAttribute('href', 'https://github.com/Lawlzer/lawlzer-website');
+
+		expect(screen.getByText('7+')).toBeInTheDocument();
+		expect(screen.getByText('Years of Experience')).toBeInTheDocument();
+		expect(screen.getByText('50+')).toBeInTheDocument();
+		expect(screen.getByText('Projects Completed')).toBeInTheDocument();
+		expect(screen.getByText('1,000+')).toBeInTheDocument();
+		expect(screen.getByText('GitHub Contributions')).toBeInTheDocument();
 	});
 
-	it('renders the "Featured Projects" section heading', () => {
+	it('should render featured projects', () => {
 		render(<MainPage />);
-		const projectsHeading = screen.getByRole('heading', { name: /Featured Projects/i });
-		expect(projectsHeading).toBeInTheDocument();
+
+		expect(screen.getByText('Featured Projects')).toBeInTheDocument();
+		expect(screen.getByText(/dev.lawlzer \(This Website!\)/i)).toBeInTheDocument();
+		expect(screen.getByText(/Data Platform/i)).toBeInTheDocument();
+		expect(screen.getByText(/Web Scraping Solutions/i)).toBeInTheDocument();
+		expect(screen.getByText(/Open Source Contributions/i)).toBeInTheDocument();
 	});
 
-	it('renders the project showcase with title and description', () => {
+	it('should render GitHub and LinkedIn links', () => {
 		render(<MainPage />);
-		// Use a regex that allows for different hostnames potentially determined by getBaseUrl
-		expect(screen.getByRole('heading', { name: /dev\.lawlzer \(This Website!\)/i })).toBeInTheDocument();
-		expect(screen.getByText(/A personal portfolio and project hub built with Next.js/i)).toBeInTheDocument();
+
+		const githubLink = screen.getByRole('link', { name: /GitHub/i });
+		expect(githubLink).toHaveAttribute('href', 'https://github.com/lawlzer');
+		expect(githubLink).toHaveAttribute('target', '_blank');
+
+		const linkedinLink = screen.getByRole('link', { name: /LinkedIn/i });
+		expect(linkedinLink).toHaveAttribute('href', 'https://www.linkedin.com/in/kevin-porter-6a80b7210/');
+		expect(linkedinLink).toHaveAttribute('target', '_blank');
 	});
 
-	it('renders the key features including links', () => {
+	it('should render project features', () => {
 		render(<MainPage />);
-		// Find the container for the first project (This Website!)
-		const projectContainer = screen.getByRole('heading', { name: /dev\.lawlzer \(This Website!\)/i }).closest('div.flex-grow')?.parentElement;
-		expect(projectContainer).toBeInTheDocument(); // Assert the container is found
 
-		if (projectContainer) {
-			// Scope the search within the first project's container
-			expect(within(projectContainer).getByText(/Key Features:/i)).toBeInTheDocument();
-			expect(within(projectContainer).getByRole('link', { name: /Dynamic Color Theming/i })).toHaveAttribute('href', 'http://colors.dev.lawlzer');
-			expect(within(projectContainer).getByRole('link', { name: /Valorant Lineup Tool/i })).toHaveAttribute('href', 'http://valorant.dev.lawlzer');
-			expect(within(projectContainer).getByText(/Responsive & Mobile-First/i)).toBeInTheDocument();
-		} else {
-			// Fail the test explicitly if the container wasn't found
-			expect(projectContainer).not.toBeNull();
-		}
+		// Website features
+		expect(screen.getByText('Dynamic Color Theming')).toBeInTheDocument();
+		expect(screen.getByText('Valorant Lineup Tool')).toBeInTheDocument();
+		expect(screen.getByText('Responsive & Mobile-First')).toBeInTheDocument();
+		expect(screen.getByText('Perfect Lighthouse Score')).toBeInTheDocument();
+
+		// Data Platform features
+		expect(screen.getByText('Dynamic Mongoose DB for 2+ billion documents')).toBeInTheDocument();
+		expect(screen.getByText('Hourly USDA API integration')).toBeInTheDocument();
+		expect(screen.getByText('AWS EC2 & Lambda deployment')).toBeInTheDocument();
+		expect(screen.getByText('98% test coverage (Jest & Supertest)')).toBeInTheDocument();
 	});
 });
