@@ -20,13 +20,19 @@ export default function ProtectedLink({ href, children, className, ...props }: P
 
 		// Check if the window object exists (for SSR and testing)
 		if (typeof window !== 'undefined' && window.__NEXT_PROTECT_UNSAVED_CHANGES__) {
-			// Call the function to see if we should intercept
-			const shouldIntercept = window.__NEXT_PROTECT_UNSAVED_CHANGES__(targetPath);
+			try {
+				// Call the function to see if we should intercept
+				const shouldIntercept = window.__NEXT_PROTECT_UNSAVED_CHANGES__(targetPath);
 
-			if (shouldIntercept) {
-				e.preventDefault();
-				// Navigation will be handled by the function
-				return;
+				if (shouldIntercept) {
+					e.preventDefault();
+					// Navigation will be handled by the function
+					return;
+				}
+			} catch (error) {
+				// If the protection function throws, log the error but allow navigation
+				console.error('Error in navigation protection function:', error);
+				// Continue with default navigation behavior
 			}
 		}
 
