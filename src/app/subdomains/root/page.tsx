@@ -1,240 +1,270 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion'; // Import motion and AnimatePresence
-// Import Image for placeholders
+import { ArrowRightIcon, ChartBarIcon, CodeBracketIcon, CommandLineIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { BeakerIcon, BriefcaseIcon, CheckCircleIcon, CubeIcon, GlobeAltIcon, LinkIcon, RocketLaunchIcon } from '@heroicons/react/24/solid';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
-import DataPlatformPreview from './components/DataPlatformPreview'; // Import the new component
+import DataPlatformPreview from './components/DataPlatformPreview';
 
-import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl
+import { getBaseUrl } from '~/lib/utils';
+
+// Animation variants with improved timing
+const containerVariants = {
+	hidden: { opacity: 0 },
+	visible: {
+		opacity: 1,
+		transition: {
+			staggerChildren: 0.08,
+			delayChildren: 0.1,
+		},
+	},
+};
+
+const itemVariants = {
+	hidden: { opacity: 0, y: 20 },
+	visible: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			duration: 0.4,
+			ease: [0.25, 0.1, 0.25, 1],
+		},
+	},
+};
+
+const scaleVariants = {
+	hidden: { opacity: 0, scale: 0.95 },
+	visible: {
+		opacity: 1,
+		scale: 1,
+		transition: {
+			duration: 0.4,
+			ease: [0.25, 0.1, 0.25, 1],
+		},
+	},
+};
 
 export default function MainPage(): JSX.Element {
-	// State for controlling the overlay and selected card ID
-	const [selectedId, setSelectedId] = useState<string | null>(null); // Changed state
-
-	// Get the base URL and extract the hostname
+	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const fullUrl = getBaseUrl();
 	const { hostname } = new URL(fullUrl);
-
-	const dataPlatformCardId = 'data-platform-card'; // Define layout ID
+	const dataPlatformCardId = 'data-platform-card';
 
 	const projects = [
 		{
 			id: 'website',
 			title: `${hostname} (This Website!)`,
 			description: 'A personal portfolio and project hub built with Next.js, TypeScript, and Tailwind CSS.',
-			keyFeaturesTitle: 'Key Features:',
+			icon: GlobeAltIcon,
+			gradient: 'from-primary to-primary/60',
+			isClickable: true,
+			githubUrl: 'https://github.com/Lawlzer/lawlzer-website',
 			features: [
-				{ text: 'Dynamic Color Theming', link: getBaseUrl('colors') },
-				{ text: 'Valorant Lineup Tool', link: getBaseUrl('valorant') },
-				{ text: 'Responsive & Mobile-First', link: null },
-				{ text: 'Perfect Google Lighthouse score', link: null },
+				{ text: 'Dynamic Color Theming', link: getBaseUrl('colors'), icon: SparklesIcon },
+				{ text: 'Valorant Lineup Tool', link: getBaseUrl('valorant'), icon: BeakerIcon },
+				{ text: 'Responsive & Mobile-First', icon: CubeIcon },
+				{ text: 'Perfect Lighthouse Score', icon: RocketLaunchIcon },
 			],
-			icon: '🌐',
-			gradient: 'from-blue-500 to-purple-600',
 		},
 		{
 			id: dataPlatformCardId,
 			title: 'Data Platform',
 			description: 'Handled 2B+ Mongoose documents with real-time dynamic search capabilities, using USDA APIs.',
-			keyFeaturesTitle: 'Key Features:',
-			features: [
-				{ text: 'Dynamic Mongoose DB for 2+ billion documents', link: null },
-				{ text: 'Hourly USDA API integration', link: null },
-				{ text: 'AWS EC2 & Lambda deployment', link: null },
-				{ text: '98% test coverage (Jest & Supertest)', link: null },
-			],
-			icon: '📊',
-			gradient: 'from-green-500 to-teal-600',
+			icon: ChartBarIcon,
+			gradient: 'from-primary/80 to-primary/40',
 			isClickable: true,
+			features: [{ text: 'Dynamic Mongoose DB for 2+ billion documents' }, { text: 'Hourly USDA API integration' }, { text: 'AWS EC2 & Lambda deployment' }, { text: '98% test coverage (Jest & Supertest)' }],
 		},
 		{
 			id: 'scrapers',
 			title: 'Web Scraping Solutions',
 			description: 'Developed Playwright solutions to extract data from 200+ complex websites monthly.',
-			keyFeaturesTitle: 'Techniques Used:',
-			features: [
-				{ text: 'Rotating/Residential Proxies', link: null },
-				{ text: 'Captcha Solving & Temp-Mail', link: null },
-				{ text: 'Parallelism & Scalability', link: null },
-			],
-			icon: '🕷️',
-			gradient: 'from-orange-500 to-red-600',
+			icon: CodeBracketIcon,
+			gradient: 'from-primary/60 to-primary/30',
+			features: [{ text: 'Rotating/Residential Proxies' }, { text: 'Captcha Solving & Temp-Mail' }, { text: 'Parallelism & Scalability' }],
 		},
 		{
 			id: 'npm',
 			title: 'Open Source Contributions',
 			description: 'Published high-quality NPM packages with robust testing and developer experience.',
-			keyFeaturesTitle: 'Key Aspects:',
-			features: [
-				{ text: 'Extensive Testing & Strict ESLint', link: null },
-				{ text: 'Husky & Lint-Staged Integration', link: null },
-				{ text: 'GitHub Actions CI/CD', link: null },
-			],
-			icon: '📦',
-			gradient: 'from-pink-500 to-rose-600',
+			icon: CommandLineIcon,
+			gradient: 'from-primary/70 to-primary/50',
+			features: [{ text: 'Extensive Testing & Strict ESLint' }, { text: 'Husky & Lint-Staged Integration' }, { text: 'GitHub Actions CI/CD' }],
 		},
 	];
 
+	const stats = [
+		{ label: 'Years of Experience', value: '7+', icon: BriefcaseIcon },
+		{ label: 'Projects Completed', value: '50+', icon: CheckCircleIcon },
+		{ label: 'GitHub Contributions', value: '1,000+', icon: CodeBracketIcon },
+	];
+
 	return (
-		<div className='flex w-full flex-grow flex-col overflow-y-auto'>
-			{/* Hero Section */}
-			<section className='relative overflow-hidden bg-gradient-to-br from-primary/5 via-transparent to-primary/5 px-6 py-16 sm:px-8 md:py-24'>
-				<div className='mx-auto max-w-6xl'>
-					<motion.div animate={{ opacity: 1, y: 0 }} className='text-center' initial={{ opacity: 0, y: 20 }} transition={{ duration: 0.6 }}>
-						<h1 className='mb-6 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-5xl font-bold text-transparent sm:text-6xl md:text-7xl'>Welcome!</h1>
-						<p className='mx-auto mb-8 max-w-3xl text-xl text-secondary-text sm:text-2xl'>
-							I&apos;m{' '}
-							<a className='text-primary font-semibold transition-colors hover:text-primary/80' href='https://www.linkedin.com/in/kevin-porter-6a80b7210/' rel='noopener noreferrer' target='_blank'>
-								Kevin Porter
-							</a>{' '}
-							(aka{' '}
-							<a className='text-primary font-semibold transition-colors hover:text-primary/80' href='https://github.com/Lawlzer' rel='noopener noreferrer' target='_blank'>
-								Lawlzer
-							</a>
-							)
-						</p>
-						<div className='mx-auto mb-10 max-w-2xl space-y-3 text-lg text-secondary-text'>
-							<p>A fully self-taught Senior Software Engineer with 7 years of experience</p>
-							<p>Specialized in backend development, deployment, and scalable solutions</p>
-							<p>Launched 50+ projects with a focus on security, performance, and reliability</p>
-						</div>
-						<motion.a className='inline-flex items-center gap-2 rounded-lg bg-primary px-8 py-4 text-lg font-semibold text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2' href='https://github.com/Lawlzer/lawlzer-website' rel='noopener noreferrer' target='_blank' whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-							<svg className='h-5 w-5' fill='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
-								<path d='M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z' />
-							</svg>
-							View Source Code
-						</motion.a>
-					</motion.div>
-				</div>
+		<div className='flex w-full flex-grow flex-col'>
+			{/* Hero Section - Clean and Modern */}
+			<section className='relative overflow-hidden bg-gradient-to-b from-background via-background to-secondary/20'>
+				{/* Subtle background pattern */}
+				<div className='absolute inset-0 bg-grid-pattern opacity-[0.02]' />
+
+				<motion.div initial='hidden' animate='visible' variants={containerVariants} className='relative mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20'>
+					{/* Main content */}
+					<div className='text-center'>
+						<motion.div variants={itemVariants} className='mb-6'>
+							<h1 className='text-5xl font-extrabold tracking-tight sm:text-6xl md:text-7xl'>
+								<span className='block text-foreground'>Hi, I&apos;m</span>
+								<span className='mt-2 block text-primary'>Kevin Porter</span>
+							</h1>
+						</motion.div>
+
+						<motion.p variants={itemVariants} className='mx-auto max-w-2xl text-lg text-secondary-text sm:text-xl'>
+							I&apos;m a full-stack developer passionate about creating elegant solutions to complex problems. Specializing in TypeScript, React, and modern web technologies.
+						</motion.p>
+
+						{/* Stats Grid - Made smaller */}
+						<motion.div variants={itemVariants} className='mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3'>
+							{stats.map((stat, index) => {
+								const Icon = stat.icon;
+								return (
+									<motion.div key={index} variants={scaleVariants} whileHover={{ scale: 1.05 }} className='group relative overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md hover:border-primary/50'>
+										<div className='absolute top-0 right-0 -mt-2 -mr-2 h-16 w-16 rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors' />
+										<Icon className='relative mb-1 h-6 w-6 text-primary' />
+										<div className='relative'>
+											<p className='text-2xl font-bold text-foreground'>{stat.value}</p>
+											<p className='text-xs text-secondary-text'>{stat.label}</p>
+										</div>
+									</motion.div>
+								);
+							})}
+						</motion.div>
+
+						{/* CTAs - Removed "Get in Touch" */}
+						<motion.div variants={itemVariants} className='mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center'>
+							<motion.a href='https://github.com/lawlzer' target='_blank' rel='noopener noreferrer' whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className='group inline-flex items-center gap-2 rounded-lg border border-border bg-background px-6 py-3 text-sm font-semibold text-foreground shadow-sm transition-all hover:bg-secondary hover:shadow-md'>
+								<CodeBracketIcon className='h-5 w-5' />
+								GitHub
+								<ArrowRightIcon className='h-4 w-4 transition-transform group-hover:translate-x-1' />
+							</motion.a>
+
+							<motion.a href='https://www.linkedin.com/in/kevin-porter-6a80b7210/' target='_blank' rel='noopener noreferrer' whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className='group inline-flex items-center gap-2 rounded-lg border border-border bg-background px-6 py-3 text-sm font-semibold text-foreground shadow-sm transition-all hover:bg-secondary hover:shadow-md'>
+								<LinkIcon className='h-5 w-5' />
+								LinkedIn
+								<ArrowRightIcon className='h-4 w-4 transition-transform group-hover:translate-x-1' />
+							</motion.a>
+						</motion.div>
+					</div>
+				</motion.div>
 			</section>
 
-			{/* Project Showcase Section */}
-			<section className='px-6 py-16 sm:px-8'>
-				<div className='mx-auto max-w-6xl'>
-					<motion.h2 className='mb-12 text-center text-4xl font-bold text-primary sm:text-5xl' initial={{ opacity: 0, y: 20 }} transition={{ duration: 0.5 }} viewport={{ once: true }} whileInView={{ opacity: 1, y: 0 }}>
-						Featured Projects
-					</motion.h2>
-					<div className='grid grid-cols-1 gap-8 md:grid-cols-2'>
-						{projects.map((project, index) => (
-							<motion.div
-								key={project.id}
-								className={`group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-secondary/50 to-secondary shadow-lg transition-all hover:shadow-2xl ${project.isClickable ? 'cursor-pointer' : ''}`}
-								initial={{ opacity: 0, y: 30 }}
-								layoutId={project.isClickable ? project.id : undefined}
-								transition={{ duration: 0.5, delay: index * 0.1 }}
-								viewport={{ once: true, amount: 0.2 }}
-								whileInView={{ opacity: 1, y: 0 }}
-								onClick={
-									project.isClickable
-										? () => {
-												setSelectedId(project.id);
-											}
-										: undefined
-								}
-							>
-								{/* Gradient overlay */}
-								<div className={`absolute inset-0 bg-gradient-to-br ${project.gradient} opacity-0 transition-opacity group-hover:opacity-10`} />
+			{/* Projects Section - Refined Design */}
+			<section className='bg-background py-16 sm:py-20'>
+				<div className='mx-auto max-w-7xl px-6 sm:px-8'>
+					<motion.div initial='hidden' whileInView='visible' viewport={{ once: true, amount: 0.1 }} variants={containerVariants}>
+						<motion.div variants={itemVariants} className='text-center'>
+							<h2 className='text-4xl font-bold tracking-tight text-foreground sm:text-5xl'>Featured Projects</h2>
+							<p className='mt-4 text-lg text-secondary-text'>Sample complex projects I&apos;ve built for clients, showcasing scalable solutions and modern technologies</p>
+						</motion.div>
 
-								{/* Card content */}
-								<div className='relative p-8'>
-									{/* Icon */}
-									<div className='mb-4 text-5xl'>{project.icon}</div>
+						<motion.div variants={itemVariants} className='mt-12 grid grid-cols-1 gap-8 md:grid-cols-2'>
+							{projects.map((project) => {
+								const Icon = project.icon;
+								return (
+									<motion.div
+										key={project.id}
+										layoutId={project.isClickable ? project.id : undefined}
+										variants={scaleVariants}
+										whileHover={{ y: -4 }}
+										className={`group relative overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm transition-all hover:shadow-xl hover:border-primary/50 ${project.isClickable ? 'cursor-pointer' : ''}`}
+										onClick={
+											project.isClickable
+												? () => {
+														if (project.id === 'website' && 'githubUrl' in project && project.githubUrl !== undefined && project.githubUrl !== null && project.githubUrl !== '') {
+															window.open(project.githubUrl, '_blank', 'noopener,noreferrer');
+														} else {
+															setSelectedId(project.id);
+														}
+													}
+												: undefined
+										}
+										onKeyDown={
+											project.isClickable
+												? (e: React.KeyboardEvent) => {
+														if (e.key === 'Enter' || e.key === ' ') {
+															e.preventDefault();
+															if (project.id === 'website' && 'githubUrl' in project && project.githubUrl !== undefined && project.githubUrl !== null && project.githubUrl !== '') {
+																window.open(project.githubUrl, '_blank', 'noopener,noreferrer');
+															} else {
+																setSelectedId(project.id);
+															}
+														}
+													}
+												: undefined
+										}
+										tabIndex={project.isClickable ? 0 : undefined}
+										role={project.isClickable ? 'button' : undefined}
+										aria-label={project.isClickable ? `View ${project.title} details` : undefined}
+									>
+										{/* Gradient accent */}
+										<div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${project.gradient}`} />
 
-									{/* Title and description */}
-									<h3 className='mb-3 text-2xl font-bold text-primary'>{project.title}</h3>
-									<p className='mb-4 text-secondary-text'>{project.description}</p>
+										{/* Icon */}
+										<div className={`mb-6 inline-flex rounded-lg bg-gradient-to-br ${project.gradient} p-3 text-white shadow-lg`}>
+											<Icon className='h-6 w-6' />
+										</div>
 
-									{/* Features */}
-									<div>
-										<h4 className='mb-2 text-sm font-semibold uppercase tracking-wide text-primary-text/80'>{project.keyFeaturesTitle}</h4>
+										{/* Content */}
+										<h3 className='mb-3 text-xl font-bold text-foreground'>{project.title}</h3>
+										<p className='mb-6 text-secondary-text'>{project.description}</p>
+
+										{/* Features */}
 										<ul className='space-y-2'>
-											{project.features.map((feature, featureIndex) => (
-												<li key={featureIndex} className='flex items-start'>
-													<span className='mr-2 mt-1 text-primary'>•</span>
-													{feature.link !== null ? (
+											{project.features.map((feature, index) => (
+												<motion.li key={index} className='flex items-start gap-3 text-sm' initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
+													<CheckCircleIcon className={`mt-0.5 h-4 w-4 flex-shrink-0 text-primary`} />
+													{'link' in feature && feature.link !== undefined ? (
 														<a
-															className='text-secondary-text transition-colors hover:text-primary'
 															href={feature.link}
-															rel='noopener noreferrer'
 															target='_blank'
+															rel='noopener noreferrer'
+															className='text-secondary-text hover:text-primary transition-colors inline-flex items-center gap-1 -m-2 p-2 rounded'
 															onClick={(e) => {
 																e.stopPropagation();
 															}}
 														>
 															{feature.text}
+															{'icon' in feature && feature.icon !== undefined ? <feature.icon className='h-3 w-3' /> : null}
 														</a>
 													) : (
 														<span className='text-secondary-text'>{feature.text}</span>
 													)}
-												</li>
+												</motion.li>
 											))}
 										</ul>
-									</div>
 
-									{/* Click indicator for clickable cards */}
-									{project.isClickable && (
-										<div className='mt-6 flex items-center text-sm text-primary'>
-											<span>Click to explore</span>
-											<svg className='ml-1 h-4 w-4' fill='none' stroke='currentColor' strokeWidth={2} viewBox='0 0 24 24'>
-												<path strokeLinecap='round' strokeLinejoin='round' d='M9 5l7 7-7 7' />
-											</svg>
-										</div>
-									)}
-								</div>
-							</motion.div>
-						))}
-					</div>
+										{/* Click indicator */}
+										{project.isClickable && (
+											<motion.div className='mt-6 flex items-center gap-2 text-sm font-medium text-primary' animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+												<span>{project.id === 'website' ? 'Click to view the GitHub repository' : 'Click to explore'}</span>
+												<ArrowRightIcon className='h-4 w-4' />
+											</motion.div>
+										)}
+									</motion.div>
+								);
+							})}
+						</motion.div>
+					</motion.div>
 				</div>
 			</section>
 
-			{/* Data Platform Overlay */}
+			{/* Data Platform Modal */}
 			<AnimatePresence>
 				{selectedId === dataPlatformCardId && (
-					<motion.div
-						animate={{ opacity: 1 }}
-						className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-0 backdrop-blur-sm sm:p-4'
-						exit={{ opacity: 0 }}
-						initial={{ opacity: 0 }}
-						transition={{ duration: 0.3 }}
-						onClick={() => {
+					<DataPlatformPreview
+						onClose={() => {
 							setSelectedId(null);
 						}}
-					>
-						<motion.div
-							className='relative flex max-h-[95vh] w-full max-w-[1200px] flex-col overflow-hidden rounded-xl bg-background shadow-2xl'
-							layoutId={dataPlatformCardId}
-							transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-							onClick={(e) => {
-								e.stopPropagation();
-							}}
-						>
-							{/* Close Button */}
-							<button
-								aria-label='Close data platform details'
-								className='absolute top-4 right-4 z-10 rounded-full bg-background/80 p-2 text-foreground backdrop-blur-sm transition-all hover:bg-background hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary'
-								type='button'
-								onClick={(e) => {
-									e.stopPropagation();
-									setSelectedId(null);
-								}}
-							>
-								<svg className='h-6 w-6' fill='none' stroke='currentColor' strokeWidth={2} viewBox='0 0 24 24'>
-									<path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
-								</svg>
-							</button>
-
-							{/* Content */}
-							<motion.div animate={{ opacity: 1 }} className='h-full w-full overflow-y-auto' exit={{ opacity: 0 }} initial={{ opacity: 0 }} transition={{ duration: 0.2, delay: 0.15 }}>
-								<DataPlatformPreview
-									onClose={() => {
-										setSelectedId(null);
-									}}
-								/>
-							</motion.div>
-						</motion.div>
-					</motion.div>
+					/>
 				)}
 			</AnimatePresence>
 		</div>
