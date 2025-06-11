@@ -1,14 +1,21 @@
 'use client';
 
-import React from 'react';
+import { ThemeProvider } from 'next-themes';
+import type { ReactNode } from 'react';
 
-// Remove unused SessionProvider import
-// import { SessionProvider } from 'next-auth/react';
+import { ToastProvider } from '~/components/Toast';
 import { TRPCReactProvider } from '~/trpc/react';
 
-export const Providers = ({ children }: { children: React.ReactNode }): React.JSX.Element => (
-	// Remove SessionProvider wrapper
-	// <SessionProvider>
-	<TRPCReactProvider>{children}</TRPCReactProvider>
-	// </SessionProvider>
-);
+interface ProvidersProps {
+	children: ReactNode;
+}
+
+export function Providers({ children }: ProvidersProps) {
+	return (
+		<TRPCReactProvider>
+			<ThemeProvider attribute='class' defaultTheme='system' enableSystem>
+				<ToastProvider>{children}</ToastProvider>
+			</ThemeProvider>
+		</TRPCReactProvider>
+	);
+}

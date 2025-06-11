@@ -18,15 +18,4 @@ export const db = globalForPrisma.prisma ?? createPrismaClient();
 
 if (env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
 
-// Add connection check
-(async () => {
-	try {
-		await db.$connect();
-		console.info('⚪ Database connection established successfully.');
-	} catch (error) {
-		console.error('🔴 Failed to connect to the database. Please ensure MongoDB is running.');
-		console.error('Original error:', error);
-		// Re-throwing the error to potentially halt server startup or clearly indicate the failure.
-		throw error;
-	}
-})();
+// Connection check is now handled in instrumentation.ts
