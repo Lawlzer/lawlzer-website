@@ -26,16 +26,11 @@ type FacetResult = Record<string, { _id: string | null; count: number }[]>;
 // TODO: Adjust this list based on actual desired filterable fields
 const FILTERABLE_FIELDS: string[] = ['type', 'category', 'country', 'state', 'Cattle Type', 'Choice Grade'];
 
-// Ensure DATABASE_URL is set in your environment variables
-const uri = process.env.DATABASE_URL;
-if (uri === undefined || uri === '') {
-	throw new Error('Missing environment variable: DATABASE_URL');
-}
-
 let client: MongoClient | null = null;
 let clientPromise: Promise<MongoClient> | null = null;
 
 async function getMongoClient(): Promise<MongoClient> {
+	const uri = process.env.DATABASE_URL;
 	// Add explicit checks for uri inside the function
 	if (uri === undefined || uri === '') {
 		throw new Error('Missing environment variable: DATABASE_URL');

@@ -35,14 +35,11 @@ export interface RawDataPoint {
 const MAX_DOCUMENTS_FOR_PROCESSING = 5000;
 
 // --- MongoDB Connection (reuse logic - assumed correct) ---
-const uri = process.env.DATABASE_URL;
-if (uri === undefined || uri === '') {
-	throw new Error('Missing environment variable: DATABASE_URL');
-}
 let client: MongoClient | null = null;
 let clientPromise: Promise<MongoClient> | null = null;
 
 async function getMongoClient(): Promise<MongoClient> {
+	const uri = process.env.DATABASE_URL;
 	if (uri === undefined || uri === '') {
 		throw new Error('Missing environment variable: DATABASE_URL');
 	}

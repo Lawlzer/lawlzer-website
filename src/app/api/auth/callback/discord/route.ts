@@ -92,6 +92,7 @@ async function upsertUser(discordUser: DiscordUserInfo, tokens: DiscordTokenResp
 		update: {
 			name: discordUser.username,
 			image: avatarUrl,
+			discordId: discordUser.id,
 			accounts: {
 				upsert: {
 					where: {
@@ -124,6 +125,7 @@ async function upsertUser(discordUser: DiscordUserInfo, tokens: DiscordTokenResp
 			email: discordUser.email,
 			name: discordUser.username,
 			image: avatarUrl,
+			discordId: discordUser.id,
 			emailVerified: discordUser.verified ? new Date() : null,
 			accounts: {
 				create: {

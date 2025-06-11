@@ -54,9 +54,6 @@ describe('GET /api/dev/account', () => {
 				const res = await fetch({ method: 'GET' });
 				expect(res.status).toBe(200);
 
-				// // Assert mockGetServerSession was called // Removed mock assertion
-				// expect(mockGetServerSession).toHaveBeenCalledTimes(1);
-
 				// Check response body matches the expected payload (empty session)
 				const body = await res.json();
 				expect(body.session === null || Object.keys(body.session).length === 0).toBe(true); // Accept either empty object or null
