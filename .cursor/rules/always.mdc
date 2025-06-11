@@ -20,6 +20,10 @@ alwaysApply: true
 - Only pause when genuinely missing critical information that cannot be inferred
 - Assume implicit approval to continue with logical next steps
 
+## Documentation
+- NEVER create documentation files (*.md) or README files unless explicitly requested by the user
+- Only create documentation when user specifically asks for it
+
 ## Communication
 - Provide suggestions even if unrelated to current task
 - Ask clarifying questions when information is missing
