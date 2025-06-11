@@ -1,10 +1,12 @@
 'use client';
 
+import { ChartBarIcon, DocumentTextIcon, FunnelIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import type { TickFormatter } from '@visx/axis';
 import { localPoint } from '@visx/event';
 import { defaultStyles as defaultTooltipStyles, useTooltip, useTooltipInPortal } from '@visx/tooltip';
 import type { NumberValue } from '@visx/vendor/d3-scale';
 import { addDays, format as formatDateFns, getDayOfYear as dfnsGetDayOfYear, getYear } from 'date-fns';
+import { motion } from 'framer-motion';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -643,8 +645,6 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 		[getFormattedChartData, rawDataPoints, showTooltip, hideTooltip, hiddenDatasets] // Original dependencies
 	);
 
-	const isLoading = loadingFilters || loadingChartData;
-
 	// Determine the message to show in the chart area based on current state
 	const chartMessage = useMemo(() => {
 		if (loadingChartData) return 'Loading chart data...';
@@ -659,142 +659,178 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	// --- Render Logic ---
 
 	return (
-		<div
-			className='bg-secondary border-border flex w-[95vw] max-w-[1600px] flex-col overflow-hidden rounded-lg border p-6 shadow-2xl'
-			onClick={(e) => {
-				e.stopPropagation();
-			}}
-		>
-			{/* Header */}
-			<div className='mb-4 flex flex-shrink-0 flex-wrap items-center justify-between gap-y-2'>
-				<h2 className='text-primary text-2xl font-bold'>
-					Data Platform - Analytics
-					{isLoading ? <span className='text-muted-foreground ml-2 text-lg font-normal'>(Loading...)</span> : null}
-				</h2>
-				{/* NEW: Mobile View Toggle Button */}
-				{isMobile && canShowChartBasedOnFilters && !isLoading ? (
-					<button type='button' className='bg-accent text-accent-foreground hover:bg-accent/90 mr-2 rounded px-3 py-1 text-sm' onClick={handleToggleMobileView}>
-						{mobileViewMode === 'filters' ? 'View Chart' : 'View Filters'}
-					</button>
-				) : null}
-			</div>
+		// Fixed modal wrapper with backdrop
+		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4' onClick={onClose}>
+			<motion.div
+				initial={{ scale: 0.9, opacity: 0 }}
+				animate={{ scale: 1, opacity: 1 }}
+				exit={{ scale: 0.9, opacity: 0 }}
+				transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+				className='relative flex max-h-[90vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-background shadow-2xl'
+				onClick={(e) => {
+					e.stopPropagation();
+				}}
+			>
+				{/* Close button */}
+				<button aria-label='Close' className='absolute top-4 right-4 z-10 rounded-lg bg-secondary/80 p-2 text-foreground backdrop-blur-sm transition-all hover:bg-secondary hover:scale-110' onClick={onClose}>
+					<svg className='h-5 w-5' fill='none' stroke='currentColor' strokeWidth={2} viewBox='0 0 24 24'>
+						<path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
+					</svg>
+				</button>
 
-			{/* Controls: Count */}
-			<div className='mb-4 flex flex-shrink-0 flex-wrap items-center justify-between gap-4'>
-				<div>
-					<p className='text-muted-foreground text-sm'>
-						Total documents matching filters: <span className='font-medium'>{totalDocuments}</span>
-						{chartLimitExceeded ? <span className='text-destructive ml-2'>(Charts disabled - {chartDocumentCount} documents exceeds limit. Apply more filters.)</span> : null}
-					</p>
-				</div>
-				{/* REMOVED Time Range Selector */}
-			</div>
+				{/* Original component content */}
+				<div className='h-full w-full overflow-y-auto'>
+					{/* Header */}
+					<div className='sticky top-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent backdrop-blur-xl border-b border-border/50'>
+						<div className='px-6 py-4 sm:px-8 sm:py-6'>
+							<div className='flex items-center justify-between'>
+								<motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className='flex items-center gap-4'>
+									<div className='p-3 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg'>
+										<ChartBarIcon className='h-6 w-6' />
+									</div>
+									<div>
+										<h2 className='text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent'>Data Platform</h2>
+										<p className='text-sm text-secondary-text mt-0.5'>Explore agricultural data with dynamic filters</p>
+									</div>
+								</motion.div>
+								<motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className='flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20'>
+									<div className='h-2 w-2 rounded-full bg-emerald-500 animate-pulse' />
+									<span className='text-xs font-medium text-emerald-600'>Live Data</span>
+								</motion.div>
+							</div>
 
-			{/* Main Layout: Conditional Rendering */}
-			<div className={`min-h-[400px] flex-grow overflow-hidden ${!isMobile ? 'grid grid-cols-1 gap-6 lg:grid-cols-4' : 'flex'}`}>
-				{isMobile ? (
-					// Mobile View: Show one panel at a time
-					<div className='h-full w-full'>
-						{mobileViewMode === 'filters' ? (
-							<FilterPanel
-								activeFilters={activeFilters}
-								availableFilters={availableFilters} // Pass needed prop
-								commonFields={commonFields}
-								error={error}
-								handleClearFilters={handleClearFilters}
-								handleFilterToggle={handleFilterToggle}
-								hasFilterData={hasFilterData}
-								isFilterActive={isFilterActive}
-								isLoading={loadingFilters} // Pass specific loading state
-								isMobile={isMobile}
-								sortedFilterEntries={sortedFilterEntries}
-								totalDocuments={totalDocuments}
-								searchTerm=''
-								showAllStates={{}}
-							/>
+							{/* Stats bar */}
+							<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className='mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3'>
+								<div className='flex items-center gap-3 p-3 rounded-lg bg-card border border-border'>
+									<div className='p-2 rounded-lg bg-primary/10'>
+										<DocumentTextIcon className='h-4 w-4 text-primary' />
+									</div>
+									<div>
+										<p className='text-xs text-secondary-text'>Total Documents</p>
+										<p className='text-lg font-semibold text-foreground'>{totalDocuments.toLocaleString()}</p>
+									</div>
+								</div>
+								<div className='flex items-center gap-3 p-3 rounded-lg bg-card border border-border'>
+									<div className='p-2 rounded-lg bg-blue-500/10'>
+										<FunnelIcon className='h-4 w-4 text-blue-500' />
+									</div>
+									<div>
+										<p className='text-xs text-secondary-text'>Active Filters</p>
+										<p className='text-lg font-semibold text-foreground'>{Object.keys(activeFilters).length}</p>
+									</div>
+								</div>
+								<div className='flex items-center gap-3 p-3 rounded-lg bg-card border border-border'>
+									<div className='p-2 rounded-lg bg-green-500/10'>
+										<SparklesIcon className='h-4 w-4 text-green-500' />
+									</div>
+									<div>
+										<p className='text-xs text-secondary-text'>Status</p>
+										<p className='text-sm font-medium text-green-600'>{loadingFilters || loadingChartData ? 'Updating...' : 'Ready'}</p>
+									</div>
+								</div>
+							</motion.div>
+						</div>
+					</div>
+
+					{/* Content area */}
+					<div className={`flex-1 p-6 ${isMobile ? '' : 'min-h-[500px]'}`}>
+						{isMobile ? (
+							// Mobile View: Show one panel at a time
+							<div className='h-full w-full'>
+								{mobileViewMode === 'filters' ? (
+									<FilterPanel
+										activeFilters={activeFilters}
+										availableFilters={availableFilters} // Pass needed prop
+										commonFields={commonFields}
+										error={error}
+										handleClearFilters={handleClearFilters}
+										handleFilterToggle={handleFilterToggle}
+										hasFilterData={hasFilterData}
+										isFilterActive={isFilterActive}
+										isLoading={loadingFilters} // Pass specific loading state
+										isMobile={isMobile}
+										sortedFilterEntries={sortedFilterEntries}
+										totalDocuments={totalDocuments}
+										searchTerm=''
+										showAllStates={{}}
+									/>
+								) : (
+									// Pass props needed by ChartPanel
+									<ChartPanel
+										TooltipInPortal={TooltipInPortal}
+										activeChartTab={activeChartTab}
+										canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+										changingChartTabVisual={changingChartTabVisual}
+										chartDocumentCount={chartDocumentCount}
+										chartLimitExceeded={chartLimitExceeded}
+										chartMessage={chartMessage}
+										chartableFields={chartableFields}
+										containerRef={containerRef}
+										error={error}
+										getFormattedChartData={getFormattedChartData} // Pass the memoized data
+										handleChartTabChange={handleChartTabChange}
+										handleToggleMobileView={handleToggleMobileView}
+										handleTooltip={handleTooltip}
+										hiddenDatasets={hiddenDatasets}
+										hideTooltip={hideTooltip}
+										isLoading={loadingChartData} // Use chart loading state
+										isMobile={isMobile}
+										mobileViewMode={mobileViewMode}
+										showCharts={showCharts}
+										tooltipLeft={tooltipLeft}
+										tooltipOpen={tooltipOpen}
+										tooltipTop={tooltipTop}
+										totalDocuments={totalDocuments} // Pass total documents
+										handleLegendClick={handleLegendClick}
+										// Pass tooltip props
+										tooltipData={tooltipData}
+									/>
+								)}
+							</div>
 						) : (
-							// Pass props needed by ChartPanel
-							<ChartPanel
-								TooltipInPortal={TooltipInPortal}
-								activeChartTab={activeChartTab}
-								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
-								changingChartTabVisual={changingChartTabVisual}
-								chartDocumentCount={chartDocumentCount}
-								chartLimitExceeded={chartLimitExceeded}
-								chartMessage={chartMessage}
-								chartableFields={chartableFields}
-								containerRef={containerRef}
-								error={error}
-								getFormattedChartData={getFormattedChartData} // Pass the memoized data
-								handleChartTabChange={handleChartTabChange}
-								handleToggleMobileView={handleToggleMobileView}
-								handleTooltip={handleTooltip}
-								hiddenDatasets={hiddenDatasets}
-								hideTooltip={hideTooltip}
-								isLoading={loadingChartData} // Use chart loading state
-								isMobile={isMobile}
-								mobileViewMode={mobileViewMode}
-								showCharts={showCharts}
-								tooltipLeft={tooltipLeft}
-								tooltipOpen={tooltipOpen}
-								tooltipTop={tooltipTop}
-								totalDocuments={totalDocuments} // Pass total documents
-								handleLegendClick={handleLegendClick}
-								// Pass tooltip props
-								tooltipData={tooltipData}
-							/>
+							// Desktop View: Show both panels side-by-side
+							<div className='grid grid-cols-1 gap-6 lg:grid-cols-4 h-full'>
+								{/* Filter Panel */}
+								<div className='lg:col-span-1'>
+									<FilterPanel activeFilters={activeFilters} availableFilters={availableFilters} commonFields={commonFields} error={error} handleClearFilters={handleClearFilters} handleFilterToggle={handleFilterToggle} hasFilterData={hasFilterData} isFilterActive={isFilterActive} isLoading={loadingFilters} isMobile={isMobile} sortedFilterEntries={sortedFilterEntries} totalDocuments={totalDocuments} searchTerm='' showAllStates={{}} />
+								</div>
+								{/* Chart Panel */}
+								<div className='lg:col-span-3'>
+									<ChartPanel
+										TooltipInPortal={TooltipInPortal}
+										activeChartTab={activeChartTab}
+										canShowChartBasedOnFilters={canShowChartBasedOnFilters}
+										changingChartTabVisual={changingChartTabVisual}
+										chartDocumentCount={chartDocumentCount}
+										chartLimitExceeded={chartLimitExceeded}
+										chartMessage={chartMessage}
+										chartableFields={chartableFields}
+										containerRef={containerRef}
+										error={error}
+										getFormattedChartData={getFormattedChartData}
+										handleChartTabChange={handleChartTabChange}
+										handleToggleMobileView={handleToggleMobileView}
+										handleTooltip={handleTooltip}
+										hiddenDatasets={hiddenDatasets}
+										hideTooltip={hideTooltip}
+										isLoading={loadingChartData}
+										isMobile={isMobile}
+										mobileViewMode={mobileViewMode}
+										showCharts={showCharts}
+										tooltipLeft={tooltipLeft}
+										tooltipOpen={tooltipOpen}
+										tooltipTop={tooltipTop}
+										totalDocuments={totalDocuments}
+										handleLegendClick={handleLegendClick}
+										// Pass tooltip props
+										tooltipData={tooltipData}
+									/>
+								</div>
+							</div>
 						)}
 					</div>
-				) : (
-					// Desktop View: Show both panels side-by-side
-					<>
-						{/* WRAPPER DIV for FilterPanel to apply layout classes */}
-						<div className='lg:col-span-1 lg:min-w-[300px]'>
-							<FilterPanel activeFilters={activeFilters} availableFilters={availableFilters} commonFields={commonFields} error={error} handleClearFilters={handleClearFilters} handleFilterToggle={handleFilterToggle} hasFilterData={hasFilterData} isFilterActive={isFilterActive} isLoading={loadingFilters} isMobile={isMobile} sortedFilterEntries={sortedFilterEntries} totalDocuments={totalDocuments} searchTerm='' showAllStates={{}} />
-						</div>
-						{/* Pass props needed by ChartPanel */}
-						{/* WRAPPER DIV for ChartPanel to apply layout classes */}
-						<div className='lg:col-span-3'>
-							<ChartPanel
-								TooltipInPortal={TooltipInPortal}
-								activeChartTab={activeChartTab}
-								canShowChartBasedOnFilters={canShowChartBasedOnFilters}
-								changingChartTabVisual={changingChartTabVisual}
-								chartDocumentCount={chartDocumentCount}
-								chartLimitExceeded={chartLimitExceeded}
-								chartMessage={chartMessage}
-								chartableFields={chartableFields}
-								containerRef={containerRef}
-								error={error}
-								getFormattedChartData={getFormattedChartData}
-								handleChartTabChange={handleChartTabChange}
-								handleToggleMobileView={handleToggleMobileView}
-								handleTooltip={handleTooltip}
-								hiddenDatasets={hiddenDatasets}
-								hideTooltip={hideTooltip}
-								isLoading={loadingChartData}
-								isMobile={isMobile}
-								mobileViewMode={mobileViewMode}
-								showCharts={showCharts}
-								tooltipLeft={tooltipLeft}
-								tooltipOpen={tooltipOpen}
-								tooltipTop={tooltipTop}
-								totalDocuments={totalDocuments}
-								handleLegendClick={handleLegendClick}
-								// Pass tooltip props
-								tooltipData={tooltipData}
-							/>
-						</div>
-					</>
-				)}
-			</div>
-
-			{/* Close Button */}
-			<div className='border-border mt-6 flex-shrink-0 border-t pt-4'>
-				<button className='bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-ring rounded px-4 py-2 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:opacity-50' disabled={isLoading} type='button' onClick={onClose}>
-					Close
-				</button>
-			</div>
-		</div>
+				</div>
+			</motion.div>
+		</motion.div>
 	);
 }

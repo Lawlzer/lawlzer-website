@@ -139,7 +139,7 @@ test.describe('DataPlatformPreview E2E Tests', () => {
 		await expect(page.getByRole('button', { name: 'Europe (25)' })).toBeVisible();
 
 		// Check for the warning message
-		await expect(page.getByText(/Charts disabled.*exceeds limit/i)).toBeVisible();
+		await expect(page.getByText(/Chart generation disabled.*Dataset size.*exceeds the limit/i)).toBeVisible();
 
 		// Check that charts are not visible
 		await expect(page.getByRole('tab')).toHaveCount(0);
