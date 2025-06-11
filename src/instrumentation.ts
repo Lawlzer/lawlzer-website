@@ -8,6 +8,10 @@ export async function register() {
 		try {
 			await db.$connect();
 			console.info('✅ MongoDB connection established successfully.');
+
+			// Initialize Data Platform with sample data if empty
+			const { initializeDataPlatform } = await import('~/server/dataPlatform/init');
+			await initializeDataPlatform();
 		} catch (error) {
 			console.warn('⚠️  MongoDB is not accessible. Please ensure MongoDB is running.');
 			console.warn('    Some features may not work properly without database connection.');

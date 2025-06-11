@@ -43,20 +43,20 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 	totalDocuments,
 	activeFilters,
 	availableFilters, // Included prop
-	isMobile,
+	isMobile: _isMobile,
 	handleFilterToggle,
 	handleClearFilters,
 	isFilterActive,
 	searchTerm,
 	showAllStates: _showAllStates,
 }) => (
-	<motion.div className={`relative flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/95 to-card/98 shadow-lg ${isMobile ? 'h-full' : ''}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+	<motion.div className={`relative flex flex-col h-full overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/95 to-card/98 shadow-lg`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
 		{/* Enhanced Header */}
-		<div className='border-b border-border/30 bg-gradient-to-r from-muted/20 via-muted/30 to-muted/20 px-4 py-3.5'>
+		<div className='border-b border-border/30 bg-gradient-to-r from-muted/20 via-muted/30 to-muted/20 px-3 py-2'>
 			<div className='flex items-center justify-between'>
-				<h3 className='flex items-center gap-2.5 text-lg font-semibold text-foreground'>
-					<motion.div className='flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10' whileHover={{ scale: 1.1, rotate: 180 }} transition={{ type: 'spring', stiffness: 200 }}>
-						<svg className='h-5 w-5 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+				<h3 className='flex items-center gap-2 text-sm font-semibold text-foreground'>
+					<motion.div className='flex h-6 w-6 items-center justify-center rounded-md bg-primary/10' whileHover={{ scale: 1.1, rotate: 180 }} transition={{ type: 'spring', stiffness: 200 }}>
+						<svg className='h-4 w-4 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
 							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' />
 						</svg>
 					</motion.div>
@@ -72,7 +72,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 		</div>
 
 		{/* Enhanced Content */}
-		<div className='flex-grow overflow-y-auto p-4'>
+		<div className='flex-grow overflow-y-auto p-3'>
 			{/* Enhanced Loading Overlay with Skeleton */}
 			{isLoading ? (
 				<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -96,21 +96,21 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
 			{/* Enhanced Filters Content */}
 			{!isLoading && error === null && hasFilterData ? (
-				<div className='space-y-3'>
+				<div className='space-y-2'>
 					{sortedFilterEntries.map(({ key, valueCounts }, index) => (
-						<motion.div key={key} className='group overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-muted/10 to-muted/20 backdrop-blur-sm transition-all hover:border-border hover:shadow-md' initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05, type: 'spring', stiffness: 200 }} whileHover={{ scale: 1.01 }}>
-							<div className='px-4 py-3'>
-								<h4 className='mb-3 flex items-center gap-2 text-sm font-semibold capitalize text-foreground' title={key.replace(/_/g, ' ')}>
+						<motion.div key={key} className='group overflow-hidden rounded-lg border border-border/50 bg-gradient-to-br from-muted/10 to-muted/20 backdrop-blur-sm transition-all hover:border-border hover:shadow-md' initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05, type: 'spring', stiffness: 200 }} whileHover={{ scale: 1.01 }}>
+							<div className='px-3 py-2'>
+								<h4 className='mb-2 flex items-center gap-1.5 text-xs font-semibold capitalize text-foreground' title={key.replace(/_/g, ' ')}>
 									<motion.span className='inline-block h-1.5 w-1.5 rounded-full bg-primary' animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 2, repeat: Infinity, delay: index * 0.1 }} />
 									{key.replace(/_/g, ' ')}
 								</h4>
-								<div className='flex flex-wrap gap-2'>
+								<div className='flex flex-wrap gap-1.5'>
 									{valueCounts.map(({ value, count }) => {
 										const isActive = isFilterActive(key, value) || valueCounts.length === 1;
 										return (
 											<motion.button
 												key={value}
-												className={`group/btn relative flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${isActive ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'border-border/50 bg-background/60 text-muted-foreground hover:border-primary/50 hover:bg-accent hover:text-accent-foreground hover:shadow-sm'}`}
+												className={`group/btn relative flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-all ${isActive ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'border-border/50 bg-background/60 text-muted-foreground hover:border-primary/50 hover:bg-accent hover:text-accent-foreground hover:shadow-sm'}`}
 												title={`${value} (${count})`}
 												type='button'
 												onClick={() => {

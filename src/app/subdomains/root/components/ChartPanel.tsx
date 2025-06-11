@@ -90,13 +90,13 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 	const shouldShowPanelContent = showCharts || isLoading || chartLimitExceeded || (isMobile && !canShowChartBasedOnFilters);
 
 	return (
-		<motion.div className={`relative flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/95 to-card/98 shadow-lg ${isMobile ? 'h-full' : ''}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+		<motion.div className={`relative flex flex-col h-full overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card/95 to-card/98 shadow-lg`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
 			{/* Enhanced Header */}
-			<div className='border-b border-border/30 bg-gradient-to-r from-muted/20 via-muted/30 to-muted/20 px-4 py-3.5'>
+			<div className='border-b border-border/30 bg-gradient-to-r from-muted/20 via-muted/30 to-muted/20 px-3 py-2'>
 				<div className='flex items-center justify-between'>
-					<h3 className='flex items-center gap-2.5 text-lg font-semibold text-foreground'>
-						<motion.div className='flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10' whileHover={{ scale: 1.1, rotate: -10 }} transition={{ type: 'spring', stiffness: 200 }}>
-							<svg className='h-5 w-5 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+					<h3 className='flex items-center gap-2 text-sm font-semibold text-foreground'>
+						<motion.div className='flex h-6 w-6 items-center justify-center rounded-md bg-primary/10' whileHover={{ scale: 1.1, rotate: -10 }} transition={{ type: 'spring', stiffness: 200 }}>
+							<svg className='h-4 w-4 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
 								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z' />
 							</svg>
 						</motion.div>
@@ -114,16 +114,16 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 			</div>
 
 			{shouldShowPanelContent ? (
-				<div className='flex min-h-[450px] flex-grow flex-col'>
+				<div className='flex flex-grow flex-col overflow-hidden'>
 					{/* Enhanced Chart Tabs */}
 					{!isLoading && !chartLimitExceeded && canShowChartBasedOnFilters && chartableFields.length > 0 ? (
 						<motion.div className='border-b border-border/30 bg-gradient-to-r from-muted/10 via-muted/20 to-muted/10' initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-							<div className='flex space-x-2 overflow-x-auto p-2.5'>
+							<div className='flex space-x-1.5 overflow-x-auto p-2'>
 								{chartableFields.map((key, index) => (
 									<motion.button
 										type='button'
 										key={key}
-										className={`group relative whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all ${activeChartTab === key ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:shadow-sm'}`}
+										className={`group relative whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${activeChartTab === key ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:shadow-sm'}`}
 										onClick={() => {
 											handleChartTabChange(key);
 										}}
@@ -143,11 +143,11 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 
 					{/* Enhanced Message Area or Chart */}
 					{isLoading ? (
-						<motion.div className='flex-grow p-8' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+						<motion.div className='flex-grow p-4' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
 							<ChartPanelSkeleton />
 						</motion.div>
 					) : chartMessage !== null && !(isMobile && mobileViewMode === 'chart') ? (
-						<motion.div className={`flex min-h-[450px] flex-grow items-center justify-center p-8 ${isMobile ? 'text-base' : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+						<motion.div className={`flex flex-grow items-center justify-center p-4 ${isMobile ? 'text-sm' : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
 							<div className='text-center'>
 								{chartLimitExceeded ? (
 									<>
@@ -192,7 +192,7 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 						</motion.div>
 					) : activeChartTab !== null && getFormattedChartData !== null ? (
 						// Render the actual chart component
-						<motion.div className='relative h-[450px] flex-grow bg-gradient-to-br from-background/20 to-background/5' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+						<motion.div className='relative flex-grow bg-gradient-to-br from-background/20 to-background/5' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
 							<TimeSeriesChart
 								TooltipInPortal={TooltipInPortal}
 								activeChartTab={activeChartTab}
@@ -233,7 +233,7 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 				</div>
 			) : (
 				// Enhanced fallback message when panel content shouldn't show
-				<motion.div className='flex min-h-[450px] flex-grow items-center justify-center p-8' initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+				<motion.div className='flex flex-grow items-center justify-center p-4' initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
 					<div className='text-center'>
 						<motion.div className='mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-muted/50 to-muted/30' animate={{ rotate: [0, -10, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity, repeatDelay: 2 }}>
 							<svg className='h-10 w-10 text-muted-foreground' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -254,8 +254,8 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({
 			)}
 
 			{/* Enhanced Footer */}
-			<motion.div className='border-t border-border/30 bg-gradient-to-r from-muted/10 to-muted/20 px-4 py-2.5' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-				<p className='flex items-center gap-3 text-xs text-muted-foreground'>
+			<motion.div className='border-t border-border/30 bg-gradient-to-r from-muted/10 to-muted/20 px-3 py-1.5' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+				<p className='flex items-center gap-3 text-[10px] text-muted-foreground'>
 					<span className='flex items-center gap-1.5'>
 						<svg className='h-3.5 w-3.5 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
 							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' />
