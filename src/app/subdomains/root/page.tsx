@@ -98,7 +98,10 @@ export default function MainPage(): JSX.Element {
 	const stats = [
 		{ label: 'Years of Experience', value: '7+', icon: BriefcaseIcon },
 		{ label: 'Projects Completed', value: '50+', icon: CheckCircleIcon },
-		{ label: 'GitHub Contributions', value: '1,000+', icon: CodeBracketIcon },
+		{ label: 'Production Deployments', value: '100+', icon: CodeBracketIcon },
+		{ label: 'Websites Autonomously Scraped', value: '200+', icon: CodeBracketIcon },
+		{ label: 'APIs integrated', value: '250+', icon: CodeBracketIcon },
+		{ label: 'Peer Reviews Completed', value: '800+', icon: CodeBracketIcon },
 	];
 
 	return (
@@ -123,7 +126,7 @@ export default function MainPage(): JSX.Element {
 						</motion.p>
 
 						{/* Stats Grid - Made smaller */}
-						<motion.div variants={itemVariants} className='mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3'>
+						<motion.div variants={itemVariants} className='mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:gap-4'>
 							{stats.map((stat, index) => {
 								const Icon = stat.icon;
 								return (
@@ -131,7 +134,7 @@ export default function MainPage(): JSX.Element {
 										<div className='absolute top-0 right-0 -mt-2 -mr-2 h-16 w-16 rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors' />
 										<Icon className='relative mb-1 h-6 w-6 text-primary' />
 										<div className='relative'>
-											<p className='text-2xl font-bold text-foreground'>{stat.value}</p>
+											<p className='text-xl font-bold text-foreground sm:text-2xl'>{stat.value}</p>
 											<p className='text-xs text-secondary-text'>{stat.label}</p>
 										</div>
 									</motion.div>
