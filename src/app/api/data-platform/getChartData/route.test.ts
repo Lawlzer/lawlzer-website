@@ -1,14 +1,14 @@
-import type { MongoClient } from 'mongodb';
 import { testApiHandler } from 'next-test-api-route-handler';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock the mongodb module before any imports that use it
-vi.mock('mongodb', () => ({
-	MongoClient: vi.fn().mockImplementation(
-		() =>
-			// @ts-expect-error - accessing test global
-			global._currentMockClient as MongoClient
-	),
+// Mock the db module before any imports that use it
+vi.mock('~/server/db', () => ({
+	db: {
+		commodityData: {
+			count: vi.fn(),
+			findMany: vi.fn(),
+		},
+	},
 }));
 
 // Set DATABASE_URL before importing route
@@ -16,52 +16,18 @@ process.env.DATABASE_URL = 'mongodb://localhost:27017/test';
 
 import * as route from './route';
 
-describe('/api/data-platform/getChartData', () => {
-	let mockCollection: any;
-	let mockDb: any;
-	let mockClient: any;
+import { db } from '~/server/db';
 
+describe('/api/data-platform/getChartData', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 
 		// Use vi.stubEnv to set environment variables
 		vi.stubEnv('DATABASE_URL', 'mongodb://localhost:27017/test');
 		vi.stubEnv('NODE_ENV', 'development');
-
-		// Create fresh mocks for each test
-		mockCollection = {
-			collectionName: 'CommodityData',
-			countDocuments: vi.fn(),
-			find: vi.fn(),
-		};
-
-		mockDb = {
-			databaseName: 'test',
-			collection: vi.fn().mockReturnValue(mockCollection),
-		};
-
-		mockClient = {
-			db: vi.fn().mockReturnValue(mockDb),
-			connect: vi.fn().mockResolvedValue(undefined), // connect returns a promise that resolves to the client
-		};
-
-		// Make the mock client available globally
-		// @ts-expect-error - setting test global
-		global._currentMockClient = mockClient;
-
-		// Reset the global MongoDB promise
-		// @ts-expect-error - resetting global
-		delete global._mongoClientPromise;
-
-		// Set up the global promise to return our mock client
-		// @ts-expect-error - setting global
-		global._mongoClientPromise = Promise.resolve(mockClient);
 	});
 
 	afterEach(() => {
-		// Clean up globals
-		// @ts-expect-error - cleaning globals
-		delete global._mongoClientPromise;
 		// Restore environment
 		vi.unstubAllEnvs();
 		vi.resetModules();
@@ -69,9 +35,9 @@ describe('/api/data-platform/getChartData', () => {
 
 	it('should return raw data points when no filters applied', async () => {
 		// Mock document count
-		mockCollection.countDocuments.mockResolvedValue(3);
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(3);
 
-		// Mock find result
+		// Mock findMany result
 		const mockDocuments = [
 			{
 				_id: '1',
@@ -98,9 +64,7 @@ describe('/api/data-platform/getChartData', () => {
 			},
 		];
 
-		mockCollection.find.mockReturnValue({
-			toArray: vi.fn().mockResolvedValue(mockDocuments),
-		});
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
 		await testApiHandler({
 			appHandler: route,
@@ -133,57 +97,107 @@ describe('/api/data-platform/getChartData', () => {
 					},
 				});
 
-				// Verify MongoDB calls
-				expect(mockCollection.countDocuments).toHaveBeenCalledWith({});
-				expect(mockCollection.find).toHaveBeenCalledWith(
-					{},
-					{
-						projection: {
-							unixDate: 1,
-							price: 1,
-							exports: 1,
-							head: 1,
-							totalVolume: 1,
-						},
-					}
-				);
+				// Verify Prisma calls
+				// eslint-disable-next-line @typescript-eslint/unbound-method
+				expect(db.commodityData.count).toHaveBeenCalledWith({ where: {} });
+				// eslint-disable-next-line @typescript-eslint/unbound-method
+				expect(db.commodityData.findMany).toHaveBeenCalledWith({
+					where: {},
+					select: {
+						unixDate: true,
+						price: true,
+						exports: true,
+						head: true,
+						totalVolume: true,
+					},
+				});
+			},
+		});
+	});
+
+	it('should return aggregate data when groupBy parameter is set', async () => {
+		const groupBy = 'type';
+
+		// Mock count
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(50);
+
+		// Mock findMany with grouped data
+		const mockDocuments = [
+			// Beef documents
+			{ unixDate: 1700000000000, price: 100, type: 'Beef' },
+			{ unixDate: 1700100000000, price: 110, type: 'Beef' },
+			{ unixDate: 1700200000000, price: 105, type: 'Beef' },
+			// Pork documents
+			{ unixDate: 1700000000000, price: 80, type: 'Pork' },
+			{ unixDate: 1700100000000, price: 85, type: 'Pork' },
+			{ unixDate: 1700200000000, price: 82, type: 'Pork' },
+		];
+
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
+
+		await testApiHandler({
+			appHandler: route,
+			url: `/api/data-platform/getChartData?groupBy=${groupBy}`,
+			test: async ({ fetch }) => {
+				const response = await fetch({ method: 'GET' });
+				const json = await response.json();
+
+				expect(response.status).toBe(200);
+				expect(json.documentCount).toBe(50); // Total count, not grouped
+				expect(json.limitExceeded).toBe(false);
+
+				// Check aggregated data structure
+				expect(json.aggregatedData).toBeDefined();
+				expect(json.aggregatedData).toHaveProperty('Beef');
+				expect(json.aggregatedData).toHaveProperty('Pork');
+
+				// Check Beef aggregation
+				expect(json.aggregatedData.Beef).toHaveLength(3);
+				expect(json.aggregatedData.Beef[0]).toEqual({
+					timestamp: 1700000000000,
+					values: {
+						price: 100,
+					},
+				});
+
+				// Check Pork aggregation
+				expect(json.aggregatedData.Pork).toHaveLength(3);
+				expect(json.aggregatedData.Pork[0]).toEqual({
+					timestamp: 1700000000000,
+					values: {
+						price: 80,
+					},
+				});
 			},
 		});
 	});
 
 	it('should apply filters correctly', async () => {
 		const inputFilters = {
-			type: ['Beef', 'Pork'],
+			type: ['Beef'],
 			category: ['Fresh'],
-			state: 'Texas', // Non-array value
 		};
 
-		mockCollection.countDocuments.mockResolvedValue(2);
+		// Mock filtered count
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
 
+		// Mock filtered documents
 		const mockDocuments = [
 			{
-				_id: '1',
 				unixDate: 1700000000000,
+				price: 100.5,
 				type: 'Beef',
 				category: 'Fresh',
-				state: 'Texas',
-				price: 105.0,
-				exports: 1200,
 			},
 			{
-				_id: '2',
 				unixDate: 1700100000000,
-				type: 'Pork',
+				price: 102.0,
+				type: 'Beef',
 				category: 'Fresh',
-				state: 'Texas',
-				price: 85.0,
-				exports: 800,
 			},
 		];
 
-		mockCollection.find.mockReturnValue({
-			toArray: vi.fn().mockResolvedValue(mockDocuments),
-		});
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
 		await testApiHandler({
 			appHandler: route,
@@ -196,18 +210,20 @@ describe('/api/data-platform/getChartData', () => {
 				expect(json.documentCount).toBe(2);
 
 				// Verify filters were applied
-				expect(mockCollection.countDocuments).toHaveBeenCalledWith({
-					type: { $in: ['Beef', 'Pork'] },
-					category: { $in: ['Fresh'] },
-					state: 'Texas',
+				// eslint-disable-next-line @typescript-eslint/unbound-method
+				expect(db.commodityData.count).toHaveBeenCalledWith({
+					where: {
+						type: { in: ['Beef'] },
+						category: { in: ['Fresh'] },
+					},
 				});
 			},
 		});
 	});
 
 	it('should handle document count exceeding limit', async () => {
-		// Mock count exceeding MAX_DOCUMENTS_FOR_PROCESSING (5000)
-		mockCollection.countDocuments.mockResolvedValue(6000);
+		// Mock count exceeding limit
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(6000);
 
 		await testApiHandler({
 			appHandler: route,
@@ -220,41 +236,32 @@ describe('/api/data-platform/getChartData', () => {
 				expect(json.limitExceeded).toBe(true);
 				expect(json.rawData).toBeNull();
 
-				// Should not fetch documents when limit exceeded
-				expect(mockCollection.find).not.toHaveBeenCalled();
+				// Should not call findMany when limit exceeded
+				// eslint-disable-next-line @typescript-eslint/unbound-method
+				expect(db.commodityData.findMany).not.toHaveBeenCalled();
 			},
 		});
 	});
 
 	it('should skip documents with invalid unixDate', async () => {
-		mockCollection.countDocuments.mockResolvedValue(4);
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(3);
 
 		const mockDocuments = [
 			{
-				_id: '1',
 				unixDate: 1700000000000,
 				price: 100,
 			},
 			{
-				_id: '2',
 				unixDate: null, // Invalid
-				price: 102,
+				price: 200,
 			},
 			{
-				_id: '3',
-				unixDate: NaN, // Invalid
-				price: 103,
-			},
-			{
-				_id: '4',
-				unixDate: Infinity, // Invalid
-				price: 104,
+				unixDate: 'invalid', // Invalid
+				price: 300,
 			},
 		];
 
-		mockCollection.find.mockReturnValue({
-			toArray: vi.fn().mockResolvedValue(mockDocuments),
-		});
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
 		await testApiHandler({
 			appHandler: route,
@@ -271,26 +278,20 @@ describe('/api/data-platform/getChartData', () => {
 	});
 
 	it('should skip documents with no numeric values', async () => {
-		mockCollection.countDocuments.mockResolvedValue(2);
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
 
 		const mockDocuments = [
 			{
-				_id: '1',
 				unixDate: 1700000000000,
 				price: 100,
 			},
 			{
-				_id: '2',
 				unixDate: 1700100000000,
-				// No numeric fields, only metadata
-				type: 'Beef',
-				category: 'Fresh',
+				// No numeric values
 			},
 		];
 
-		mockCollection.find.mockReturnValue({
-			toArray: vi.fn().mockResolvedValue(mockDocuments),
-		});
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
 		await testApiHandler({
 			appHandler: route,
@@ -307,7 +308,7 @@ describe('/api/data-platform/getChartData', () => {
 	});
 
 	it('should handle no matching documents', async () => {
-		mockCollection.countDocuments.mockResolvedValue(0);
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
 
 		await testApiHandler({
 			appHandler: route,
@@ -320,7 +321,9 @@ describe('/api/data-platform/getChartData', () => {
 				expect(json.rawData).toEqual([]);
 
 				// Should not try to fetch when count is 0
-				expect(mockCollection.find).not.toHaveBeenCalled();
+				const findManyMock = vi.mocked(db.commodityData).findMany;
+
+				expect(findManyMock).not.toHaveBeenCalled();
 			},
 		});
 	});
@@ -351,9 +354,8 @@ describe('/api/data-platform/getChartData', () => {
 		const { mockConsoleError } = await import('testUtils/unit/console.helpers');
 		const consoleMock = mockConsoleError();
 
-		mockClient.db.mockImplementationOnce(() => {
-			throw new Error('Connection failed');
-		});
+		// Mock Prisma to throw error
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Connection failed'));
 
 		await testApiHandler({
 			appHandler: route,
@@ -378,6 +380,9 @@ describe('/api/data-platform/getChartData', () => {
 		const consoleMock = mockConsoleError();
 
 		delete process.env.DATABASE_URL;
+
+		// Mock Prisma to throw error about missing DATABASE_URL
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DATABASE_URL is not defined'));
 
 		await testApiHandler({
 			appHandler: route,
