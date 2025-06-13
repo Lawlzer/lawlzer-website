@@ -36,10 +36,11 @@ type FormattedChartData = {
 } | null;
 
 // Define constants outside component
-const chartMargin = { top: 40, right: 30, bottom: 50, left: 60 };
+// Increased margins to ensure axis labels are always visible
+const chartMargin = { top: 40, right: 30, bottom: 70, left: 80 };
 const tooltipStyles = {
-	backgroundColor: 'rgba(50,50,50,0.8)',
-	color: 'white',
+	backgroundColor: 'var(--popover)',
+	color: 'var(--popover-foreground)',
 	padding: '0.5rem',
 	borderRadius: '4px',
 	fontSize: '12px',
@@ -133,25 +134,58 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 				// Improve Y-axis scaling for small-range fields
 				const range = maxY - minY;
 				let yPadding: number;
+				let forceStartAtZero = false;
 
-				// For fields with small absolute ranges (like "head" with 50-500 range)
-				if (activeChartTab.toLowerCase() === 'head' || range < 1000) {
-					// Use percentage-based padding for better visualization
-					yPadding = range * 0.15; // 15% padding for small ranges
-					// Ensure minimum padding for very small ranges
-					if (yPadding < 10) yPadding = 10;
+				// Determine appropriate padding based on data type and range
+				if (range === 0) {
+					// If all values are the same, add small padding
+					const minPadding = Math.abs(minY) * 0.1;
+					yPadding = minPadding === 0 ? 1 : minPadding;
+				} else if (range < 0.1) {
+					// For very small decimal ranges (like prices 1.00-1.02)
+					yPadding = range * 0.5; // 50% padding for tiny ranges
+				} else if (range < 1) {
+					// For small decimal ranges
+					yPadding = range * 0.3; // 30% padding
+				} else if (range < 10) {
+					// For medium ranges
+					yPadding = range * 0.2; // 20% padding
+				} else if (range < 1000) {
+					// For larger ranges
+					yPadding = range * 0.15; // 15% padding
 				} else {
-					// Standard 10% padding for large ranges
-					yPadding = range * 0.1;
-					if (yPadding === 0) yPadding = 1;
+					// For very large ranges
+					yPadding = range * 0.1; // 10% padding
 				}
 
-				// Apply padding with special handling for negative values
-				minY = minY < 0 ? minY - yPadding : Math.max(0, minY - yPadding);
-				maxY += yPadding;
+				// Determine if we should start at zero based on data type and values
+				// Only force zero for counts/quantities when values are reasonably close to zero
+				if (/count|number|quantity|total|frequency|head/i.test(activeChartTab)) {
+					// Only start at zero if the minimum is less than 20% of the maximum
+					forceStartAtZero = minY >= 0 && minY < maxY * 0.2;
+				}
+
+				// Apply padding
+				if (forceStartAtZero) {
+					minY = 0;
+					maxY += yPadding;
+				} else {
+					// Don't force to zero - let the chart focus on the data range
+					minY -= yPadding;
+					maxY += yPadding;
+				}
 
 				// For small-range fields, ensure we have enough tick marks for readability
-				const numYTicks = range < 1000 ? 8 : 5;
+				let numYTicks: number;
+				if (range < 0.1) {
+					numYTicks = 10; // More ticks for very small ranges
+				} else if (range < 1) {
+					numYTicks = 8;
+				} else if (range < 10) {
+					numYTicks = 6;
+				} else {
+					numYTicks = 5;
+				}
 
 				const yScale = scaleLinear<number>({ domain: [minY, maxY], range: [innerHeight, 0], nice: true });
 
@@ -194,7 +228,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 												}}
 											>
 												<svg className='mr-1' height={14} width={14}>
-													<rect fill={formattedData.rangeFillColor} height={14} stroke='rgba(0,0,0,0.2)' strokeWidth={1} width={14} />
+													<rect fill={formattedData.rangeFillColor} height={14} stroke='var(--border)' strokeWidth={1} width={14} />
 													{isHidden ? <line stroke='black' strokeWidth='2' x1='0' x2='14' y1='7' y2='7' /> : null}
 												</svg>
 												<LegendLabel style={{ textDecoration: isHidden ? 'line-through' : 'none' }}>{formattedData.rangeLabel}</LegendLabel>
@@ -207,23 +241,24 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 						<svg ref={containerRef} height={height} width={width}>
 							<Group left={chartMargin.left} top={chartMargin.top}>
 								{/* Grid */}
-								<GridRows pointerEvents='none' scale={yScale} stroke='#e0e0e0' strokeOpacity={0.3} width={innerWidth} />
-								<GridColumns height={innerHeight} pointerEvents='none' scale={xScale} stroke='#e0e0e0' strokeOpacity={0.3} />
+								<GridRows pointerEvents='none' scale={yScale} stroke='currentColor' strokeOpacity={0.1} width={innerWidth} className='text-border' />
+								<GridColumns height={innerHeight} pointerEvents='none' scale={xScale} stroke='currentColor' strokeOpacity={0.1} className='text-border' />
 
 								{/* Axes */}
 								<AxisBottom
 									label='Day of Year'
 									numTicks={innerWidth > 520 ? 12 : 6}
 									scale={xScale}
-									stroke='#333'
+									stroke='currentColor'
 									tickFormat={formatDayOfYearForAxis}
-									tickStroke='#333'
+									tickStroke='currentColor'
 									top={innerHeight}
 									labelProps={{
 										fontSize: 14,
-										fill: '#333',
+										fill: 'currentColor',
 										textAnchor: 'middle',
 										dy: '2.5em',
+										className: 'text-foreground',
 									}}
 									tickLabelProps={{
 										// Use object directly, angle logic needs width
@@ -231,40 +266,53 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 										textAnchor: 'middle',
 										dy: '0.25em',
 										angle: innerWidth < 400 ? 45 : 0,
+										fill: 'currentColor',
+										className: 'text-muted-foreground',
 									}}
 								/>
 								<AxisLeft
 									label={getYAxisLabel(activeChartTab)}
 									numTicks={numYTicks}
 									scale={yScale}
-									stroke='#333'
-									tickStroke='#333'
+									stroke='currentColor'
+									tickStroke='currentColor'
 									labelProps={{
 										fontSize: 14,
-										fill: '#333',
+										fill: 'currentColor',
 										textAnchor: 'middle',
 										dy: '-3em',
 										dx: '-3em',
 										angle: -90,
+										className: 'text-foreground',
 									}}
 									tickLabelProps={{
 										fontSize: 11,
 										textAnchor: 'end',
 										dx: '-0.25em',
 										dy: '0.25em',
+										fill: 'currentColor',
+										className: 'text-muted-foreground',
 									}}
 									tickFormat={(value) => {
 										// Format tick labels based on the data range
 										const num = typeof value === 'number' ? value : value.valueOf();
-										if (activeChartTab.toLowerCase() === 'head' || range < 1000) {
-											// Show full numbers for small ranges
-											return Math.round(num).toString();
+
+										// For very small ranges, show appropriate decimal places
+										if (range < 0.01) {
+											return num.toFixed(4); // 4 decimal places for very tiny ranges
+										} else if (range < 0.1) {
+											return num.toFixed(3); // 3 decimal places for small ranges
+										} else if (range < 1) {
+											return num.toFixed(2); // 2 decimal places for sub-1 ranges
+										} else if (range < 10) {
+											return num.toFixed(1); // 1 decimal place for small ranges
 										} else if (num >= 1000000) {
 											return `${(num / 1000000).toFixed(1)}M`;
 										} else if (num >= 1000) {
 											return `${(num / 1000).toFixed(0)}K`;
+										} else {
+											return Math.round(num).toString();
 										}
-										return num.toFixed(0);
 									}}
 								/>
 
@@ -309,20 +357,35 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ formattedData,
 						{/* Tooltip */}
 						{tooltipOpen && tooltipData ? (
 							<TooltipInPortal left={tooltipLeft} style={tooltipStyles} top={tooltipTop}>
-								<div style={{ marginBottom: '5px', fontWeight: 'bold' }}>{formatDayOfYearForAxis(tooltipData.day, 0, [])}</div>
-								{tooltipData.range ? (
-									<div>
-										Range ({/\(([^)]+)\)/.exec(formattedData?.rangeLabel)?.[1] ?? ''}):{' '}
-										<strong>
-											{tooltipData.range.yMin.toFixed(2)} - {tooltipData.range.yMax.toFixed(2)}
-										</strong>
-									</div>
-								) : null}
-								{tooltipData.points.map((point: TooltipPointData) => (
-									<div key={point.year}>
-										{point.year}: {String(point.y)}
-									</div>
-								))}
+								{(() => {
+									// Helper function to format values based on range
+									const formatValue = (value: number): string => {
+										if (range < 0.01) return value.toFixed(4);
+										if (range < 0.1) return value.toFixed(3);
+										if (range < 1) return value.toFixed(2);
+										if (range < 10) return value.toFixed(1);
+										return Math.round(value).toString();
+									};
+
+									return (
+										<>
+											<div style={{ marginBottom: '5px', fontWeight: 'bold' }}>{formatDayOfYearForAxis(tooltipData.day, 0, [])}</div>
+											{tooltipData.range ? (
+												<div>
+													Range ({/\(([^)]+)\)/.exec(formattedData?.rangeLabel)?.[1] ?? ''}):{' '}
+													<strong>
+														{formatValue(tooltipData.range.yMin)} - {formatValue(tooltipData.range.yMax)}
+													</strong>
+												</div>
+											) : null}
+											{tooltipData.points.map((point: TooltipPointData) => (
+												<div key={point.year}>
+													{point.year}: {formatValue(point.y)}
+												</div>
+											))}
+										</>
+									);
+								})()}
 							</TooltipInPortal>
 						) : null}
 					</>
