@@ -2,23 +2,10 @@
 /**
  * Debug script to manually reset and repopulate the Data Platform database.
  *
- * THIS IS FOR DEBUGGING ONLY!
- *
- * In normal operation, the data platform is automatically seeded on server startup
- * if the database is empty. Use this script only when you need to:
- *
- * 1. Force reset the database and start fresh
- * 2. Test the data generation logic
- * 3. Debug data platform issues
- *
  * Usage:
- *   npm run debug:reset-data-platform
- *   or
- *   npx tsx scripts/debugResetDataPlatform.ts
- *
- * Options:
- *   --no-reset    Skip the database reset and just add more data
- *   --force       Use a more aggressive deletion method if standard fails
+ *   npx tsx scripts/reset-data-platform.ts
+ *   npx tsx scripts/reset-data-platform.ts --force
+ *   npx tsx scripts/reset-data-platform.ts --no-reset
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -37,34 +24,7 @@ async function simpleReset(): Promise<void> {
 		console.info(`[DataPlatform] Deleted ${result.count} records.`);
 	} catch (error) {
 		console.error('[DataPlatform] Simple reset also failed:', error);
-
-		// Last resort: raw SQL (works differently for different databases)
-		console.info('[DataPlatform] Attempting database-specific cleanup...');
-		try {
-			// For MongoDB (most common)
-			const databaseUrl = process.env.DATABASE_URL;
-			const dbName = databaseUrl !== undefined && databaseUrl !== '' ? (databaseUrl.split('/').pop()?.split('?')[0] ?? 'unknown') : 'unknown';
-			console.info(`[DataPlatform] Database: ${dbName}`);
-
-			// Try MongoDB-style drop
-			await prisma.$runCommandRaw({
-				drop: 'CommodityData',
-			});
-			console.info('[DataPlatform] Collection dropped successfully.');
-		} catch (dropError) {
-			console.error('[DataPlatform] Drop failed (this is normal for non-MongoDB databases):', dropError);
-
-			// For SQL databases, try TRUNCATE
-			// TODO: Fix this for Prisma v5+
-			// try {
-			// 	await prisma.$executeRawUnsafe('TRUNCATE TABLE "CommodityData" CASCADE');
-			// 	console.info('[DataPlatform] TRUNCATE successful.');
-			// } catch (truncateError) {
-			// 	console.error('[DataPlatform] TRUNCATE also failed:', truncateError);
-			// 	throw new Error('All reset methods failed. Please check your database connection and permissions.');
-			// }
-			throw new Error('Reset failed. Please use standard reset method or check database connection.');
-		}
+		throw error;
 	}
 }
 
@@ -90,7 +50,7 @@ async function main(): Promise<void> {
 
 		if (!forceMode) {
 			console.info('📌 If you still get errors, use --force flag:');
-			console.info('   npx tsx scripts/debugResetDataPlatform.ts --force');
+			console.info('   npx tsx scripts/reset-data-platform.ts --force');
 			console.info('');
 		}
 
@@ -104,15 +64,17 @@ async function main(): Promise<void> {
 		console.info('Resetting database...');
 
 		try {
-			// Try the standard reset first
-			await resetDataPlatform();
-		} catch (error) {
-			console.error('Standard reset failed:', error);
-
 			if (forceMode) {
-				console.info('Force mode enabled, trying alternative reset methods...');
+				// In force mode, skip the complex reset and use simple one
 				await simpleReset();
 			} else {
+				// Try the standard reset first
+				await resetDataPlatform();
+			}
+		} catch (error) {
+			console.error('Reset failed:', error);
+
+			if (!forceMode) {
 				console.error('');
 				console.error('❌ Reset failed due to database conflicts.');
 				console.error('');
@@ -120,8 +82,14 @@ async function main(): Promise<void> {
 				console.error('   1. Make sure ALL Next.js servers are stopped');
 				console.error('   2. Close Prisma Studio if open');
 				console.error('   3. Try again with --force flag:');
-				console.error('      npx tsx scripts/debugResetDataPlatform.ts --force');
+				console.error('      npx tsx scripts/reset-data-platform.ts --force');
 				console.error('');
+				process.exit(1);
+			} else {
+				// Force mode also failed
+				console.error('');
+				console.error('❌ Even force mode failed. The database is likely locked.');
+				console.error('   Please ensure all connections are closed and try again.');
 				process.exit(1);
 			}
 		}
