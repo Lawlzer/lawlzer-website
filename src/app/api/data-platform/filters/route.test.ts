@@ -1,14 +1,14 @@
-import type { MongoClient } from 'mongodb';
 import { testApiHandler } from 'next-test-api-route-handler';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock the mongodb module before any imports that use it
-vi.mock('mongodb', () => ({
-	MongoClient: vi.fn().mockImplementation(
-		() =>
-			// @ts-expect-error - accessing test global
-			global._currentMockClient as MongoClient
-	),
+// Mock the db module before any imports that use it
+vi.mock('~/server/db', () => ({
+	db: {
+		commodityData: {
+			count: vi.fn(),
+			groupBy: vi.fn(),
+		},
+	},
 }));
 
 // Set DATABASE_URL before importing route
@@ -17,52 +17,18 @@ process.env.DATABASE_URL = 'mongodb://localhost:27017/test';
 import type { FiltersResponse } from './route';
 import * as route from './route';
 
-describe('/api/data-platform/filters', () => {
-	let mockCollection: any;
-	let mockDb: any;
-	let mockClient: any;
+import { db } from '~/server/db';
 
+describe('/api/data-platform/filters', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 
 		// Use vi.stubEnv to set environment variables
 		vi.stubEnv('DATABASE_URL', 'mongodb://localhost:27017/test');
 		vi.stubEnv('NODE_ENV', 'development');
-
-		// Create fresh mocks for each test
-		mockCollection = {
-			collectionName: 'CommodityData',
-			countDocuments: vi.fn(),
-			aggregate: vi.fn(),
-		};
-
-		mockDb = {
-			databaseName: 'test',
-			collection: vi.fn().mockReturnValue(mockCollection),
-		};
-
-		mockClient = {
-			db: vi.fn().mockReturnValue(mockDb),
-			connect: vi.fn().mockResolvedValue(undefined),
-		};
-
-		// Make the mock client available globally
-		// @ts-expect-error - setting test global
-		global._currentMockClient = mockClient;
-
-		// Reset the global MongoDB promise
-		// @ts-expect-error - resetting global
-		delete global._mongoClientPromise;
-
-		// Set up the global promise to return our mock client
-		// @ts-expect-error - setting global
-		global._mongoClientPromise = Promise.resolve(mockClient);
 	});
 
 	afterEach(() => {
-		// Clean up globals
-		// @ts-expect-error - cleaning globals
-		delete global._mongoClientPromise;
 		// Restore environment
 		vi.unstubAllEnvs();
 		vi.resetModules();
@@ -70,27 +36,31 @@ describe('/api/data-platform/filters', () => {
 
 	it('should return filters with counts when no input filters provided', async () => {
 		// Mock total document count
-		mockCollection.countDocuments.mockResolvedValue(100);
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(100);
 
-		// Mock aggregation result with facets
-		const mockFacetResult = {
-			type: [
-				{ _id: 'Beef', count: 50 },
-				{ _id: 'Pork', count: 30 },
-				{ _id: 'Poultry', count: 20 },
-			],
-			category: [
-				{ _id: 'Fresh', count: 60 },
-				{ _id: 'Frozen', count: 40 },
-			],
-			country: [
-				{ _id: 'USA', count: 100 }, // Common field - all documents
-			],
+		// Mock groupBy results for each filter type
+		const mockGroupByImplementation = async ({ by, _count, where: _where }: any) => {
+			const field = by[0];
+			if (field === 'type') {
+				return [
+					{ type: 'Beef', _count: { _all: 50 } },
+					{ type: 'Pork', _count: { _all: 30 } },
+					{ type: 'Poultry', _count: { _all: 20 } },
+				];
+			}
+			if (field === 'category') {
+				return [
+					{ category: 'Fresh', _count: { _all: 60 } },
+					{ category: 'Frozen', _count: { _all: 40 } },
+				];
+			}
+			if (field === 'country') {
+				return [{ country: 'USA', _count: { _all: 100 } }];
+			}
+			return [];
 		};
 
-		mockCollection.aggregate.mockReturnValue({
-			toArray: vi.fn().mockResolvedValue([mockFacetResult]),
-		});
+		(db.commodityData.groupBy as ReturnType<typeof vi.fn>).mockImplementation(mockGroupByImplementation);
 
 		await testApiHandler<FiltersResponse>({
 			appHandler: route,
@@ -118,9 +88,9 @@ describe('/api/data-platform/filters', () => {
 					country: 'USA',
 				});
 
-				// Verify MongoDB calls
-				expect(mockCollection.countDocuments).toHaveBeenCalledWith({});
-				expect(mockCollection.aggregate).toHaveBeenCalled();
+				// Verify Prisma calls
+				// eslint-disable-next-line @typescript-eslint/unbound-method
+				expect(db.commodityData.count).toHaveBeenCalled();
 			},
 		});
 	});
@@ -132,26 +102,30 @@ describe('/api/data-platform/filters', () => {
 		};
 
 		// Mock filtered document count
-		mockCollection.countDocuments.mockResolvedValue(40);
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(40);
 
-		// Mock aggregation result with filtered facets
-		const mockFacetResult = {
-			type: [
-				{ _id: 'Beef', count: 25 },
-				{ _id: 'Pork', count: 15 },
-			],
-			category: [
-				{ _id: 'Fresh', count: 40 }, // All 40 documents are Fresh
-			],
-			country: [
-				{ _id: 'USA', count: 30 },
-				{ _id: 'Canada', count: 10 },
-			],
+		// Mock groupBy results with filtered data
+		const mockGroupByImplementation = async ({ by, _count, where: _where }: any) => {
+			const field = by[0];
+			if (field === 'type') {
+				return [
+					{ type: 'Beef', _count: { _all: 25 } },
+					{ type: 'Pork', _count: { _all: 15 } },
+				];
+			}
+			if (field === 'category') {
+				return [{ category: 'Fresh', _count: { _all: 40 } }];
+			}
+			if (field === 'country') {
+				return [
+					{ country: 'USA', _count: { _all: 30 } },
+					{ country: 'Canada', _count: { _all: 10 } },
+				];
+			}
+			return [];
 		};
 
-		mockCollection.aggregate.mockReturnValue({
-			toArray: vi.fn().mockResolvedValue([mockFacetResult]),
-		});
+		(db.commodityData.groupBy as ReturnType<typeof vi.fn>).mockImplementation(mockGroupByImplementation);
 
 		await testApiHandler<FiltersResponse>({
 			appHandler: route,
@@ -172,35 +146,42 @@ describe('/api/data-platform/filters', () => {
 				// Category should be a common field since all 40 documents are Fresh
 				expect(json.commonFields?.category).toBe('Fresh');
 
-				// Verify MongoDB was called with correct filter
-				expect(mockCollection.countDocuments).toHaveBeenCalledWith({
-					type: { $in: ['Beef', 'Pork'] },
-					category: { $in: ['Fresh'] },
+				// Verify Prisma was called with correct filter
+				// eslint-disable-next-line @typescript-eslint/unbound-method
+				expect(db.commodityData.count).toHaveBeenCalledWith({
+					where: {
+						type: { in: ['Beef', 'Pork'] },
+						category: { in: ['Fresh'] },
+					},
 				});
 			},
 		});
 	});
 
 	it('should exclude filters with max count <= 15 when multiple values exist', async () => {
-		mockCollection.countDocuments.mockResolvedValue(50);
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(50);
 
-		const mockFacetResult = {
-			type: [
-				{ _id: 'Beef', count: 10 }, // Max count = 10, should be excluded
-				{ _id: 'Pork', count: 5 },
-			],
-			state: [
-				{ _id: 'Texas', count: 30 }, // Max count > 15, should be included
-				{ _id: 'California', count: 20 },
-			],
-			'Cattle Type': [
-				{ _id: 'Angus', count: 12 }, // Only one value, should be included
-			],
+		const mockGroupByImplementation = async ({ by }: any) => {
+			const field = by[0];
+			if (field === 'type') {
+				return [
+					{ type: 'Beef', _count: { _all: 10 } },
+					{ type: 'Pork', _count: { _all: 5 } },
+				];
+			}
+			if (field === 'state') {
+				return [
+					{ state: 'Texas', _count: { _all: 30 } },
+					{ state: 'California', _count: { _all: 20 } },
+				];
+			}
+			if (field === 'Cattle Type') {
+				return [{ 'Cattle Type': 'Angus', _count: { _all: 12 } }];
+			}
+			return [];
 		};
 
-		mockCollection.aggregate.mockReturnValue({
-			toArray: vi.fn().mockResolvedValue([mockFacetResult]),
-		});
+		(db.commodityData.groupBy as ReturnType<typeof vi.fn>).mockImplementation(mockGroupByImplementation);
 
 		await testApiHandler<FiltersResponse>({
 			appHandler: route,
@@ -251,9 +232,8 @@ describe('/api/data-platform/filters', () => {
 		const { mockConsoleError } = await import('testUtils/unit/console.helpers');
 		const consoleMock = mockConsoleError();
 
-		mockClient.db.mockImplementationOnce(() => {
-			throw new Error('Connection failed');
-		});
+		// Mock Prisma to throw error
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Connection failed'));
 
 		await testApiHandler({
 			appHandler: route,
@@ -278,6 +258,9 @@ describe('/api/data-platform/filters', () => {
 		const consoleMock = mockConsoleError();
 
 		delete process.env.DATABASE_URL;
+
+		// Mock Prisma to throw error about missing DATABASE_URL
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DATABASE_URL is not defined'));
 
 		await testApiHandler({
 			appHandler: route,
