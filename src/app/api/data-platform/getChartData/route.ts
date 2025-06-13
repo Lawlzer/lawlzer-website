@@ -69,13 +69,19 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 		if (documentCount === 0) {
 			console.info('[ChartData API] No documents match filters.');
-			return NextResponse.json({ rawData: [], documentCount: 0 });
+			const response = NextResponse.json({ rawData: [], documentCount: 0 });
+			// Set cache headers for 24 hours
+			response.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=3600');
+			return response;
 		}
 
 		// 3. Check count against the limit
 		if (documentCount > MAX_DOCUMENTS_FOR_PROCESSING) {
 			console.info(`[ChartData API] Document count (${documentCount}) exceeds limit (${MAX_DOCUMENTS_FOR_PROCESSING}).`);
-			return NextResponse.json({ rawData: null, limitExceeded: true, documentCount: documentCount });
+			const response = NextResponse.json({ rawData: null, limitExceeded: true, documentCount: documentCount });
+			// Set cache headers for 24 hours
+			response.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=3600');
+			return response;
 		}
 
 		// 4. Fetch required fields from CommodityData
@@ -126,7 +132,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 		console.info(`[ChartData API] Processed ${rawData.length} data points. Numeric fields found: ${Array.from(numericFieldsPresent).join(', ')}`);
 
 		// 6. Return the raw data points
-		return NextResponse.json({ rawData: rawData, documentCount: documentCount, limitExceeded: false });
+		const response = NextResponse.json({ rawData: rawData, documentCount: documentCount, limitExceeded: false });
+		// Set cache headers for 24 hours
+		response.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=3600');
+		return response;
 	} catch (error) {
 		console.error('Failed to fetch chart data:', error);
 		const errorMessage = error instanceof Error ? error.message : 'Internal server error';

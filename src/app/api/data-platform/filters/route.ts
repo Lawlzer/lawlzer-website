@@ -115,7 +115,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 		// Return results
 		console.debug(`[Filters API] Successfully processed. Returning totalDocuments: ${totalDocuments}, Filter keys: ${Object.keys(formattedFilters).join(', ')}`);
-		return NextResponse.json({ filters: formattedFilters, totalDocuments, commonFields });
+
+		const response = NextResponse.json({ filters: formattedFilters, totalDocuments, commonFields });
+
+		// Set cache headers for 24 hours
+		response.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=3600');
+
+		return response;
 	} catch (error) {
 		console.error('Failed to fetch filters:', error);
 		const errorMessage = error instanceof Error ? error.message : 'Internal server error';
