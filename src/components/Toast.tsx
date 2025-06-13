@@ -36,10 +36,10 @@ const icons = {
 };
 
 const colors = {
-	success: 'from-green-500/20 to-green-500/10 border-green-500/30 text-green-700 dark:text-green-400',
-	error: 'from-red-500/20 to-red-500/10 border-red-500/30 text-red-700 dark:text-red-400',
-	warning: 'from-yellow-500/20 to-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400',
-	info: 'from-blue-500/20 to-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400',
+	success: 'from-primary/20 to-primary/10 border-primary/30 text-primary',
+	error: 'from-destructive/20 to-destructive/10 border-destructive/30 text-destructive',
+	warning: 'from-accent/20 to-accent/10 border-accent/30 text-accent',
+	info: 'from-muted/20 to-muted/10 border-border text-muted-foreground',
 };
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) {
@@ -61,7 +61,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
 			<div className='flex items-start gap-3 p-4'>
 				<Icon className='h-5 w-5 flex-shrink-0 mt-0.5' />
 				<p className='flex-1 text-sm font-medium'>{toast.message}</p>
-				<button onClick={onRemove} className='flex-shrink-0 rounded-md p-1 hover:bg-black/10 dark:hover:bg-white/10 transition-colors'>
+				<button onClick={onRemove} className='flex-shrink-0 rounded-md p-1 hover:bg-foreground/10 transition-colors'>
 					<XMarkIcon className='h-4 w-4' />
 				</button>
 			</div>
