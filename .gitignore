@@ -57,4 +57,4 @@ model_cache/
 whisper-openai-exp/
 feature_cache
 plans
-
+.cursor/rules/**

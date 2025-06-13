@@ -1,6 +1,0 @@
----
-description: ESLint configuration guidance for common issues
-globs: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']
-alwaysApply: false
----
-// <<ESLINT_STRICT_BOOLEAN_EXPRESSIONS>>
