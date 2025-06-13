@@ -224,6 +224,78 @@ export async function seedDataPlatform(options?: { force?: boolean }): Promise<v
 // --- Reset Function (for debugging) ---
 export async function resetDataPlatform(): Promise<void> {
 	console.info('[DataPlatform] Resetting database: deleting existing CommodityData...');
-	await db.commodityData.deleteMany({});
-	console.info('[DataPlatform] Existing data deleted.');
+
+	// Add retry logic for transaction conflicts
+	const maxRetries = 3;
+	let lastError: unknown;
+
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			// First, get the count for logging
+			const initialCount = await db.commodityData.count();
+			console.info(`[DataPlatform] Found ${initialCount} records to delete...`);
+
+			if (initialCount === 0) {
+				console.info('[DataPlatform] No records to delete.');
+				return;
+			}
+
+			// Delete in batches to avoid timeouts on large datasets
+			const BATCH_SIZE = 10000;
+			let deletedTotal = 0;
+
+			while (true) {
+				// Find a batch of IDs to delete
+				const batch = await db.commodityData.findMany({
+					take: BATCH_SIZE,
+					select: { id: true },
+				});
+
+				if (batch.length === 0) {
+					break; // No more records
+				}
+
+				// Delete this batch
+				const batchIds = batch.map((item) => item.id);
+				const deleteResult = await db.commodityData.deleteMany({
+					where: {
+						id: { in: batchIds },
+					},
+				});
+
+				deletedTotal += deleteResult.count;
+				console.info(`[DataPlatform] Deleted ${deletedTotal}/${initialCount} records...`);
+
+				// Small delay to reduce database pressure
+				if (batch.length === BATCH_SIZE) {
+					await new Promise<void>((resolve) => {
+						setTimeout(() => {
+							resolve();
+						}, 100);
+					});
+				}
+			}
+
+			console.info(`[DataPlatform] Successfully deleted ${deletedTotal} records.`);
+			return; // Success, exit function
+		} catch (error) {
+			lastError = error;
+			console.warn(`[DataPlatform] Attempt ${attempt}/${maxRetries} failed:`, error);
+
+			if (attempt < maxRetries) {
+				// Wait before retrying (exponential backoff)
+				const waitTime = attempt * 2000; // 2s, 4s, 6s
+				console.info(`[DataPlatform] Waiting ${waitTime}ms before retry...`);
+				await new Promise<void>((resolve) => {
+					setTimeout(() => {
+						resolve();
+					}, waitTime);
+				});
+			}
+		}
+	}
+
+	// All retries failed
+	console.error('[DataPlatform] Failed to reset database after all retries');
+	throw lastError;
 }
