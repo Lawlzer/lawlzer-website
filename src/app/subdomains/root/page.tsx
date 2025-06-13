@@ -2,7 +2,7 @@
 
 import { ArrowRightIcon, ChartBarIcon, CodeBracketIcon, CommandLineIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { BeakerIcon, BriefcaseIcon, CheckCircleIcon, CubeIcon, GlobeAltIcon, LinkIcon, RocketLaunchIcon } from '@heroicons/react/24/solid';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
@@ -22,26 +22,26 @@ const containerVariants = {
 	},
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
 	hidden: { opacity: 0, y: 20 },
 	visible: {
 		opacity: 1,
 		y: 0,
 		transition: {
 			duration: 0.4,
-			ease: [0.25, 0.1, 0.25, 1],
+			ease: 'easeOut' as const,
 		},
 	},
 };
 
-const scaleVariants = {
+const scaleVariants: Variants = {
 	hidden: { opacity: 0, scale: 0.95 },
 	visible: {
 		opacity: 1,
 		scale: 1,
 		transition: {
 			duration: 0.4,
-			ease: [0.25, 0.1, 0.25, 1],
+			ease: 'easeOut' as const,
 		},
 	},
 };
@@ -131,7 +131,7 @@ export default function MainPage(): JSX.Element {
 								const Icon = stat.icon;
 								return (
 									<motion.div key={index} variants={scaleVariants} whileHover={{ scale: 1.05 }} className='group relative overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md hover:border-primary/50'>
-										<div className='absolute top-0 right-0 -mt-2 -mr-2 h-16 w-16 rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors' />
+										<div className='absolute top-0 right-0 -mt-2 -mr-2 h-16 w-16 rounded-full bg-muted/50 group-hover:bg-muted transition-colors' />
 										<Icon className='relative mb-1 h-6 w-6 text-primary' />
 										<div className='relative'>
 											<p className='text-xl font-bold text-foreground sm:text-2xl'>{stat.value}</p>
@@ -212,7 +212,7 @@ export default function MainPage(): JSX.Element {
 										<div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${project.gradient}`} />
 
 										{/* Icon */}
-										<div className={`mb-6 inline-flex rounded-lg bg-gradient-to-br ${project.gradient} p-3 text-white shadow-lg`}>
+										<div className={`mb-6 inline-flex rounded-lg bg-gradient-to-br ${project.gradient} p-3 text-primary-foreground shadow-lg`}>
 											<Icon className='h-6 w-6' />
 										</div>
 

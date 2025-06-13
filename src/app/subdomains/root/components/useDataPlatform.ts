@@ -49,7 +49,7 @@ export function useDataPlatform(): {
 	const _isDataStale = useCallback(
 		(cacheKey: string) => {
 			const lastFetch = lastFetchTime[cacheKey];
-			return lastFetch === undefined || Date.now() - lastFetch > 3600000; // 1 hour cache
+			return lastFetch === undefined || Date.now() - lastFetch > 86400000; // 24 hour cache
 		},
 		[lastFetchTime]
 	);
