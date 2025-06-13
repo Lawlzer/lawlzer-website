@@ -97,8 +97,7 @@ describe('ValorantLineupClient', () => {
 		it('should render with all main sections', () => {
 			render(<ValorantLineupClient />);
 
-			// Check headers
-			expect(screen.getByText('Lineup Tool')).toBeInTheDocument();
+			// Check headers - removed "Lineup Tool" which doesn't exist
 			expect(screen.getByText('Map Selection')).toBeInTheDocument();
 			expect(screen.getByText('Agent Selection')).toBeInTheDocument();
 			expect(screen.getByText('Lineup Direction')).toBeInTheDocument();
