@@ -43,19 +43,19 @@ describe('/api/data-platform/filters', () => {
 			const field = by[0];
 			if (field === 'type') {
 				return [
-					{ type: 'Beef', _count: { _all: 50 } },
-					{ type: 'Pork', _count: { _all: 30 } },
-					{ type: 'Poultry', _count: { _all: 20 } },
+					{ type: 'Beef', _count: 50 },
+					{ type: 'Pork', _count: 30 },
+					{ type: 'Poultry', _count: 20 },
 				];
 			}
 			if (field === 'category') {
 				return [
-					{ category: 'Fresh', _count: { _all: 60 } },
-					{ category: 'Frozen', _count: { _all: 40 } },
+					{ category: 'Fresh', _count: 60 },
+					{ category: 'Frozen', _count: 40 },
 				];
 			}
 			if (field === 'country') {
-				return [{ country: 'USA', _count: { _all: 100 } }];
+				return [{ country: 'USA', _count: 100 }];
 			}
 			return [];
 		};
@@ -72,6 +72,7 @@ describe('/api/data-platform/filters', () => {
 				expect(json.totalDocuments).toBe(100);
 
 				// Check filters structure
+				expect(json.filters).toBeDefined();
 				expect(json.filters.type).toEqual([
 					{ value: 'Beef', count: 50 },
 					{ value: 'Pork', count: 30 },
@@ -109,17 +110,17 @@ describe('/api/data-platform/filters', () => {
 			const field = by[0];
 			if (field === 'type') {
 				return [
-					{ type: 'Beef', _count: { _all: 25 } },
-					{ type: 'Pork', _count: { _all: 15 } },
+					{ type: 'Beef', _count: 25 },
+					{ type: 'Pork', _count: 15 },
 				];
 			}
 			if (field === 'category') {
-				return [{ category: 'Fresh', _count: { _all: 40 } }];
+				return [{ category: 'Fresh', _count: 40 }];
 			}
 			if (field === 'country') {
 				return [
-					{ country: 'USA', _count: { _all: 30 } },
-					{ country: 'Canada', _count: { _all: 10 } },
+					{ country: 'USA', _count: 30 },
+					{ country: 'Canada', _count: 10 },
 				];
 			}
 			return [];
@@ -138,6 +139,7 @@ describe('/api/data-platform/filters', () => {
 				expect(json.totalDocuments).toBe(40);
 
 				// Check filtered results
+				expect(json.filters).toBeDefined();
 				expect(json.filters.type).toEqual([
 					{ value: 'Beef', count: 25 },
 					{ value: 'Pork', count: 15 },
@@ -165,18 +167,18 @@ describe('/api/data-platform/filters', () => {
 			const field = by[0];
 			if (field === 'type') {
 				return [
-					{ type: 'Beef', _count: { _all: 10 } },
-					{ type: 'Pork', _count: { _all: 5 } },
+					{ type: 'Beef', _count: 10 },
+					{ type: 'Pork', _count: 5 },
 				];
 			}
 			if (field === 'state') {
 				return [
-					{ state: 'Texas', _count: { _all: 30 } },
-					{ state: 'California', _count: { _all: 20 } },
+					{ state: 'Texas', _count: 30 },
+					{ state: 'California', _count: 20 },
 				];
 			}
-			if (field === 'Cattle Type') {
-				return [{ 'Cattle Type': 'Angus', _count: { _all: 12 } }];
+			if (field === 'cattleType') {
+				return [{ cattleType: 'Angus', _count: 12 }];
 			}
 			return [];
 		};
@@ -200,8 +202,8 @@ describe('/api/data-platform/filters', () => {
 					{ value: 'California', count: 20 },
 				]);
 
-				// Cattle Type should be included (only one value)
-				expect(json.filters['Cattle Type']).toEqual([{ value: 'Angus', count: 12 }]);
+				// cattleType should be included (only one value)
+				expect(json.filters.cattleType).toEqual([{ value: 'Angus', count: 12 }]);
 			},
 		});
 	});

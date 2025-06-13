@@ -146,26 +146,15 @@ describe('/api/data-platform/getChartData', () => {
 				expect(json.documentCount).toBe(50); // Total count, not grouped
 				expect(json.limitExceeded).toBe(false);
 
-				// Check aggregated data structure
-				expect(json.aggregatedData).toBeDefined();
-				expect(json.aggregatedData).toHaveProperty('Beef');
-				expect(json.aggregatedData).toHaveProperty('Pork');
+				// Check raw data structure - API now returns rawData not aggregatedData
+				expect(json.rawData).toBeDefined();
+				expect(json.rawData).toHaveLength(6); // All 6 documents
 
-				// Check Beef aggregation
-				expect(json.aggregatedData.Beef).toHaveLength(3);
-				expect(json.aggregatedData.Beef[0]).toEqual({
+				// Check first data point
+				expect(json.rawData[0]).toEqual({
 					timestamp: 1700000000000,
 					values: {
 						price: 100,
-					},
-				});
-
-				// Check Pork aggregation
-				expect(json.aggregatedData.Pork).toHaveLength(3);
-				expect(json.aggregatedData.Pork[0]).toEqual({
-					timestamp: 1700000000000,
-					values: {
-						price: 80,
 					},
 				});
 			},
@@ -321,9 +310,8 @@ describe('/api/data-platform/getChartData', () => {
 				expect(json.rawData).toEqual([]);
 
 				// Should not try to fetch when count is 0
-				const findManyMock = vi.mocked(db.commodityData).findMany;
-
-				expect(findManyMock).not.toHaveBeenCalled();
+				// eslint-disable-next-line @typescript-eslint/unbound-method
+				expect(db.commodityData.findMany).not.toHaveBeenCalled();
 			},
 		});
 	});
