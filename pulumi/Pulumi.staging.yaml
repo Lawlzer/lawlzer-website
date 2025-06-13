@@ -1,0 +1,12 @@
+config:
+  aws:region: us-east-1
+  lawlzer-website-pulumi:appName: lawlzer-website-staging
+  lawlzer-website-pulumi:appPort: '80'
+  lawlzer-website-pulumi:instanceType: 't2.micro' # Free tier eligible
+  lawlzer-website-pulumi:domain: 'staging.lawlzer.com'
+  lawlzer-website-pulumi:githubOrg: Lawlzer
+  lawlzer-website-pulumi:githubRepo: lawlzer-website
+  lawlzer-website-pulumi:githubBranch: staging
+  # The mongo secret - using production URI for now
+  lawlzer-website-pulumi:mongoSecretArn:
+    secure: AAABAI4rWd40EhaeHpoT5vEj8wtJfvw2G4DoA0FKWtXREFovecgyt3jdsOjiyUu0zXeFwEKUeurCvWy7CpN0quQ+Kwe16j+4z4Nv13GL7LpOVIySydUGfn9FzGsUSjwDz7bM5ovHAtlzdPQ=

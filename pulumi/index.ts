@@ -1,99 +1,100 @@
 import * as aws from '@pulumi/aws';
-import * as awsx from '@pulumi/awsx'; // Using awsx for simplified networking/load balancing
 import * as pulumi from '@pulumi/pulumi';
 
-function throwError(message: string): never {
-	throw new Error(message);
-}
-
-// --- Configuration ---
+// Get configuration
 const config = new pulumi.Config();
-// Basic config values - can be set via `pulumi config set <key> <value>`
-const appName = config.get('appName') ?? pulumi.getProject(); // Default to Pulumi project name
-const appPort = config.getNumber('appPort') ?? throwError('appPort is required'); // Port your app listens on (from Dockerfile)
-console.debug(`DEBUG: Using appPort: ${appPort}`); // Log appPort
-const cpu = config.getNumber('cpu') ?? 256; // Fargate CPU units (256 = 0.25 vCPU)
-const memory = config.getNumber('memory') ?? 512; // Fargate memory in MiB
-const desiredCount = config.getNumber('desiredCount') ?? 1; // Number of containers to run
-const targetArch = config.get('targetArch') ?? 'X86_64'; // Fargate CPU Architecture (match Dockerfile) - options: X86_64, ARM64
-const imageUri = config.get('image'); // Read the 'image' config value if provided
-console.debug(`DEBUG: Read config 'image': ${imageUri}`); // Log the raw config value
+const appName = config.get('appName') ?? pulumi.getProject();
+const appPort = config.getNumber('appPort') ?? 3000;
+const instanceType = config.get('instanceType') ?? 't2.micro';
+const domain = config.get('domain') ?? 'staging.lawlzer.com';
+const githubOrg = config.get('githubOrg') ?? 'Lawlzer';
+const githubRepo = config.get('githubRepo') ?? 'lawlzer-website';
+const githubBranch = config.get('githubBranch') ?? 'staging';
 
-// Runtime environment variables from config (add others as needed)
-// The MongoDB URI should be stored securely, preferably in AWS Secrets Manager
-// We'll assume it's stored there and retrieve its ARN via config
-// Example: pulumi config set mongoSecretArn arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/myapp/mongo-db-conn-string-XXXXXX
-const mongoSecretArn = config.requireSecret('mongoSecretArn'); // Require this secret ARN in Pulumi config
+// Get the mongo secret ARN from config
+const mongoSecretArn = config.getSecret('mongoSecretArn');
 
-mongoSecretArn.apply((arn) => {
-	console.info(`DEBUG: Using mongoSecretArn (SSM Parameter ARN): ${arn}`);
-}); // Log secret ARN
-
-// NEW: GitHub Configuration - Replace with your actual Org/Repo
-const githubOrg = 'lawlzer'; // Replace with your GitHub Org name
-const githubRepo = 'lawlzer-website'; // Replace with your GitHub Repo name
-const githubBranch = 'main'; // Or your primary deployment branch
-
-// Get current AWS context for constructing ARNs
+// Get current AWS context
 const currentIdentity = aws.getCallerIdentity({});
 const accountId = currentIdentity.then((id) => id.accountId);
-const region = aws.config.requireRegion(); // Get region from AWS provider config
+const region = aws.config.requireRegion();
 
-// --- Networking (using Default VPC) ---
-// Get the default VPC using the core AWS provider
-const defaultVpc = aws.ec2.getVpc({ default: true });
-// Get subnet IDs from the default VPC
-const defaultSubnets = defaultVpc.then(async (vpc) => aws.ec2.getSubnets({ filters: [{ name: 'vpc-id', values: [vpc.id] }] }));
-
-// --- ECR --- Moved Up --- NOW DEFINED BEFORE IAM POLICY ---
-const repo = new awsx.ecr.Repository('app-repo', {
-	name: `${appName}-repo`,
-	// Optional: Add lifecycle policy to clean up old images
-	// lifecyclePolicy: { ... }
+// Create a security group for the EC2 instance
+const webSecurityGroup = new aws.ec2.SecurityGroup('web-sg', {
+	name: `${appName}-web-sg`,
+	description: 'Security group for web server',
+	ingress: [
+		// HTTP
+		{
+			protocol: 'tcp',
+			fromPort: 80,
+			toPort: 80,
+			cidrBlocks: ['0.0.0.0/0'],
+			description: 'HTTP from anywhere',
+		},
+		// HTTPS
+		{
+			protocol: 'tcp',
+			fromPort: 443,
+			toPort: 443,
+			cidrBlocks: ['0.0.0.0/0'],
+			description: 'HTTPS from anywhere',
+		},
+		// SSH (restrict this to your IP in production)
+		{
+			protocol: 'tcp',
+			fromPort: 22,
+			toPort: 22,
+			cidrBlocks: ['0.0.0.0/0'], // TODO: Restrict to specific IPs
+			description: 'SSH access',
+		},
+		// Node.js app port (internal)
+		{
+			protocol: 'tcp',
+			fromPort: appPort,
+			toPort: appPort,
+			cidrBlocks: ['127.0.0.1/32'],
+			description: 'Node.js app port',
+		},
+	],
+	egress: [
+		{
+			protocol: '-1',
+			fromPort: 0,
+			toPort: 0,
+			cidrBlocks: ['0.0.0.0/0'],
+			description: 'Allow all outbound traffic',
+		},
+	],
+	tags: {
+		Name: `${appName}-web-sg`,
+	},
 });
-// Use .apply() to log the resolved value of the Output
-repo.url.apply((url) => {
-	console.info(`DEBUG: ECR Repo URL: ${url}`);
+
+// Create an IAM role for the EC2 instance
+const ec2Role = new aws.iam.Role('ec2-role', {
+	name: `${appName}-ec2-role`,
+	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
+		Service: 'ec2.amazonaws.com',
+	}),
 });
 
-// --- Route 53 DNS --- (Removed as DNS is managed by Cloudflare)
-
-// --- IAM ---
-
-// 1. OIDC Provider for GitHub Actions
-// Pulumi will create this. If it already exists manually, import it once:
-// `pulumi import aws:iam/openIdConnectProvider:OpenIdConnectProvider github-oidc-provider <EXISTING_OIDC_PROVIDER_ARN>`
-const githubOidcProvider = new aws.iam.OpenIdConnectProvider('github-oidc-provider', {
-	url: 'https://token.actions.githubusercontent.com',
-	clientIdLists: ['sts.amazonaws.com'],
-	// Common thumbprints for GitHub Actions OIDC - verify if needed
-	thumbprintLists: ['6938fd4d98bab03faadb97b34396831e3780aea1', '1c58a3a8518e8759bf075b76b750d4f2df264fcd'],
-});
-
-// 2. Task Execution Role: Allows ECS tasks to pull images, send logs, get secrets
-const taskExecRole = new aws.iam.Role('task-exec-role', {
-	name: `${appName}-task-exec-role`, // More specific name
-	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'ecs-tasks.amazonaws.com' }),
-});
-
-// Policy allowing the task execution role to read the specific Mongo secret (from SSM Parameter Store)
-const _taskExecSecretPolicy = new aws.iam.RolePolicy('task-exec-secret-policy', {
-	name: `${appName}-AllowMongoSecretRead`,
-	role: taskExecRole.id,
-	// MODIFIED: Use pulumi.all to resolve dependencies before stringifying
+// Attach policies to allow EC2 to read secrets and use SSM
+const ec2SecretPolicy = new aws.iam.RolePolicy('ec2-secret-policy', {
+	name: `${appName}-ec2-secret-policy`,
+	role: ec2Role.id,
 	policy: pulumi.all([mongoSecretArn, region, accountId]).apply(([secretArn, resolvedRegion, resolvedAccountId]) =>
 		JSON.stringify({
 			Version: '2012-10-17',
 			Statement: [
 				{
-					Action: 'ssm:GetParameters',
 					Effect: 'Allow',
-					Resource: secretArn, // Use the resolved secret ARN
+					Action: ['ssm:GetParameters', 'ssm:GetParameter'],
+					Resource: secretArn,
 				},
 				{
-					Action: 'kms:Decrypt',
 					Effect: 'Allow',
-					// Construct the ARN string using resolved values
+					Action: 'kms:Decrypt',
 					Resource: `arn:aws:kms:${resolvedRegion}:${resolvedAccountId}:alias/aws/ssm`,
 				},
 			],
@@ -101,51 +102,264 @@ const _taskExecSecretPolicy = new aws.iam.RolePolicy('task-exec-secret-policy', 
 	),
 });
 
-// Attach the standard AWS managed policy for task execution (includes ECR pull, logs)
-new aws.iam.RolePolicyAttachment('task-exec-policy-attachment', {
-	role: taskExecRole.name,
-	policyArn: aws.iam.ManagedPolicy.AmazonECSTaskExecutionRolePolicy,
+// Attach SSM managed instance policy for Session Manager access
+new aws.iam.RolePolicyAttachment('ec2-ssm-policy', {
+	role: ec2Role.name,
+	policyArn: aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
 });
 
-taskExecRole.arn.apply((arn) => {
-	console.info(`DEBUG: Task Execution Role ARN: ${arn}`);
-}); // Log Task Exec Role ARN
+// Create instance profile
+const instanceProfile = new aws.iam.InstanceProfile('ec2-instance-profile', {
+	name: `${appName}-instance-profile`,
+	role: ec2Role.name,
+});
 
-// 3. Application Task Role: Permissions for the application *inside* the container
-const appTaskRole = new aws.iam.Role('app-task-role', {
-	name: `${appName}-app-task-role`, // More specific name
-	assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'ecs-tasks.amazonaws.com' }),
-	// Add inline policies here if your application needs specific AWS permissions at runtime
-	// Example: Accessing S3 buckets, other secrets, etc.
-	inlinePolicies: [
-		// { name: "AllowAppS3Read", policy: JSON.stringify({ ... }) }
+// User data script to set up the EC2 instance
+const userData = pulumi.all([mongoSecretArn, region]).apply(
+	([secretArn, resolvedRegion]) =>
+		`#!/bin/bash
+# Log all output
+exec > >(tee /var/log/user-data.log)
+exec 2>&1
+
+echo "Starting user data script at $(date)"
+
+# Exit on error
+set -e
+
+# Update system
+echo "Updating system packages..."
+apt-get update
+apt-get upgrade -y
+
+# Install Node.js 20
+echo "Installing Node.js 20..."
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+apt-get install -y nodejs
+
+# Install nginx
+echo "Installing nginx..."
+apt-get install -y nginx
+
+# Install PM2 globally
+echo "Installing PM2..."
+npm install -g pm2
+
+# Install git
+echo "Installing git..."
+apt-get install -y git
+
+# Install AWS CLI v2
+echo "Installing AWS CLI v2..."
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+apt-get install -y unzip
+unzip awscliv2.zip
+./aws/install
+rm -rf awscliv2.zip aws/
+
+# Create app directory
+echo "Setting up application directory..."
+mkdir -p /var/www/app
+cd /var/www/app
+
+# Clone the repository
+echo "Cloning repository from ${githubOrg}/${githubRepo} branch ${githubBranch}..."
+git clone -b ${githubBranch} https://github.com/${githubOrg}/${githubRepo}.git .
+
+# Install dependencies
+echo "Installing npm dependencies..."
+npm install
+
+# Build the application
+echo "Building application..."
+npm run build
+
+# Get MongoDB connection string from Parameter Store
+echo "Fetching MongoDB connection string..."
+export MONGO_URI=$(aws ssm get-parameter --name "${secretArn}" --with-decryption --region ${resolvedRegion} --query 'Parameter.Value' --output text)
+
+# Create .env file
+echo "Creating .env file..."
+cat > .env << EOF
+NODE_ENV=production
+PORT=${appPort}
+MONGO_URI=$MONGO_URI
+EOF
+
+# Configure nginx as reverse proxy
+echo "Configuring nginx..."
+cat > /etc/nginx/sites-available/default << 'NGINX_CONFIG'
+server {
+	listen 80;
+	server_name _;
+
+	location / {
+		proxy_pass http://localhost:${appPort};
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade \\$http_upgrade;
+		proxy_set_header Connection 'upgrade';
+		proxy_set_header Host \\$host;
+		proxy_cache_bypass \\$http_upgrade;
+		proxy_set_header X-Real-IP \\$remote_addr;
+		proxy_set_header X-Forwarded-For \\$proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto \\$scheme;
+	}
+}
+NGINX_CONFIG
+
+# Restart nginx
+echo "Restarting nginx..."
+systemctl restart nginx
+
+# Start the app with PM2
+echo "Starting application with PM2..."
+cd /var/www/app
+# Use sudo to allow binding to port 80
+sudo pm2 start npm --name "${appName}" -- start -- -p ${appPort}
+sudo pm2 save
+sudo pm2 startup systemd
+
+# Create a simple deployment script
+echo "Creating deployment script..."
+cat > /home/ubuntu/deploy.sh << 'DEPLOY_SCRIPT'
+#!/bin/bash
+cd /var/www/app
+git pull origin ${githubBranch}
+npm install
+npm run build
+pm2 restart ${appName}
+DEPLOY_SCRIPT
+
+chmod +x /home/ubuntu/deploy.sh
+chown ubuntu:ubuntu /home/ubuntu/deploy.sh
+
+# Create a status check endpoint
+echo "Creating health check endpoint..."
+cat > /var/www/html/health << 'HEALTH'
+OK
+HEALTH
+
+# Signal completion
+echo "User data script completed successfully at $(date)"
+touch /var/lib/cloud/instance/user-data-finished
+
+# Send completion signal to CloudWatch (optional)
+aws ssm put-parameter --name "/ec2/${appName}/setup-complete" --value "$(date)" --type String --overwrite --region ${resolvedRegion} || true
+`
+);
+
+// Get the latest Ubuntu AMI
+const ami = aws.ec2.getAmi({
+	mostRecent: true,
+	owners: ['099720109477'], // Canonical
+	filters: [
+		{ name: 'name', values: ['ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*'] },
+		{ name: 'virtualization-type', values: ['hvm'] },
 	],
 });
 
-appTaskRole.arn.apply((arn) => {
-	console.info(`DEBUG: Application Task Role ARN: ${arn}`);
-}); // Log App Task Role ARN
+// Create the EC2 instance
+const webServer = new aws.ec2.Instance('web-server', {
+	instanceType: instanceType,
+	ami: ami.then((amiResult) => amiResult.id),
+	iamInstanceProfile: instanceProfile.name,
+	vpcSecurityGroupIds: [webSecurityGroup.id],
+	userData: userData,
+	rootBlockDevice: {
+		volumeSize: 20, // 20GB storage
+		volumeType: 'gp3',
+		deleteOnTermination: true,
+	},
+	tags: {
+		Name: `${appName}-web-server`,
+		Environment: 'staging',
+	},
+	// Enable detailed monitoring (optional)
+	monitoring: false,
+});
 
-// 4. GitHub Actions Deployment Role: Assumed by the workflow via OIDC
+// Allocate an Elastic IP for the instance
+const eip = new aws.ec2.Eip('web-eip', {
+	instance: webServer.id,
+	tags: {
+		Name: `${appName}-eip`,
+	},
+});
+
+// Create ACM certificate for HTTPS (optional - for future use with CloudFront or ALB)
+const certificate = new aws.acm.Certificate('app-certificate', {
+	domainName: domain,
+	validationMethod: 'DNS',
+	tags: {
+		Name: `${appName}-certificate`,
+	},
+});
+
+// Output the certificate validation options
+export const certificateValidationOptions = certificate.domainValidationOptions;
+
+// Wait for instance to be ready (optional - uncomment if you want Pulumi to wait)
+// const instanceReady = new aws.ssm.Command('wait-for-setup', {
+// 	instanceIds: [webServer.id],
+// 	documentName: 'AWS-RunShellScript',
+// 	parameters: {
+// 		commands: [
+// 			'while [ ! -f /var/lib/cloud/instance/user-data-finished ]; do echo "Waiting for setup..."; sleep 10; done',
+// 			'echo "Setup complete!"',
+// 			'pm2 list'
+// 		]
+// 	}
+// }, { dependsOn: [webServer] });
+
+// Outputs
+export const instanceId = webServer.id;
+export const { publicIp } = eip;
+export const { publicDns } = webServer;
+export const instanceUrl = pulumi.interpolate`http://${eip.publicIp}`;
+export const domainName = domain;
+
+// Commands to check status (no SSH needed!)
+export const checkStatusCommand = pulumi.interpolate`aws ssm send-command --instance-ids ${webServer.id} --document-name "AWS-RunShellScript" --parameters 'commands=["pm2 list","curl -s http://localhost:${appPort}/","tail -20 /var/log/user-data.log"]' --region ${region}`;
+export const checkLogsCommand = pulumi.interpolate`aws ssm send-command --instance-ids ${webServer.id} --document-name "AWS-RunShellScript" --parameters 'commands=["tail -100 /var/log/user-data.log"]' --region ${region}`;
+export const deployCommand = pulumi.interpolate`aws ssm send-command --instance-ids ${webServer.id} --document-name "AWS-RunShellScript" --parameters 'commands=["sudo /home/ubuntu/deploy.sh"]' --region ${region}`;
+
+// Instructions for DNS setup
+export const dnsInstructions = pulumi.interpolate`
+Please create an A record in Cloudflare:
+  Domain: ${domain}
+  Type: A
+  Value: ${eip.publicIp}
+  Proxy: Disabled (for initial setup)
+`;
+
+// Status check instructions
+export const statusInstructions = pulumi.interpolate`
+To check if setup is complete (no SSH needed):
+1. Check status: ${checkStatusCommand}
+2. Check logs: ${checkLogsCommand}
+3. Then get output: aws ssm get-command-invocation --command-id <COMMAND_ID> --instance-id ${webServer.id} --region ${region}
+
+The app will be available at: http://${eip.publicIp} once setup completes (usually 3-5 minutes).
+`;
+
+// GitHub Actions deployment role (simplified for EC2)
+// The OIDC provider already exists from the production stack, so we'll reference it
 const githubActionsRole = new aws.iam.Role('github-actions-role', {
-	name: `${appName}-github-actions-role`, // Specific role name
-	assumeRolePolicy: pulumi.all([githubOidcProvider.arn, githubOidcProvider.url]).apply(([oidcArn, oidcUrl]) =>
+	name: `${appName}-github-actions-role`,
+	assumeRolePolicy: pulumi.all([accountId]).apply(([accId]) =>
 		JSON.stringify({
 			Version: '2012-10-17',
 			Statement: [
 				{
 					Effect: 'Allow',
-					Principal: { Federated: oidcArn },
+					Principal: {
+						Federated: `arn:aws:iam::${accId}:oidc-provider/token.actions.githubusercontent.com`,
+					},
 					Action: 'sts:AssumeRoleWithWebIdentity',
 					Condition: {
 						StringEquals: {
-							// IMPORTANT: Update with your GitHub Org/Repo and branch!
-							[`${oidcUrl.replace('https://', '')}:sub`]: `repo:${githubOrg}/${githubRepo}:ref:refs/heads/${githubBranch}`,
+							'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:ref:refs/heads/${githubBranch}`,
 						},
-						// Optional: Add audience condition if needed, usually sts.amazonaws.com
-						// StringLike: {
-						//     [`${oidcUrl.replace("https://", "")}:aud`]: "sts.amazonaws.com",
-						// },
 					},
 				},
 			],
@@ -153,254 +367,32 @@ const githubActionsRole = new aws.iam.Role('github-actions-role', {
 	),
 });
 
-// 5. GitHub Actions Deployment Policy: Permissions needed by the workflow
-const githubActionsDeployPolicy = new aws.iam.Policy('github-actions-deploy-policy', {
+// Policy for GitHub Actions to deploy to EC2
+const githubActionsPolicy = new aws.iam.Policy('github-actions-deploy-policy', {
 	name: `${appName}-github-actions-deploy-policy`,
-	description: 'Policy allowing GitHub Actions to deploy the application to ECS.',
-	policy: pulumi
-		.all([repo.repository.arn, taskExecRole.arn, appTaskRole.arn, accountId, region]) // Ensure needed resources/values are resolved
-		.apply(([repoArn, taskExecArn, appTaskArn, currentAccountId, currentRegion]) =>
-			JSON.stringify({
-				Version: '2012-10-17',
-				Statement: [
-					{
-						// Allow logging in to ECR
-						Effect: 'Allow',
-						Action: ['ecr:GetAuthorizationToken'],
-						Resource: ['*'], // Required by the action
-					},
-					{
-						// Allow pushing images to the specific ECR repository
-						Effect: 'Allow',
-						Action: ['ecr:BatchCheckLayerAvailability', 'ecr:CompleteLayerUpload', 'ecr:InitiateLayerUpload', 'ecr:PutImage', 'ecr:UploadLayerPart'],
-						Resource: [repoArn], // Use resolved repo ARN
-					},
-					{
-						// Allow updating the ECS service and task definition
-						Effect: 'Allow',
-						Action: [
-							'ecs:DescribeServices',
-							'ecs:DescribeTaskDefinition',
-							'ecs:RegisterTaskDefinition',
-							'ecs:UpdateService',
-							// Needed if using deployment circuit breaker or rollback
-							'ecs:DescribeTasks',
-							'ecs:ListTasks',
-						],
-						// Grant access only to resources within the specific cluster
-						Resource: [
-							// Use resolved account ID and region
-							`arn:aws:ecs:${currentRegion}:${currentAccountId}:service/${appName}-cluster/${appName}-service`,
-							`arn:aws:ecs:${currentRegion}:${currentAccountId}:task-definition/${appName}-service:*`, // Family prefix
-							`arn:aws:ecs:${currentRegion}:${currentAccountId}:cluster/${appName}-cluster`,
-						],
-					},
-					{
-						// Allow passing the execution and task roles to ECS tasks
-						Effect: 'Allow',
-						Action: ['iam:PassRole'],
-						Resource: [taskExecArn, appTaskArn], // Use resolved role ARNs
-						Condition: {
-							StringEquals: { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' },
-						},
-					},
-					// Add any other permissions needed by the deployment (e.g., S3 access for env files)
-					// Example: S3 read for env file
-					// {
-					//     Effect: "Allow",
-					//     Action: "s3:GetObject",
-					//     Resource: "arn:aws:s3:::your-env-bucket-name/.env.build"
-					// },
-				],
-			})
-		),
+	description: 'Policy allowing GitHub Actions to deploy to EC2 via SSM',
+	policy: pulumi.all([webServer.arn, region]).apply(([instanceArn, resolvedRegion]) =>
+		JSON.stringify({
+			Version: '2012-10-17',
+			Statement: [
+				{
+					Effect: 'Allow',
+					Action: ['ssm:SendCommand', 'ssm:GetCommandInvocation', 'ssm:ListCommandInvocations'],
+					Resource: [instanceArn, `arn:aws:ssm:${resolvedRegion}::document/AWS-RunShellScript`],
+				},
+				{
+					Effect: 'Allow',
+					Action: ['ec2:DescribeInstances'],
+					Resource: '*',
+				},
+			],
+		})
+	),
 });
 
-// 6. Attach Deployment Policy to GitHub Actions Role
-new aws.iam.RolePolicyAttachment('github-actions-deploy-policy-attachment', {
+new aws.iam.RolePolicyAttachment('github-actions-policy-attachment', {
 	role: githubActionsRole.name,
-	policyArn: githubActionsDeployPolicy.arn,
+	policyArn: githubActionsPolicy.arn,
 });
 
-// --- ACM Certificate for HTTPS ---
-const domainName = 'lawlzer.com';
-
-// Request a certificate for the domain and www subdomain
-const certificate = new aws.acm.Certificate('app-certificate', {
-	domainName: domainName,
-	subjectAlternativeNames: [`www.${domainName}`, `*.${domainName}`],
-	validationMethod: 'DNS',
-	tags: {
-		Name: `${appName}-certificate`,
-	},
-});
-
-// Output the DNS validation records needed. User must add these to Cloudflare.
-// Note: Pulumi won't proceed with validation until these are created AND propagated.
-export const certificateValidationOptions = certificate.domainValidationOptions;
-
-// Create the validation record resources in Pulumi - this resource waits
-// until the DNS records are confirmed by AWS.
-// IMPORTANT: This requires a SECOND `pulumi up` run after manually creating
-// the CNAME records in Cloudflare using the output from the first run.
-const certificateValidation = new aws.acm.CertificateValidation(
-	'app-certificate-validation',
-	{
-		certificateArn: certificate.arn,
-		// This field is intentionally empty/commented out in the initial setup.
-		// Pulumi automatically uses the certificate's domainValidationOptions
-		// to know what to wait for when validationMethod is DNS.
-		// validationRecordFqdns: [], // Only needed if using EMAIL validation or managing DNS outside Route 53 *with Pulumi*
-	},
-	// Explicitly depend on the certificate resource
-	{ dependsOn: [certificate] }
-);
-
-// --- ECS Cluster ---
-const cluster = new aws.ecs.Cluster('app-cluster', {
-	name: `${appName}-cluster`,
-});
-
-// --- Target Group for HTTPS Listener ---
-// Define the target group explicitly for the HTTPS listener
-const httpsTargetGroupResource = new aws.lb.TargetGroup(`${appName}-https-tg`, {
-	name: `${appName}-https-tg`,
-	port: appPort,
-	protocol: 'HTTP', // Protocol between ALB and container
-	vpcId: defaultVpc.then((vpc) => vpc.id), // Associate with the default VPC
-	targetType: 'ip', // Required for Fargate
-	healthCheck: {
-		path: '/', // Consider changing to a dedicated /api/health endpoint if available
-		port: 'traffic-port',
-		protocol: 'HTTP',
-		// Increased tolerance for health checks
-		interval: 60, // Increased from 30
-		timeout: 30, // Increased from 10
-		healthyThreshold: 5, // Increased from 3
-		unhealthyThreshold: 5, // Increased from 3
-		matcher: '200-404', // todo change to 399, temporarily 404 so we can push/commit faster
-		// matcher: '200-399',
-	},
-	tags: {
-		Name: `${appName}-https-tg`,
-	},
-});
-
-// Log health check config
-httpsTargetGroupResource.healthCheck.apply((hc) => {
-	console.info(`DEBUG: Target Group Health Check Config: ${JSON.stringify(hc)}`);
-});
-
-// --- Load Balancer (Updated for HTTPS) ---
-const alb = new awsx.lb.ApplicationLoadBalancer('app-lb', {
-	name: `${appName}-alb`,
-	// Remove default listener/target group on port 80 created by awsx by default
-	defaultTargetGroup: undefined,
-	// Define listeners explicitly
-	listeners: [
-		{
-			// HTTPS listener using the validated ACM certificate
-			port: 443,
-			protocol: 'HTTPS',
-			certificateArn: certificateValidation.certificateArn, // Use ARN from validation resource
-			// Default action forwards traffic to the explicitly defined target group
-			defaultActions: [
-				{
-					type: 'forward',
-					// Reference the target group ARN
-					targetGroupArn: httpsTargetGroupResource.arn,
-				},
-			],
-		},
-		{
-			// HTTP listener that redirects to HTTPS
-			port: 80,
-			protocol: 'HTTP',
-			defaultActions: [
-				{
-					type: 'redirect',
-					redirect: {
-						protocol: 'HTTPS',
-						port: '443',
-						statusCode: 'HTTP_301', // Permanent redirect
-					},
-				},
-			],
-		},
-	],
-});
-
-// --- ECS Fargate Service ---
-// Reference the explicitly created Target Group in the service definition
-const appService = new awsx.ecs.FargateService(
-	'app-service',
-	{
-		name: `${appName}-service`,
-		cluster: cluster.arn,
-		desiredCount: desiredCount,
-		networkConfiguration: {
-			// Use default VPC subnets
-			subnets: defaultSubnets.then((subnets) => subnets.ids),
-			assignPublicIp: true,
-		},
-		taskDefinitionArgs: {
-			executionRole: { roleArn: taskExecRole.arn },
-			taskRole: { roleArn: appTaskRole.arn },
-			container: {
-				name: `${appName}-container`,
-				image: imageUri ?? pulumi.interpolate`${repo.url}:latest`,
-				cpu: cpu,
-				memory: memory,
-				essential: true,
-				portMappings: [
-					// Use the explicitly created Target Group
-					{
-						containerPort: appPort,
-						hostPort: appPort,
-						targetGroup: httpsTargetGroupResource, // Pass the TargetGroup resource itself
-					},
-				],
-				secrets: [{ name: 'MONGO_URI', valueFrom: mongoSecretArn }],
-				environment: [
-					{ name: 'NODE_ENV', value: 'production' },
-					// Add other runtime environment variables here if needed
-				],
-			},
-			// Specify CPU Architecture for Fargate task
-			runtimePlatform: {
-				operatingSystemFamily: 'LINUX',
-				cpuArchitecture: targetArch,
-			},
-		},
-	},
-	{ dependsOn: [alb, githubActionsRole] } // Ensure role exists before service potentially needs it (though not directly)
-); // Ensure ALB is created before the service tries to use its target group
-
-// Add a log for the final image value being used
-const finalImageUriForLog = imageUri ?? pulumi.interpolate`${repo.url}:latest`;
-// Use .apply() if it's an Output, otherwise log directly
-if (pulumi.Output.isInstance(finalImageUriForLog)) {
-	finalImageUriForLog.apply((uri) => {
-		console.info(`DEBUG: Final image URI passed to container definition: ${uri}`);
-	});
-} else {
-	console.info(`DEBUG: Final image URI passed to container definition: ${finalImageUriForLog}`);
-}
-
-// --- Outputs ---
-// Output the ALB DNS name. You will use this to create a CNAME record in Cloudflare.
-export const albDnsName = alb.loadBalancer.dnsName;
-// The final URL will be https://lawlzer.com after setting up the CNAME in Cloudflare and HTTPS.
-export const appUrl = `https://${domainName}`;
-export const ecrRepositoryUrl = repo.url;
-export const ecrRepositoryName = repo.repository.name; // Export just the name for GitHub Actions
-export const ecsClusterName = cluster.name;
-export const ecsServiceName = appService.service.name;
-// Task Definition Family isn't easily accessible from awsx Service, grab it from underlying resource if needed
-// For now, the GH action will use config. Or we can construct it: `${appName}-service` often works.
-export const taskDefinitionFamily = pulumi.interpolate`${appName}-service`; // awsx usually names the underlying task def based on service name
-export const containerName = pulumi.interpolate`${appName}-container`; // Name given in taskDefinitionArgs
-// NEW: Export the ARN of the role GitHub Actions should assume
 export const githubActionsRoleArn = githubActionsRole.arn;
-
-console.info('Finished setting up Next.js app on ECS!');
