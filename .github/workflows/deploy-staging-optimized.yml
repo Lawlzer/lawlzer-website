@@ -100,13 +100,9 @@ jobs:
         run: |
           # Create a unique S3 key
           S3_KEY="deployments/staging/build-${{ github.sha }}.tar.gz"
-          S3_BUCKET="lawlzer-website-deployments"  # You'll need to create this bucket
+          S3_BUCKET="lawlzer-website-deployments"
 
-          # Create bucket if it doesn't exist
-          aws s3api head-bucket --bucket $S3_BUCKET 2>/dev/null || \
-            aws s3api create-bucket --bucket $S3_BUCKET --region ${{ secrets.AWS_REGION }}
-
-          # Upload the package
+          # Upload the package (bucket already exists)
           aws s3 cp deployment-package.tar.gz s3://$S3_BUCKET/$S3_KEY
           echo "S3_KEY=$S3_KEY" >> $GITHUB_ENV
           echo "S3_BUCKET=$S3_BUCKET" >> $GITHUB_ENV
