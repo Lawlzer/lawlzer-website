@@ -37,6 +37,10 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
+          AUTH_DISCORD_SECRET: ${{ secrets.AUTH_DISCORD_SECRET }}
+          AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
           NEXT_PUBLIC_SCHEME: ${{ secrets.NEXT_PUBLIC_SCHEME }}
           NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: ${{ secrets.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN }}
           NEXT_PUBLIC_TOP_LEVEL_DOMAIN: ${{ secrets.NEXT_PUBLIC_TOP_LEVEL_DOMAIN }}
