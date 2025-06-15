@@ -58,7 +58,7 @@ jobs:
           cp -r .next deployment-package/
           cp -r public deployment-package/
           cp package.json deployment-package/
-          cp package-lock.json deployment-package/
+          cp bun.lock deployment-package/
           cp next.config.mjs deployment-package/
           cp -r src deployment-package/  # In case of runtime imports
 
