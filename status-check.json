@@ -1,0 +1,48 @@
+{
+    "Command": {
+        "CommandId": "c72fb0f3-c5a8-46c4-9a3d-0ac80f37a342",
+        "DocumentName": "AWS-RunShellScript",
+        "DocumentVersion": "$DEFAULT",
+        "Comment": "",
+        "ExpiresAfter": "2025-06-14T14:26:10.470000-05:00",
+        "Parameters": {
+            "commands": [
+                "tail -30 /var/log/user-data.log",
+                "pm2 status",
+                "ls -la /var/www/app/.next/server 2>&1 || echo Build not complete"
+            ]
+        },
+        "InstanceIds": [
+            "i-0f9f42a0ad229fae3"
+        ],
+        "Targets": [],
+        "RequestedDateTime": "2025-06-14T12:26:10.470000-05:00",
+        "Status": "Pending",
+        "StatusDetails": "Pending",
+        "OutputS3Region": "us-east-1",
+        "OutputS3BucketName": "",
+        "OutputS3KeyPrefix": "",
+        "MaxConcurrency": "50",
+        "MaxErrors": "0",
+        "TargetCount": 1,
+        "CompletedCount": 0,
+        "ErrorCount": 0,
+        "DeliveryTimedOutCount": 0,
+        "ServiceRole": "",
+        "NotificationConfig": {
+            "NotificationArn": "",
+            "NotificationEvents": [],
+            "NotificationType": ""
+        },
+        "CloudWatchOutputConfig": {
+            "CloudWatchLogGroupName": "",
+            "CloudWatchOutputEnabled": false
+        },
+        "TimeoutSeconds": 3600,
+        "AlarmConfiguration": {
+            "IgnorePollAlarmFailure": false,
+            "Alarms": []
+        },
+        "TriggeredAlarms": []
+    }
+}

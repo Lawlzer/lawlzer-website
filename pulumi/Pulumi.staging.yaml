@@ -9,4 +9,4 @@ config:
   lawlzer-website-pulumi:githubBranch: staging
   # The mongo secret - using production URI for now
   lawlzer-website-pulumi:mongoSecretArn:
-    secure: AAABAI4rWd40EhaeHpoT5vEj8wtJfvw2G4DoA0FKWtXREFovecgyt3jdsOjiyUu0zXeFwEKUeurCvWy7CpN0quQ+Kwe16j+4z4Nv13GL7LpOVIySydUGfn9FzGsUSjwDz7bM5ovHAtlzdPQ=
+    secure: AAABAHcU+OFovWCpWnt5bB6qL857fZPM6csmlJVrNdz2i8eN2LOfccUH1n2Toef30BT/GAR7CpOR9CFnNcKvD8K3QWt4tm3lQH/SDDMB32wyWpy9NqMkbm3O8dFPg/8tFo1soCoq7OA2UNo=

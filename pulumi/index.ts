@@ -5,7 +5,7 @@ import * as pulumi from '@pulumi/pulumi';
 const config = new pulumi.Config();
 const appName = config.get('appName') ?? pulumi.getProject();
 const appPort = config.getNumber('appPort') ?? 3000;
-const instanceType = config.get('instanceType') ?? 't2.micro';
+const instanceType = config.get('instanceType') ?? 't3.micro'; // t3.micro is cheaper and more performant
 const domain = config.get('domain') ?? 'staging.lawlzer.com';
 const githubOrg = config.get('githubOrg') ?? 'Lawlzer';
 const githubRepo = config.get('githubRepo') ?? 'lawlzer-website';
@@ -168,7 +168,7 @@ git clone -b ${githubBranch} https://github.com/${githubOrg}/${githubRepo}.git .
 
 # Install dependencies
 echo "Installing npm dependencies..."
-npm install
+npm install --legacy-peer-deps
 
 # Build the application
 echo "Building application..."
@@ -214,10 +214,9 @@ systemctl restart nginx
 # Start the app with PM2
 echo "Starting application with PM2..."
 cd /var/www/app
-# Use sudo to allow binding to port 80
-sudo pm2 start npm --name "${appName}" -- start -- -p ${appPort}
-sudo pm2 save
-sudo pm2 startup systemd
+PORT=${appPort} pm2 start npm --name "${appName}" -- start
+pm2 save
+pm2 startup systemd -u ubuntu --hp /home/ubuntu
 
 # Create a simple deployment script
 echo "Creating deployment script..."

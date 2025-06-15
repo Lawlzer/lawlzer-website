@@ -1,0 +1,222 @@
+# .github/workflows/deploy-staging-optimized.yml
+name: Build and Deploy to Staging EC2
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch: # Allow manual triggers
+
+permissions:
+  id-token: write # Required for OIDC authentication
+  contents: read # Required to check out the code
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Application
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_SCHEME: ${{ secrets.NEXT_PUBLIC_SCHEME }}
+          NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: ${{ secrets.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN }}
+          NEXT_PUBLIC_TOP_LEVEL_DOMAIN: ${{ secrets.NEXT_PUBLIC_TOP_LEVEL_DOMAIN }}
+          NEXT_PUBLIC_FRONTEND_PORT: ${{ secrets.NEXT_PUBLIC_FRONTEND_PORT }}
+          NEXT_PUBLIC_AUTH_GOOGLE_ID: ${{ secrets.NEXT_PUBLIC_AUTH_GOOGLE_ID }}
+          NEXT_PUBLIC_AUTH_DISCORD_ID: ${{ secrets.NEXT_PUBLIC_AUTH_DISCORD_ID }}
+          NEXT_PUBLIC_AUTH_GITHUB_ID: ${{ secrets.NEXT_PUBLIC_AUTH_GITHUB_ID }}
+
+      - name: Create Deployment Package
+        run: |
+          # Create a deployment directory
+          mkdir -p deployment-package
+
+          # Copy necessary files
+          cp -r .next deployment-package/
+          cp -r public deployment-package/
+          cp package.json deployment-package/
+          cp package-lock.json deployment-package/
+          cp next.config.mjs deployment-package/
+          cp -r src deployment-package/  # In case of runtime imports
+
+          # Create a minimal node_modules with production deps only
+          cd deployment-package
+          npm ci --production --legacy-peer-deps
+          cd ..
+
+          # Create archive
+          tar -czf deployment-package.tar.gz deployment-package/
+          echo "Deployment package size: $(du -h deployment-package.tar.gz | cut -f1)"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-package
+          path: deployment-package.tar.gz
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Staging EC2
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: deployment-package
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::019997775122:role/lawlzer-website-staging-github-actions-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload Package to S3
+        run: |
+          # Create a unique S3 key
+          S3_KEY="deployments/staging/build-${{ github.sha }}.tar.gz"
+          S3_BUCKET="lawlzer-website-deployments"  # You'll need to create this bucket
+
+          # Create bucket if it doesn't exist
+          aws s3api head-bucket --bucket $S3_BUCKET 2>/dev/null || \
+            aws s3api create-bucket --bucket $S3_BUCKET --region ${{ secrets.AWS_REGION }}
+
+          # Upload the package
+          aws s3 cp deployment-package.tar.gz s3://$S3_BUCKET/$S3_KEY
+          echo "S3_KEY=$S3_KEY" >> $GITHUB_ENV
+          echo "S3_BUCKET=$S3_BUCKET" >> $GITHUB_ENV
+
+      - name: Deploy to EC2 via SSM
+        env:
+          INSTANCE_ID: ${{ secrets.STAGING_INSTANCE_ID }}
+        run: |
+          # Deploy commands
+          DEPLOY_COMMANDS=$(cat <<'EOF'
+          [
+            "cd /var/www/app",
+            "echo 'Stopping application...'",
+            "pm2 stop all || true",
+            
+            "echo 'Backing up current deployment...'",
+            "if [ -d .next ]; then mv .next .next.backup; fi",
+            
+            "echo 'Downloading new deployment...'",
+            "aws s3 cp s3://$S3_BUCKET/$S3_KEY /tmp/deployment.tar.gz",
+            
+            "echo 'Extracting deployment...'",
+            "tar -xzf /tmp/deployment.tar.gz -C /tmp/",
+            
+            "echo 'Copying new files...'",
+            "cp -r /tmp/deployment-package/.next .",
+            "cp -r /tmp/deployment-package/public .",
+            "cp /tmp/deployment-package/package*.json .",
+            "cp /tmp/deployment-package/next.config.mjs .",
+            "cp -r /tmp/deployment-package/src .",
+            "cp -r /tmp/deployment-package/node_modules .",
+            
+            "echo 'Setting permissions...'",
+            "chown -R root:root .",
+            
+            "echo 'Starting application...'",
+            "export NODE_ENV=production",
+            "export PORT=3000",
+            "export NODE_OPTIONS='--max-old-space-size=512'",
+            "pm2 start npm --name staging-app -- start",
+            "pm2 save",
+            
+            "echo 'Cleaning up...'",
+            "rm -rf /tmp/deployment-package /tmp/deployment.tar.gz",
+            "rm -rf .next.backup",
+            
+            "echo 'Deployment complete!'",
+            "pm2 list"
+          ]
+          EOF
+          )
+
+          # Run deployment
+          aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=$DEPLOY_COMMANDS" \
+            --comment "GitHub Actions deployment ${{ github.sha }}" \
+            --output json > command-output.json
+
+          # Get command ID
+          COMMAND_ID=$(jq -r '.Command.CommandId' command-output.json)
+          echo "Command ID: $COMMAND_ID"
+
+          # Wait for deployment to complete (up to 5 minutes)
+          for i in {1..30}; do
+            sleep 10
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query 'Status' \
+              --output text)
+            
+            echo "Deployment status: $STATUS"
+            
+            if [ "$STATUS" = "Success" ]; then
+              echo "✅ Deployment completed successfully!"
+              break
+            elif [ "$STATUS" = "Failed" ]; then
+              echo "❌ Deployment failed!"
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query 'StandardErrorContent' \
+                --output text
+              exit 1
+            fi
+          done
+
+      - name: Verify Deployment
+        env:
+          INSTANCE_ID: ${{ secrets.STAGING_INSTANCE_ID }}
+        run: |
+          echo "Checking application status..."
+
+          # Check PM2 and curl via SSM
+          CHECK_COMMAND='pm2 list && echo "---" && curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:3000'
+
+          aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[\"$CHECK_COMMAND\"]" \
+            --output json > check-output.json
+
+          COMMAND_ID=$(jq -r '.Command.CommandId' check-output.json)
+          sleep 5
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query 'StandardOutputContent' \
+            --output text
+
+          echo "✅ Deployment verification complete!"
+          echo "📌 Note: The application will be accessible at https://staging.lawlzer.com after DNS setup"
+
+      - name: Cleanup S3
+        if: always()
+        continue-on-error: true
+        run: |
+          # Delete the deployment package from S3 after successful deployment
+          aws s3 rm s3://${{ env.S3_BUCKET }}/${{ env.S3_KEY }} || true
