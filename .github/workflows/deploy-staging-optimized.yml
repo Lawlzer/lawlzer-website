@@ -61,6 +61,7 @@ jobs:
           cp bun.lock deployment-package/
           cp next.config.mjs deployment-package/
           cp -r src deployment-package/  # In case of runtime imports
+          cp -r prisma deployment-package/  # For Prisma schema
 
           # Create a minimal node_modules with production deps only
           cd deployment-package
