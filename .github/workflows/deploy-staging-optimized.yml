@@ -24,10 +24,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install Dependencies
-        run: npm ci --legacy-peer-deps
+        run: bun install
 
       - name: Build Application
         run: npm run build
@@ -56,7 +60,7 @@ jobs:
 
           # Create a minimal node_modules with production deps only
           cd deployment-package
-          npm ci --production --legacy-peer-deps
+          bun install --production
           cd ..
 
           # Create archive
