@@ -86,6 +86,6 @@ export default defineConfig({
 						: []),
 				]),
 	],
-	// Removed webServer configuration - server must be running before e2e tests
-	// Server check is now handled in globalSetup
+	// Server startup is now handled dynamically in globalSetup
+	// It will check if a server is running and start one if needed
 });
