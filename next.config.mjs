@@ -18,7 +18,7 @@ const config = {
 		contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
 	},
 	experimental: {
-		// optimizeCss: true, // Temporarily disabled due to CI issues with lightningcss native bindings
+		optimizeCss: true,
 		optimizePackageImports: ['@heroicons/react', 'framer-motion'],
 	},
 	async rewrites() {
