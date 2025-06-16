@@ -8,5 +8,50 @@
 	"env": {
 		"NEXT_PUBLIC_SCHEME": "https",
 		"NEXT_PUBLIC_FRONTEND_PORT": "443"
-	}
+	},
+	"framework": "nextjs",
+	"buildCommand": "npm run build",
+	"devCommand": "npm run dev",
+	"installCommand": "npm install",
+	"outputDirectory": ".next",
+	"ignoreCommand": "git diff HEAD^ HEAD --quiet .",
+	"functions": {
+		"app/api/**": {
+			"maxDuration": 10
+		}
+	},
+	"rewrites": [
+		{
+			"source": "/api/:path*",
+			"destination": "/api/:path*"
+		}
+	],
+	"headers": [
+		{
+			"source": "/(.*)",
+			"headers": [
+				{
+					"key": "X-Content-Type-Options",
+					"value": "nosniff"
+				},
+				{
+					"key": "X-Frame-Options",
+					"value": "DENY"
+				},
+				{
+					"key": "X-XSS-Protection",
+					"value": "1; mode=block"
+				}
+			]
+		},
+		{
+			"source": "/:path*.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "public, max-age=31536000, immutable"
+				}
+			]
+		}
+	]
 }
