@@ -11,6 +11,8 @@ import type { NumberValue } from '@visx/vendor/d3-scale';
 import { addDays, format as formatDateFns } from 'date-fns';
 import React from 'react';
 
+import { formatFieldName } from '~/lib/utils';
+
 // Define types needed (consider moving to a shared types file)
 interface ChartPoint {
 	x: number;
@@ -60,7 +62,7 @@ const getY = (d: ChartPoint): number => d.y;
 const getMinY = (d: RangePoint): number => d.yMin;
 const getMaxY = (d: RangePoint): number => d.yMax;
 const getYAxisLabel = (dataType: string): string => {
-	const formattedName = dataType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+	const formattedName = formatFieldName(dataType);
 	if (/price|cost|value|revenue|salary/i.test(dataType)) return `${formattedName} (USD)`;
 	if (/count|number|quantity|total|frequency/i.test(dataType)) return formattedName;
 	if (/percentage|ratio|rate|share/i.test(dataType)) return `${formattedName} (%)`;

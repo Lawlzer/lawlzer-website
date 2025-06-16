@@ -15,6 +15,7 @@ import { FilterPanel } from './FilterPanel'; // Import the new component
 import { SettingsModal } from './SettingsModal'; // Import the settings modal
 
 import { useMediaQuery } from '~/hooks/useMediaQuery'; // Import the hook
+import { formatFieldName } from '~/lib/utils';
 import { DataPlatformCache } from '~/utils/dataPlatformCache'; // Import cache utility
 
 // REMOVED MAX_DOCUMENTS constant, limit now handled by backend
@@ -661,7 +662,7 @@ export default function DataPlatformPreview({ onClose }: DataPlatformPreviewProp
 	}, [rawDataPoints, activeChartTab, hiddenDatasets]); // Add hiddenDatasets dependency
 
 	const _getYAxisLabel = (dataType: string): string => {
-		const formattedName = dataType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+		const formattedName = formatFieldName(dataType);
 		if (/price|cost|value|revenue|salary/i.test(dataType)) return `${formattedName} (USD)`;
 		if (/count|number|quantity|total|frequency/i.test(dataType)) return formattedName;
 		if (/percentage|ratio|rate|share/i.test(dataType)) return `${formattedName} (%)`;

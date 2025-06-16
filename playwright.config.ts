@@ -9,8 +9,8 @@ const __dirname = path.resolve();
 const globalSetupPath = path.resolve(__dirname, 'testUtils', 'playwright', 'globalSetup.ts');
 
 export default defineConfig({
-	testDir: './src', // Directory where tests are located
-	testMatch: '**/*.playwright.ts', // Match only files ending in .playwright.ts
+	testDir: './tests', // Directory where tests are located
+	testMatch: '**/*.spec.ts', // Match only files ending in .spec.ts
 	fullyParallel: true,
 	forbidOnly: Boolean(process.env.CI),
 	retries: process.env.CI !== undefined ? 2 : 0,
