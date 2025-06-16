@@ -83,8 +83,10 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Install sharp for Linux
-        run: npm install --include=optional sharp --legacy-peer-deps
+      - name: Install native dependencies for Linux
+        run: |
+          npm install --include=optional sharp --legacy-peer-deps
+          npm rebuild lightningcss
 
       - name: Build application
         run: npm run build
