@@ -86,17 +86,6 @@ export default defineConfig({
 						: []),
 				]),
 	],
-	webServer:
-		process.env.PLAYWRIGHT_BACKEND_URL !== undefined && process.env.PLAYWRIGHT_BACKEND_URL !== ''
-			? undefined // Don't start a server if URL is provided
-			: [
-					{
-						command: 'npm run dev',
-						url: 'http://dev.localhost:3000',
-						timeout: 120000, // Increase timeout to 2 minutes
-						reuseExistingServer: true, // Always reuse existing server if available
-						stdout: 'pipe',
-						stderr: 'pipe',
-					},
-				],
+	// Removed webServer configuration - server must be running before e2e tests
+	// Server check is now handled in globalSetup
 });

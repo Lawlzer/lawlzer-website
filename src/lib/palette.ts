@@ -1,7 +1,5 @@
 'use client'; // Need this for document.cookie
 
-import { env } from '~/env.mjs';
-
 // Define COOKIE keys
 export const COOKIE_KEYS = {
 	PAGE_BG: 'theme_page_bg',
@@ -110,24 +108,32 @@ function getBaseDomain(): string | null {
 		return hostname;
 	}
 
-	// Use environment variables to construct the domain
+	// Extract the base domain for cookie sharing across all subdomains
 	try {
-		const secondLevel = env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN;
-		const topLevel = env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN;
+		const parts = hostname.split('.');
 
-		if (!secondLevel || !topLevel) {
-			// Fallback to extracting from hostname if env vars are missing
-			const parts = hostname.split('.');
-			if (parts.length < 2) {
-				return hostname;
+		// For any subdomain setup, we want cookies shared at the base domain level
+		// Examples:
+		// - colors.staging.lawlzer.com → .lawlzer.com
+		// - staging.lawlzer.com → .lawlzer.com
+		// - lawlzer.com → .lawlzer.com
+		// - localhost → null (no domain attribute)
+
+		if (parts.length >= 2) {
+			// Always use the last two parts as the base domain
+			const baseDomain = parts.slice(-2).join('.');
+
+			// Validate it's a proper domain (contains a dot)
+			if (baseDomain.includes('.') && !baseDomain.includes('localhost')) {
+				const cookieDomain = `.${baseDomain}`;
+				console.debug('Cookie domain:', cookieDomain, 'from hostname:', hostname);
+				return cookieDomain;
 			}
-			return parts.slice(-2).join('.');
 		}
 
-		// Construct domain from environment variables
-		// For configured deployment: secondLevel = env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN, topLevel = env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN
-		// We want cookies to be shared across all subdomains of the configured domain
-		return `${secondLevel}.${topLevel}`;
+		// For single-part domains or localhost, don't set domain attribute
+		console.debug('No domain attribute for cookies on:', hostname);
+		return null;
 	} catch (error) {
 		console.error('Error determining base domain:', error);
 		// Fallback to extracting from hostname
@@ -135,7 +141,8 @@ function getBaseDomain(): string | null {
 		if (parts.length < 2) {
 			return hostname;
 		}
-		return parts.slice(-2).join('.');
+		// Add leading dot for cross-subdomain sharing
+		return `.${parts.slice(-2).join('.')}`;
 	}
 }
 
@@ -156,7 +163,18 @@ export function setCookie(name: string, value: string, days = 365): void {
 		const domain = getBaseDomain();
 		// Setting domain=example.com makes it available to sub.example.com
 		const domainAttribute = domain !== null ? `; domain=${domain}` : '';
-		document.cookie = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
+		const cookieString = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
+
+		// Debug logging
+		console.debug('Setting cookie:', {
+			name,
+			value: `${value?.substring(0, 10)}...`, // Truncate for privacy
+			domain,
+			hostname: window.location.hostname,
+			cookieString,
+		});
+
+		document.cookie = cookieString;
 	} catch (error) {
 		console.error('Failed to set cookie:', name, error);
 	}

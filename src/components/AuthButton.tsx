@@ -17,6 +17,11 @@ const AuthButton: React.FC<AuthButtonProps> = ({ initialSession }) => {
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
+		// Update session when initialSession prop changes
+		setSession(initialSession);
+	}, [initialSession]);
+
+	useEffect(() => {
 		// Subscribe to session changes via a custom event
 		const handleSessionChange = (event: CustomEvent<SessionData | null>) => {
 			setSession(event.detail);
@@ -44,7 +49,7 @@ const AuthButton: React.FC<AuthButtonProps> = ({ initialSession }) => {
 				<MenuButton className='group flex items-center gap-3 rounded-xl bg-secondary/50 px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/50'>
 					<div className='flex items-center gap-2'>
 						<UserCircleIcon className='h-5 w-5 text-secondary-text' />
-						<span className='hidden sm:inline'>{session.user.name ?? session.user.email}</span>
+						<span className='hidden sm:inline'>{session.user.name ?? session.user.email ?? 'Account'}</span>
 					</div>
 					<ChevronDownIcon aria-hidden='true' className='h-4 w-4 text-secondary-text transition-transform duration-200 group-data-[open]:rotate-180' />
 				</MenuButton>

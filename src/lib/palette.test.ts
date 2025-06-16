@@ -104,8 +104,8 @@ describe('Palette Library Functions', () => {
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('testKey=testValue'));
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('path=/'));
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('SameSite=Lax'));
-			// Since we're using env vars, it will use test.example.com
-			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=test.example.com'));
+			// The new logic extracts base domain and adds leading dot
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=.example.com'));
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('expires=')); // Check that expires is present
 		});
 
@@ -127,7 +127,7 @@ describe('Palette Library Functions', () => {
 			setCookie('testKey', 'testValue');
 			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
 			expect(cookieSetterMock).toHaveBeenCalledWith(
-				expect.stringContaining('domain=test.example.com') // Should share cookies with test.example.com
+				expect.stringContaining('domain=.example.com') // Should share cookies across all subdomains
 			);
 		});
 
@@ -137,8 +137,8 @@ describe('Palette Library Functions', () => {
 			mockWindowLocation('colors.production.com');
 			setCookie('testKey', 'testValue');
 			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
-			// Since we're using env vars that are mocked to test.example.com, it will always use that
-			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=test.example.com'));
+			// New logic extracts base domain from hostname
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=.production.com'));
 		});
 
 		it('should handle setting a cookie when document.cookie setter fails', async () => {
