@@ -1,0 +1,20 @@
+name: Deployment Status
+
+on:
+  deployment_status:
+
+jobs:
+  deployment-status:
+    if: github.event.deployment_status.state == 'success' || github.event.deployment_status.state == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ github.event.deployment_status.state }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+            echo "🌐 URL: ${{ github.event.deployment_status.environment_url }}"
+            echo "🔗 Deployment: ${{ github.event.deployment_status.deployment_url }}"
+          else
+            echo "❌ Deployment failed!"
+            echo "📝 Check Vercel dashboard for details"
+          fi

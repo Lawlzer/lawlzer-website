@@ -1,9 +1,5 @@
 'use client'; // Need this for document.cookie
 
-// REMOVED: Cannot use server env vars on client
-// import { env } from '~/env.mjs';
-// import { getCookieDomain } from './auth';
-
 // Define COOKIE keys
 export const COOKIE_KEYS = {
 	PAGE_BG: 'theme_page_bg',
@@ -96,23 +92,70 @@ export function getDefaultColors(): typeof LIGHT_MODE_COLORS {
 	return LIGHT_MODE_COLORS;
 }
 
-// Helper function to get the base domain (e.g., example.com) from hostname
+// Helper function to get the base domain for cookie sharing
 function getBaseDomain(): string | null {
 	if (typeof window === 'undefined') return null; // Not in browser
 
 	const { hostname } = window.location;
-	if (hostname === 'localhost') {
-		return null; // No domain for localhost
+
+	// For localhost development with subdomains, extract the base domain
+	if (hostname.includes('localhost')) {
+		const parts = hostname.split('.');
+
+		// If we have subdomains like colors.eeeeee.localhost
+		if (parts.length > 2) {
+			// Extract everything after the first subdomain
+			// colors.eeeeee.localhost → .eeeeee.localhost
+			const baseDomain = `.${parts.slice(1).join('.')}`;
+			console.debug('Cookie domain for localhost:', baseDomain, 'from hostname:', hostname);
+			return baseDomain;
+		}
+
+		// For simple localhost or single subdomain, don't set domain
+		return null;
 	}
 
-	// Simple logic to get the last two parts (e.g., example.com from sub.example.com)
-	// Might need adjustment for complex TLDs (e.g., .co.uk)
-	const parts = hostname.split('.');
-	if (parts.length < 2) {
-		return hostname; // Handle cases like single-word domains if necessary
+	// For Vercel deployments (*.vercel.app), use the full hostname
+	if (hostname.endsWith('.vercel.app')) {
+		return hostname;
 	}
-	// Return the parent domain (e.g., example.com) - a leading dot is often implied by browsers
-	return parts.slice(-2).join('.');
+
+	// Extract the base domain for cookie sharing across all subdomains
+	try {
+		const parts = hostname.split('.');
+
+		// For any subdomain setup, we want cookies shared at the base domain level
+		// Examples:
+		// - colors.staging.lawlzer.com → .lawlzer.com
+		// - staging.lawlzer.com → .lawlzer.com
+		// - lawlzer.com → .lawlzer.com
+		// - localhost → null (no domain attribute)
+
+		if (parts.length >= 2) {
+			// Always use the last two parts as the base domain
+			const baseDomain = parts.slice(-2).join('.');
+
+			// Validate it's a proper domain (contains a dot)
+			if (baseDomain.includes('.') && !baseDomain.includes('localhost')) {
+				const cookieDomain = `.${baseDomain}`;
+				console.debug('Cookie domain:', cookieDomain, 'from hostname:', hostname);
+				return cookieDomain;
+			}
+		}
+
+		// For single-part domains or localhost, don't set domain attribute
+		console.debug('No domain attribute for cookies on:', hostname);
+		return null;
+	} catch (error) {
+		console.error('Error determining base domain:', error);
+		// Fallback to extracting from hostname
+		const parts = hostname.split('.');
+		if (parts.length < 2) {
+			return hostname;
+		}
+		// Add leading dot for cross-subdomain sharing
+		return `.${parts.slice(-2).join('.')}`;
+	}
 }
 
 // Helper function to set cookies client-side, scoped to the base domain
@@ -132,7 +175,18 @@ export function setCookie(name: string, value: string, days = 365): void {
 		const domain = getBaseDomain();
 		// Setting domain=example.com makes it available to sub.example.com
 		const domainAttribute = domain !== null ? `; domain=${domain}` : '';
-		document.cookie = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
+		const cookieString = `${name}=${value || ''}${expires}; path=/; SameSite=Lax${domainAttribute}`;
+
+		// Debug logging
+		console.debug('Setting cookie:', {
+			name,
+			value: `${value?.substring(0, 10)}...`, // Truncate for privacy
+			domain,
+			hostname: window.location.hostname,
+			cookieString,
+		});
+
+		document.cookie = cookieString;
 	} catch (error) {
 		console.error('Failed to set cookie:', name, error);
 	}

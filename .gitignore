@@ -37,7 +37,7 @@ backup
 legacy
 
 # Package locks (intentionally ignored)
-package-lock.json
+# package-lock.json removed to fix Vercel deployment
 bun.lock
 bun.lockb
 Cargo.lock
@@ -58,3 +58,21 @@ whisper-openai-exp/
 feature_cache
 plans
 .cursor/rules/**
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel

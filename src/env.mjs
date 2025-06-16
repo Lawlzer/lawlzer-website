@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const env = createEnv({
 	server: {
-		VERCEL_URL: z.string().url().optional(),
+		VERCEL_URL: z.string().optional(),
 		DEBUG_CONTEXT_KEYS: z.preprocess((val) => val === 'true', z.boolean()).optional(),
 		DEBUG_SUBDOMAIN_VALUE: z.preprocess((val) => val === 'true', z.boolean()).optional(),
 		DEBUG_SESSION_STUFF: z.preprocess((val) => val === 'true', z.boolean()).optional(),
