@@ -225,11 +225,9 @@ describe('DataPlatformPreview Component', () => {
 		});
 
 		it.skip('should show limit exceeded message when document count is too high', async () => {
-			// TODO: This test fails because the component doesn't render the expected
-			// "Charts disabled" text when the limit is exceeded. The component may
-			// render the message differently or the chart panel may not be visible
-			// in the test environment. Need to investigate the actual DOM output
-			// to determine the correct assertions.
+			// SKIP REASON: The filter button "test(500)" is not being rendered in the test environment.
+			// The component requires specific conditions for filter buttons to appear that aren't met
+			// in the test setup. This needs investigation into the FilterPanel rendering logic.
 			// Mock both API calls properly
 			global.fetch = vi.fn().mockImplementation(async (url: string) => {
 				if (url.includes('/api/data-platform/filters')) {
@@ -264,45 +262,49 @@ describe('DataPlatformPreview Component', () => {
 
 			render(React.createElement(DataPlatformPreview, { onClose: onCloseMock }));
 
-			// Wait for the component to load
+			// Wait for filters to load
 			await waitFor(() => {
 				expect(screen.queryByText(/Loading filters\.\.\.|Updating filters\.\.\./)).not.toBeInTheDocument();
 			});
 
-			// The component shows a message when limit is exceeded
-			// The message contains text about charts being disabled
-			await waitFor(() => {
-				const disabledMessage = screen.getByText((content, element) => {
-					const text = element?.textContent ?? '';
-					return text.includes('Charts disabled') && text.includes('limit exceeded');
-				});
-				expect(disabledMessage).toBeInTheDocument();
-			});
+			// Click the filter to trigger chart data loading (required for chart panel to show)
+			const filterButton = await screen.findByRole('button', { name: /test.*\(500\)/i });
+			fireEvent.click(filterButton);
 
-			// Also verify the document count is displayed
-			const documentCountElement = screen.getByText((content, element) => {
+			// Wait for chart data to load and check for limit exceeded message
+			await waitFor(
+				() => {
+					const heading = screen.getByText('Chart Generation Disabled');
+					expect(heading).toBeInTheDocument();
+				},
+				{ timeout: 5000 }
+			);
+
+			// Check for the dataset size message
+			const datasetMessage = screen.getByText((content, element) => {
 				const text = element?.textContent ?? '';
-				return text.includes('500') && text.includes('documents');
+				return text.includes('Dataset size') && text.includes('6,000') && text.includes('exceeds the limit');
 			});
-			expect(documentCountElement).toBeInTheDocument();
+			expect(datasetMessage).toBeInTheDocument();
+
+			// Check for the footer message
+			const footerMessage = screen.getByText((content, element) => {
+				const text = element?.textContent ?? '';
+				return text.includes('Charts disabled (limit exceeded)');
+			});
+			expect(footerMessage).toBeInTheDocument();
 		});
 	});
 
 	describe('Error Handling', () => {
 		it.skip('should display error message when API fails', async () => {
-			// TODO: This test fails because the error message "Error: Failed to fetch"
-			// is not being rendered in the FilterPanel as expected. The component
-			// might handle errors differently, or the error might be displayed in
-			// a different format. The fetch mock might also need adjustment to
-			// properly trigger the error state in the component.
+			// SKIP REASON: The error message "Error: Failed to fetch" is not appearing in the FilterPanel.
+			// The component's error handling might be preventing the error from propagating to the UI,
+			// or the error state might be handled differently than expected.
 			const errorMessage = 'Failed to fetch';
 
-			// Mock fetch to reject with an error
-			global.fetch = vi.fn().mockImplementation(async (url: string) => {
-				// Let the component attempt to fetch, then fail
-				await new Promise((resolve) => {
-					setTimeout(resolve, 10);
-				});
+			// Mock fetch to reject with an error immediately
+			global.fetch = vi.fn().mockImplementation(async (_url: string) => {
 				throw new Error(errorMessage);
 			});
 
@@ -427,11 +429,9 @@ describe('DataPlatformPreview Component', () => {
 
 	describe('Filter Sorting', () => {
 		it.skip('should sort filter categories by count (descending) then alphabetically', async () => {
-			// TODO: This test fails because the filter categories (apple, banana, zebra)
-			// are not being rendered as expected. The FilterPanel might not be displaying
-			// the filters in the test environment, or they might be rendered differently
-			// than expected. The component might also require additional setup or
-			// different mock data structure.
+			// SKIP REASON: Filter buttons (a1, b1, z1) are not being rendered in the test environment.
+			// The console shows only empty strings and header buttons (Settings, About).
+			// The FilterPanel might require additional setup or the test data structure needs adjustment.
 			// Mock both API calls
 			global.fetch = vi.fn().mockImplementation(async (url: string) => {
 				if (url.includes('/api/data-platform/filters')) {
@@ -465,36 +465,39 @@ describe('DataPlatformPreview Component', () => {
 
 			render(React.createElement(DataPlatformPreview, { onClose: onCloseMock }));
 
+			await waitFor(
+				() => {
+					expect(screen.queryByText(/Loading filters\.\.\.|Updating filters\.\.\./)).not.toBeInTheDocument();
+				},
+				{ timeout: 5000 }
+			);
+
+			// Wait for filters to load and check filter buttons are sorted correctly
+			// The FilterPanel sorts by count descending then alphabetically
 			await waitFor(() => {
-				expect(screen.queryByText(/Loading filters\.\.\.|Updating filters\.\.\./)).not.toBeInTheDocument();
+				// Check for the filter buttons - they should be sorted by count
+				const filterButtons = screen.getAllByRole('button').filter((button) => {
+					const text = button.textContent ?? '';
+					return text.includes('(') && text.includes(')') && (text.includes('a1') || text.includes('b1') || text.includes('z1'));
+				});
+
+				expect(filterButtons.length).toBe(3);
+
+				// Get button texts to verify sorting
+				const buttonTexts = filterButtons.map((btn) => btn.textContent ?? '');
+
+				// a1(20) should be first (highest count)
+				expect(buttonTexts[0]).toContain('a1');
+				expect(buttonTexts[0]).toContain('(20)');
+
+				// b1(15) should be second
+				expect(buttonTexts[1]).toContain('b1');
+				expect(buttonTexts[1]).toContain('(15)');
+
+				// z1(10) should be third (lowest count)
+				expect(buttonTexts[2]).toContain('z1');
+				expect(buttonTexts[2]).toContain('(10)');
 			});
-
-			// The filter categories are rendered with their names
-			// Look for the category names in the UI
-			const appleText = screen.getByText((content) => content.includes('apple'));
-			const bananaText = screen.getByText((content) => content.includes('banana'));
-			const zebraText = screen.getByText((content) => content.includes('zebra'));
-
-			// All categories should be present
-			expect(appleText).toBeInTheDocument();
-			expect(bananaText).toBeInTheDocument();
-			expect(zebraText).toBeInTheDocument();
-
-			// Now check filter value buttons
-			const filterButtons = screen.getAllByRole('button').filter((button) => {
-				const text = button.textContent ?? '';
-				// Filter buttons have format "value(count)"
-				return text.includes('(') && text.includes(')') && (text.includes('a1') || text.includes('b1') || text.includes('z1'));
-			});
-
-			// Should have exactly 3 filter value buttons
-			expect(filterButtons.length).toBe(3);
-
-			// Verify each button exists with correct count
-			const buttonTexts = filterButtons.map((btn) => btn.textContent ?? '');
-			expect(buttonTexts.some((text) => text.includes('a1') && text.includes('(20)'))).toBe(true);
-			expect(buttonTexts.some((text) => text.includes('b1') && text.includes('(15)'))).toBe(true);
-			expect(buttonTexts.some((text) => text.includes('z1') && text.includes('(10)'))).toBe(true);
 		});
 	});
 });
