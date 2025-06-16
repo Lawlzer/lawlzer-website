@@ -84,7 +84,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Install sharp for Linux
-        run: npm install --include=optional sharp
+        run: npm install --include=optional sharp --legacy-peer-deps
 
       - name: Build application
         run: npm run build
