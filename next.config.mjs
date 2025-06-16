@@ -32,10 +32,15 @@ const config = {
 		contentDispositionType: 'attachment',
 		contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
 		// Image optimization is now working on Vercel
+		minimumCacheTTL: 60,
+		deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+		imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
 	},
 	experimental: {
 		optimizeCss: true,
-		optimizePackageImports: ['@heroicons/react', 'framer-motion'],
+		optimizePackageImports: ['@heroicons/react', 'framer-motion', '@headlessui/react', '@visx/visx'],
+		scrollRestoration: true,
+		webVitalsAttribution: ['CLS', 'LCP', 'FCP', 'FID', 'TTFB'],
 	},
 	async rewrites() {
 		return [

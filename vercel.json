@@ -9,7 +9,9 @@
 		"NEXT_PUBLIC_SCHEME": "https",
 		"NEXT_PUBLIC_FRONTEND_PORT": "443",
 		"NEXT_PUBLIC_SECOND_LEVEL_DOMAIN": "lawlzer-website",
-		"NEXT_PUBLIC_TOP_LEVEL_DOMAIN": "vercel.app"
+		"NEXT_PUBLIC_TOP_LEVEL_DOMAIN": "vercel.app",
+		"SKIP_ENV_VALIDATION": "true",
+		"NEXT_TELEMETRY_DISABLED": "1"
 	},
 	"framework": "nextjs",
 	"buildCommand": "npm run build",
@@ -22,12 +24,7 @@
 			"maxDuration": 10
 		}
 	},
-	"rewrites": [
-		{
-			"source": "/api/:path*",
-			"destination": "/api/:path*"
-		}
-	],
+	"rewrites": [],
 	"headers": [
 		{
 			"source": "/(.*)",
@@ -43,11 +40,19 @@
 				{
 					"key": "X-XSS-Protection",
 					"value": "1; mode=block"
+				},
+				{
+					"key": "Referrer-Policy",
+					"value": "strict-origin-when-cross-origin"
+				},
+				{
+					"key": "Permissions-Policy",
+					"value": "camera=(), microphone=(), geolocation=()"
 				}
 			]
 		},
 		{
-			"source": "/:path*.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)",
+			"source": "/:path*.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|otf)",
 			"headers": [
 				{
 					"key": "Cache-Control",
@@ -55,5 +60,6 @@
 				}
 			]
 		}
-	]
+	],
+	"regions": ["iad1"]
 }
