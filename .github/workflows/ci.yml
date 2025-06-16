@@ -88,6 +88,17 @@ jobs:
         run: npm run build
         env:
           SKIP_ENV_VALIDATION: true
+          NEXT_PUBLIC_SCHEME: 'http'
+          NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'dev'
+          NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'localhost'
+          NEXT_PUBLIC_FRONTEND_PORT: '3000'
+          NEXT_PUBLIC_AUTH_GOOGLE_ID: 'dummy-google-id'
+          NEXT_PUBLIC_AUTH_DISCORD_ID: 'dummy-discord-id'
+          NEXT_PUBLIC_AUTH_GITHUB_ID: 'dummy-github-id'
+          DATABASE_URL: 'mongodb://localhost:27017/lawlzer?replicaSet=rs0'
+          AUTH_GOOGLE_SECRET: 'dummy-google-secret'
+          AUTH_DISCORD_SECRET: 'dummy-discord-secret'
+          AUTH_GITHUB_SECRET: 'dummy-github-secret'
 
       - name: Run E2E tests
         run: npm run test:e2e
@@ -122,6 +133,17 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: true
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SCHEME: 'http'
+          NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'dev'
+          NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'localhost'
+          NEXT_PUBLIC_FRONTEND_PORT: '3000'
+          NEXT_PUBLIC_AUTH_GOOGLE_ID: 'dummy-google-id'
+          NEXT_PUBLIC_AUTH_DISCORD_ID: 'dummy-discord-id'
+          NEXT_PUBLIC_AUTH_GITHUB_ID: 'dummy-github-id'
+          DATABASE_URL: 'mongodb://localhost:27017/lawlzer?replicaSet=rs0'
+          AUTH_GOOGLE_SECRET: 'dummy-google-secret'
+          AUTH_DISCORD_SECRET: 'dummy-discord-secret'
+          AUTH_GITHUB_SECRET: 'dummy-github-secret'
 
       - name: Check build output
         run: |
