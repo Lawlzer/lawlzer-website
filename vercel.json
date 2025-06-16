@@ -12,7 +12,6 @@
 		"NEXT_PUBLIC_TOP_LEVEL_DOMAIN": "vercel.app",
 		"SKIP_ENV_VALIDATION": "true",
 		"NEXT_TELEMETRY_DISABLED": "1",
-		"NODE_VERSION": "20.x",
 		"NEXT_PUBLIC_AUTH_GOOGLE_ID": "dummy-google-id",
 		"NEXT_PUBLIC_AUTH_DISCORD_ID": "dummy-discord-id",
 		"NEXT_PUBLIC_AUTH_GITHUB_ID": "dummy-github-id",
