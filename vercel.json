@@ -12,12 +12,19 @@
 		"NEXT_PUBLIC_TOP_LEVEL_DOMAIN": "vercel.app",
 		"SKIP_ENV_VALIDATION": "true",
 		"NEXT_TELEMETRY_DISABLED": "1",
-		"NODE_VERSION": "20.x"
+		"NODE_VERSION": "20.x",
+		"NEXT_PUBLIC_AUTH_GOOGLE_ID": "dummy-google-id",
+		"NEXT_PUBLIC_AUTH_DISCORD_ID": "dummy-discord-id",
+		"NEXT_PUBLIC_AUTH_GITHUB_ID": "dummy-github-id",
+		"DATABASE_URL": "mongodb://localhost:27017/lawlzer?replicaSet=rs0",
+		"AUTH_GOOGLE_SECRET": "dummy-google-secret",
+		"AUTH_DISCORD_SECRET": "dummy-discord-secret",
+		"AUTH_GITHUB_SECRET": "dummy-github-secret"
 	},
 	"framework": "nextjs",
 	"buildCommand": "npm run build",
 	"devCommand": "npm run dev",
-	"installCommand": "npm install --legacy-peer-deps --production=false",
+	"installCommand": "npm install --legacy-peer-deps",
 	"outputDirectory": ".next",
 	"ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"staging\" ] || [ \"$VERCEL_GIT_PULL_REQUEST_BASE_REF\" = \"staging\" ]; then exit 1; else exit 0; fi",
 	"functions": {
