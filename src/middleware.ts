@@ -7,24 +7,35 @@ import { env } from './env.mjs';
 
 // Function to determine if the hostname corresponds to the main domain
 function isMainDomain(hostname: string): boolean {
-	// List of hostnames that should be treated as the main domain
-	const mainDomainUrl = getBaseUrl(); // Get the base URL for the main domain
-	const mainDomainHostname = new URL(mainDomainUrl).hostname; // Extract hostname
-
-	// Build the list of main domain hostnames dynamically
-	// Include localhost, 127.0.0.1, and the configured main domain
-	const mainDomainHostnames = ['localhost', '127.0.0.1'];
-
-	// Add the main domain hostname if it's not already in the list
-	if (!mainDomainHostnames.includes(mainDomainHostname)) {
-		mainDomainHostnames.push(mainDomainHostname);
+	// For Vercel deployments, any *.vercel.app domain is considered main domain
+	if (hostname.endsWith('.vercel.app')) {
+		return true;
 	}
 
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Input hostname: ${hostname}`);
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Calculated mainDomainHostnames: ${JSON.stringify(mainDomainHostnames)}`);
-	const result = mainDomainHostnames.includes(hostname);
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Result: ${result}`);
-	return result;
+	try {
+		// List of hostnames that should be treated as the main domain
+		const mainDomainUrl = getBaseUrl(); // Get the base URL for the main domain
+		const mainDomainHostname = new URL(mainDomainUrl).hostname; // Extract hostname
+
+		// Build the list of main domain hostnames dynamically
+		// Include localhost, 127.0.0.1, and the configured main domain
+		const mainDomainHostnames = ['localhost', '127.0.0.1'];
+
+		// Add the main domain hostname if it's not already in the list
+		if (!mainDomainHostnames.includes(mainDomainHostname)) {
+			mainDomainHostnames.push(mainDomainHostname);
+		}
+
+		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Input hostname: ${hostname}`);
+		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Calculated mainDomainHostnames: ${JSON.stringify(mainDomainHostnames)}`);
+		const result = mainDomainHostnames.includes(hostname);
+		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Result: ${result}`);
+		return result;
+	} catch (error) {
+		// If environment variables are not set, fall back to simple checks
+		console.warn('[isMainDomain] Failed to get base URL, falling back to simple checks:', error);
+		return ['localhost', '127.0.0.1'].includes(hostname);
+	}
 }
 
 // Make the middleware async to await auth0.middleware
@@ -46,6 +57,22 @@ export function middleware(request: NextRequest): NextResponse {
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Host header: ${hostHeader}`);
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] X-Forwarded-Host header: ${forwardedHost}`);
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Detected hostname: ${detectedHostname}`);
+
+	// Handle www to non-www redirect
+	if (detectedHostname.startsWith('www.')) {
+		const nonWwwHostname = detectedHostname.substring(4);
+		const redirectUrl = new URL(request.url);
+		redirectUrl.hostname = nonWwwHostname;
+
+		// Preserve the original port if it was part of the hostname
+		const portMatch = /:(\d+)$/.exec(detectedHostnameWithPort);
+		if (portMatch) {
+			redirectUrl.port = portMatch[1];
+		}
+
+		console.debug(`[Middleware] Redirecting www to non-www: ${detectedHostname} -> ${nonWwwHostname}`);
+		return NextResponse.redirect(redirectUrl, 301); // Use 301 for permanent redirect
+	}
 
 	// Development-only redirect from localhost to the configured main domain
 	console.debug('[Middleware] NODE_ENV:', env.NODE_ENV, 'detectedHostname:', detectedHostname);
