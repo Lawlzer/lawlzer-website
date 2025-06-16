@@ -1,0 +1,12 @@
+{
+	"git": {
+		"deploymentEnabled": {
+			"main": true,
+			"staging": true
+		}
+	},
+	"env": {
+		"NEXT_PUBLIC_SCHEME": "https",
+		"NEXT_PUBLIC_FRONTEND_PORT": "443"
+	}
+}
