@@ -33,7 +33,7 @@ export default defineConfig({
 	updateSnapshots: 'missing',
 	metadata: {},
 	use: {
-		baseURL: process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://dev.localhost:3000',
+		baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL ?? process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:3000',
 		trace: Boolean(process.env.CI) ? 'retain-on-failure' : 'on',
 		headless: true,
 		viewport: { width: 1280, height: 720 },
@@ -86,17 +86,6 @@ export default defineConfig({
 						: []),
 				]),
 	],
-	webServer:
-		process.env.PLAYWRIGHT_BACKEND_URL !== undefined && process.env.PLAYWRIGHT_BACKEND_URL !== ''
-			? undefined // Don't start a server if URL is provided
-			: [
-					{
-						command: 'npm run dev',
-						url: 'http://dev.localhost:3000',
-						timeout: 120000, // Increase timeout to 2 minutes
-						reuseExistingServer: true, // Always reuse existing server if available
-						stdout: 'pipe',
-						stderr: 'pipe',
-					},
-				],
+	// Server startup is now handled dynamically in globalSetup
+	// It will check if a server is running and start one if needed
 });
