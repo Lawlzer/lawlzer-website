@@ -8,10 +8,11 @@ import React, { useEffect, useState } from 'react';
 import AuthButton from './AuthButton';
 import ProtectedLink from './ProtectedLink';
 
-import { getBaseUrl, subdomains } from '~/lib/utils';
+// import { useUser } from '@auth0/nextjs-auth0'; // Remove Auth0 hook
+import { env } from '~/env.mjs';
+import { subdomains } from '~/lib/utils';
 // import { getSession } from '~/server/db/session'; // Import correct session fetching function - not used in component
 import type { SessionData } from '~/server/db/session'; // Import SessionData type
-// import { useUser } from '@auth0/nextjs-auth0'; // Remove Auth0 hook
 
 // Placeholder for environment variables
 // In a real app, these should come from your environment configuration
@@ -21,7 +22,22 @@ import type { SessionData } from '~/server/db/session'; // Import SessionData ty
 // Mobile navigation link component
 const MobileNavLink = ({ href, children, onClick }: { href: string; children: React.ReactNode; onClick: () => void }) => {
 	const pathname = usePathname();
-	const isActive = pathname === href || (href !== getBaseUrl() && pathname.startsWith(href));
+
+	// For subdomain links, check if we're on that subdomain
+	let isActive = false;
+	if (href === '/') {
+		// Home link is active when we're on the root domain at path /
+		isActive = pathname === '/' && typeof window !== 'undefined' && !subdomains.some((sub) => window.location.hostname.startsWith(`${sub.name}.`));
+	} else if (href.startsWith('http')) {
+		// For absolute URLs (subdomains), check if we're on that subdomain
+		if (typeof window !== 'undefined') {
+			const url = new URL(href);
+			isActive = window.location.hostname === url.hostname;
+		}
+	} else {
+		// For relative paths
+		isActive = pathname === href || pathname.startsWith(href);
+	}
 
 	return (
 		<motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} whileHover={{ x: 4 }}>
@@ -40,11 +56,72 @@ const MobileNavLink = ({ href, children, onClick }: { href: string; children: Re
 };
 
 const Topbar = ({ session }: { session: SessionData | null }): React.JSX.Element => {
-	const baseUrl = getBaseUrl();
 	const pathname = usePathname();
 	const [isOpen, setIsOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
 	const [isValorantSubdomain, setIsValorantSubdomain] = useState(false);
+
+	// Function to get the appropriate URL
+	const getNavUrl = (subdomain?: string | null): string => {
+		// For the home link
+		if (subdomain === undefined || subdomain === null) {
+			if (typeof window !== 'undefined') {
+				const currentHost = window.location.hostname;
+				const stagingDomain = `${env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}`;
+				// If we're on the staging domain or any subdomain of it
+				if (currentHost === stagingDomain || currentHost.endsWith(`.${stagingDomain}`)) {
+					return `${env.NEXT_PUBLIC_SCHEME}://${stagingDomain}`;
+				}
+			}
+			// Otherwise use relative path
+			return '/';
+		}
+
+		// For subdomains, check if we're on a custom domain or Vercel
+		if (typeof window !== 'undefined') {
+			const currentHost = window.location.hostname;
+
+			// If we're on a Vercel deployment, use path-based routing
+			if (currentHost.endsWith('.vercel.app')) {
+				return `/subdomains/${subdomain}`;
+			}
+
+			// For custom domains (like staging.lawlzer.com), use actual subdomains
+			const currentProtocol = window.location.protocol;
+			const currentPort = window.location.port;
+
+			// Special handling for the configured domain
+			const configuredDomain = `${env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}`;
+			if (currentHost === configuredDomain || currentHost.includes(configuredDomain)) {
+				// On the configured domain, create URLs like valorant.staging.lawlzer.com
+				const portPart = currentPort && currentPort !== '80' && currentPort !== '443' ? `:${currentPort}` : '';
+				return `${currentProtocol}//${subdomain}.${configuredDomain}${portPart}`;
+			}
+
+			// Extract the base domain from current host
+			// If we're on a subdomain (but not staging.lawlzer.com), remove it to get the base domain
+			let baseDomain = currentHost;
+
+			// First, remove www. prefix if present
+			if (baseDomain.startsWith('www.')) {
+				baseDomain = baseDomain.substring(4);
+			}
+
+			subdomains.forEach((sub) => {
+				// Skip staging subdomain removal to preserve it in URLs
+				if (sub.name !== 'staging' && baseDomain.startsWith(`${sub.name}.`)) {
+					baseDomain = baseDomain.substring(sub.name.length + 1);
+				}
+			});
+
+			// Construct the subdomain URL
+			const portPart = currentPort && currentPort !== '80' && currentPort !== '443' ? `:${currentPort}` : '';
+			return `${currentProtocol}//${subdomain}.${baseDomain}${portPart}`;
+		}
+
+		// Fallback for SSR - use path-based routing
+		return `/subdomains/${subdomain}`;
+	};
 
 	// Handle scroll effect
 	useEffect(() => {
@@ -69,7 +146,21 @@ const Topbar = ({ session }: { session: SessionData | null }): React.JSX.Element
 
 	// Enhanced navigation link component
 	const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
-		const isActive = pathname === href || (href !== baseUrl && pathname.startsWith(href));
+		// For subdomain links, check if we're on that subdomain
+		let isActive = false;
+		if (href === '/') {
+			// Home link is active when we're on the root domain at path /
+			isActive = pathname === '/' && typeof window !== 'undefined' && !subdomains.some((sub) => window.location.hostname.startsWith(`${sub.name}.`));
+		} else if (href.startsWith('http')) {
+			// For absolute URLs (subdomains), check if we're on that subdomain
+			if (typeof window !== 'undefined') {
+				const url = new URL(href);
+				isActive = window.location.hostname === url.hostname;
+			}
+		} else {
+			// For relative paths
+			isActive = pathname === href || pathname.startsWith(href);
+		}
 
 		return (
 			<ProtectedLink
@@ -103,13 +194,15 @@ const Topbar = ({ session }: { session: SessionData | null }): React.JSX.Element
 						<motion.div className='hidden md:flex items-center space-x-1' initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
 							{/* All navigation links together */}
 							<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
-								<NavLink href={baseUrl}>Home</NavLink>
+								<NavLink href={getNavUrl()}>Home</NavLink>
 							</motion.div>
-							{subdomains.map((subdomain, index) => (
-								<motion.div key={subdomain.name} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 + index * 0.05 }}>
-									<NavLink href={getBaseUrl(subdomain.name)}>{subdomain.name.charAt(0).toUpperCase() + subdomain.name.slice(1)}</NavLink>
-								</motion.div>
-							))}
+							{subdomains
+								.filter((subdomain) => subdomain.name !== 'staging')
+								.map((subdomain, index) => (
+									<motion.div key={subdomain.name} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 + index * 0.05 }}>
+										<NavLink href={getNavUrl(subdomain.name)}>{subdomain.name.charAt(0).toUpperCase() + subdomain.name.slice(1)}</NavLink>
+									</motion.div>
+								))}
 						</motion.div>
 					</div>
 
@@ -153,7 +246,7 @@ const Topbar = ({ session }: { session: SessionData | null }): React.JSX.Element
 								{/* Home link for mobile */}
 								<motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }}>
 									<MobileNavLink
-										href={baseUrl}
+										href={getNavUrl()}
 										onClick={() => {
 											setIsOpen(false);
 										}}
@@ -162,18 +255,20 @@ const Topbar = ({ session }: { session: SessionData | null }): React.JSX.Element
 									</MobileNavLink>
 								</motion.div>
 								{/* Subdomain links */}
-								{subdomains.map((subdomain, index) => (
-									<motion.div key={subdomain.name} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + index * 0.05 }}>
-										<MobileNavLink
-											href={getBaseUrl(subdomain.name)}
-											onClick={() => {
-												setIsOpen(false);
-											}}
-										>
-											{subdomain.name.charAt(0).toUpperCase() + subdomain.name.slice(1)}
-										</MobileNavLink>
-									</motion.div>
-								))}
+								{subdomains
+									.filter((subdomain) => subdomain.name !== 'staging')
+									.map((subdomain, index) => (
+										<motion.div key={subdomain.name} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + index * 0.05 }}>
+											<MobileNavLink
+												href={getNavUrl(subdomain.name)}
+												onClick={() => {
+													setIsOpen(false);
+												}}
+											>
+												{subdomain.name.charAt(0).toUpperCase() + subdomain.name.slice(1)}
+											</MobileNavLink>
+										</motion.div>
+									))}
 							</div>
 						</motion.div>
 					)}

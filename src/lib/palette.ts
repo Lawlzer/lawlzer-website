@@ -1,8 +1,6 @@
 'use client'; // Need this for document.cookie
 
-// REMOVED: Cannot use server env vars on client
-// import { env } from '~/env.mjs';
-// import { getCookieDomain } from './auth';
+import { env } from '~/env.mjs';
 
 // Define COOKIE keys
 export const COOKIE_KEYS = {
@@ -96,23 +94,49 @@ export function getDefaultColors(): typeof LIGHT_MODE_COLORS {
 	return LIGHT_MODE_COLORS;
 }
 
-// Helper function to get the base domain (e.g., example.com) from hostname
+// Helper function to get the base domain for cookie sharing
 function getBaseDomain(): string | null {
 	if (typeof window === 'undefined') return null; // Not in browser
 
 	const { hostname } = window.location;
-	if (hostname === 'localhost') {
-		return null; // No domain for localhost
+
+	// For localhost development, don't set domain
+	if (hostname === 'localhost' || hostname.includes('localhost')) {
+		return null;
 	}
 
-	// Simple logic to get the last two parts (e.g., example.com from sub.example.com)
-	// Might need adjustment for complex TLDs (e.g., .co.uk)
-	const parts = hostname.split('.');
-	if (parts.length < 2) {
-		return hostname; // Handle cases like single-word domains if necessary
+	// For Vercel deployments (*.vercel.app), use the full hostname
+	if (hostname.endsWith('.vercel.app')) {
+		return hostname;
 	}
-	// Return the parent domain (e.g., example.com) - a leading dot is often implied by browsers
-	return parts.slice(-2).join('.');
+
+	// Use environment variables to construct the domain
+	try {
+		const secondLevel = env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN;
+		const topLevel = env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN;
+
+		if (!secondLevel || !topLevel) {
+			// Fallback to extracting from hostname if env vars are missing
+			const parts = hostname.split('.');
+			if (parts.length < 2) {
+				return hostname;
+			}
+			return parts.slice(-2).join('.');
+		}
+
+		// Construct domain from environment variables
+		// For configured deployment: secondLevel = env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN, topLevel = env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN
+		// We want cookies to be shared across all subdomains of the configured domain
+		return `${secondLevel}.${topLevel}`;
+	} catch (error) {
+		console.error('Error determining base domain:', error);
+		// Fallback to extracting from hostname
+		const parts = hostname.split('.');
+		if (parts.length < 2) {
+			return hostname;
+		}
+		return parts.slice(-2).join('.');
+	}
 }
 
 // Helper function to set cookies client-side, scoped to the base domain
