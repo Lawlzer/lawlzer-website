@@ -552,7 +552,7 @@ export default function ColorsPage(): JSX.Element {
 				{/* Header */}
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className='mb-6 text-center'>
 					<h1 className='text-3xl font-bold tracking-tight text-foreground sm:text-4xl mb-2'>Color Theme Studio</h1>
-					<p className='text-base text-secondary-text max-w-2xl mx-auto'>Customize the color scheme to match your style. Changes are applied instantly.</p>
+					<p className='text-base text-secondary-text max-w-2xl mx-auto'>Customize the color scheme to match your style.</p>
 				</motion.div>
 
 				{/* Color Customization */}

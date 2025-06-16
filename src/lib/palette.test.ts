@@ -2,7 +2,20 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { COOKIE_KEYS, getCookie, LIGHT_MODE_COLORS, PREDEFINED_PALETTES, setCookie } from './palette';
+// Mock env module before importing palette
+vi.mock('~/env.mjs', () => ({
+	env: {
+		NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'test',
+		NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'example.com',
+		NEXT_PUBLIC_SCHEME: 'https',
+		NEXT_PUBLIC_FRONTEND_PORT: '443',
+		NEXT_PUBLIC_AUTH_DISCORD_ID: 'test',
+		NEXT_PUBLIC_AUTH_GOOGLE_ID: 'test',
+		NEXT_PUBLIC_AUTH_GITHUB_ID: 'test',
+	},
+}));
+
+import { COOKIE_KEYS, getCookie, LIGHT_MODE_COLORS, PREDEFINED_PALETTES } from './palette';
 
 // --- Mocks & Setup --- //
 
@@ -81,21 +94,24 @@ describe('Palette Library Functions', () => {
 	});
 
 	describe('setCookie', () => {
-		it('should set a cookie with name, value, and defaults', () => {
+		it('should set a cookie with name, value, and defaults', async () => {
+			const { setCookie } = await import('./palette');
+
 			mockWindowLocation('test.example.com'); // Use a domain for this test
 			setCookie('testKey', 'testValue');
 			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
-			// Check the cookie string format (adjust date check if needed)
+			// Check the cookie string format
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('testKey=testValue'));
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('path=/'));
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('SameSite=Lax'));
-			expect(cookieSetterMock).toHaveBeenCalledWith(
-				expect.stringContaining('domain=example.com') // Base domain extracted
-			);
+			// The new logic extracts base domain and adds leading dot
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=.example.com'));
 			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('expires=')); // Check that expires is present
 		});
 
-		it('should not set domain for localhost', () => {
+		it('should not set domain for localhost', async () => {
+			const { setCookie } = await import('./palette');
+
 			mockWindowLocation('localhost');
 			setCookie('localKey', 'localValue');
 			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
@@ -104,7 +120,62 @@ describe('Palette Library Functions', () => {
 			expect(cookieSetterMock).not.toHaveBeenCalledWith(expect.stringContaining('domain='));
 		});
 
+		it('should not set domain for single subdomain localhost', async () => {
+			const { setCookie } = await import('./palette');
+
+			mockWindowLocation('colors.localhost');
+			setCookie('localKey', 'localValue');
+			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('localKey=localValue'));
+			// Ensure domain attribute is NOT present for single subdomain
+			expect(cookieSetterMock).not.toHaveBeenCalledWith(expect.stringContaining('domain='));
+		});
+
+		it('should set domain for multi-level localhost subdomains', async () => {
+			const { setCookie } = await import('./palette');
+
+			mockWindowLocation('colors.eeeeee.localhost');
+			setCookie('testKey', 'testValue');
+			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('testKey=testValue'));
+			// Should set domain to .eeeeee.localhost for cookie sharing
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=.eeeeee.localhost'));
+		});
+
+		it('should set domain correctly for deeper localhost subdomains', async () => {
+			const { setCookie } = await import('./palette');
+
+			mockWindowLocation('api.colors.eeeeee.localhost');
+			setCookie('testKey', 'testValue');
+			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
+			// Should set domain to .colors.eeeeee.localhost
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=.colors.eeeeee.localhost'));
+		});
+
+		it('should set correct domain for test.example.com subdomains', async () => {
+			const { setCookie } = await import('./palette');
+
+			mockWindowLocation('colors.test.example.com');
+			setCookie('testKey', 'testValue');
+			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
+			expect(cookieSetterMock).toHaveBeenCalledWith(
+				expect.stringContaining('domain=.example.com') // Should share cookies across all subdomains
+			);
+		});
+
+		it('should set correct domain for any subdomain', async () => {
+			const { setCookie } = await import('./palette');
+
+			mockWindowLocation('colors.production.com');
+			setCookie('testKey', 'testValue');
+			expect(cookieSetterMock).toHaveBeenCalledTimes(1);
+			// New logic extracts base domain from hostname
+			expect(cookieSetterMock).toHaveBeenCalledWith(expect.stringContaining('domain=.production.com'));
+		});
+
 		it('should handle setting a cookie when document.cookie setter fails', async () => {
+			const { setCookie } = await import('./palette');
+
 			// Mock console.error to suppress expected error output
 			const { mockConsoleError } = await import('testUtils/unit/console.helpers');
 			const consoleMock = mockConsoleError();
