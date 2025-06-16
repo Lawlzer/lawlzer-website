@@ -14,7 +14,7 @@
 	"framework": "nextjs",
 	"buildCommand": "npm run build",
 	"devCommand": "npm run dev",
-	"installCommand": "npm install --legacy-peer-deps && npm install --os=linux --cpu=x64 sharp",
+	"installCommand": "npm ci",
 	"outputDirectory": ".next",
 	"ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"staging\" ] || [ \"$VERCEL_GIT_PULL_REQUEST_BASE_REF\" = \"staging\" ]; then exit 1; else exit 0; fi",
 	"functions": {

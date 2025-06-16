@@ -42,7 +42,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
       - name: Run ESLint
         run: npm run lint:eslint:commit
@@ -63,7 +63,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
       - name: Run TypeScript type check
         run: npm run typecheck
@@ -81,10 +81,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Install sharp for Linux
-        run: npm install --os=linux --cpu=x64 sharp
+        run: npm ci
 
       - name: Build application
         run: npm run build
