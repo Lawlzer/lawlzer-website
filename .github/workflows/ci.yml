@@ -86,9 +86,6 @@ jobs:
       - name: Install sharp for Linux
         run: npm install --include=optional sharp --legacy-peer-deps
 
-      - name: Install lightningcss for Linux
-        run: npm install --include=optional lightningcss --legacy-peer-deps
-
       - name: Build application
         run: npm run build
         env:
