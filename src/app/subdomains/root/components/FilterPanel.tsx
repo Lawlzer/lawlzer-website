@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
 
+import { formatFieldName } from '~/lib/utils';
+
 // Define the structure for filters state (assuming Filters type is available or defined elsewhere)
 // If not, you might need to import or define it here.
 // import type { Filters } from './DataPlatformPreview';
@@ -124,9 +126,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 						{sortedFilterEntries.map(({ key, valueCounts }, index) => (
 							<ItemDiv key={key} className='group overflow-hidden rounded-lg border backdrop-blur-sm transition-all border-border/50 bg-gradient-to-br from-muted/10 to-muted/20 hover:border-border hover:shadow-md' {...(animationsEnabled ? { initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: index * 0.05, type: 'spring', stiffness: 200 }, whileHover: { scale: 1.01 } } : {})}>
 								<div className='px-3 py-2'>
-									<h4 className='mb-2 flex items-center gap-1.5 text-xs font-semibold capitalize text-foreground' title={key.replace(/_/g, ' ')}>
-										<ItemDiv className='inline-block h-1.5 w-1.5 rounded-full bg-primary' {...(animationsEnabled ? { animate: { scale: [1, 1.5, 1] }, transition: { duration: 2, repeat: Infinity, delay: index * 0.1 } } : {})} />
-										{key.replace(/_/g, ' ')}
+									<h4 className='mb-2 flex items-center gap-1.5 text-xs font-semibold capitalize text-foreground' title={formatFieldName(key)}>
+										<span className='text-primary'>⚡</span>
+										{formatFieldName(key)}
 									</h4>
 									{animationsEnabled ? (
 										<AnimatePresence mode='popLayout'>
@@ -330,7 +332,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 						<div className='space-y-2'>
 							{Object.entries(commonFields).map(([key, value], index) => (
 								<ItemDiv key={key} className='flex items-center justify-between rounded-lg bg-background/40 px-3 py-2 backdrop-blur-sm' {...(animationsEnabled ? { initial: { opacity: 0, x: -10 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.3 + index * 0.05 } } : {})}>
-									<span className='text-xs font-medium text-muted-foreground'>{key}:</span>
+									<span className='text-xs font-medium text-muted-foreground'>{formatFieldName(key)}:</span>
 									<span className='max-w-[60%] truncate text-xs font-medium text-foreground' title={String(value)}>
 										{String(value)}
 									</span>
