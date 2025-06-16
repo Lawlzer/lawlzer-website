@@ -1,9 +1,9 @@
 // import type { FullConfig } from '@playwright/test'; // No longer needed for project dependency approach
 import type { FullConfig } from '@playwright/test';
 import { expect } from '@playwright/test'; // Import test as setup
+import { type ChildProcess, spawn } from 'child_process';
 import dotenv from 'dotenv';
 import path from 'path';
-import { spawn, type ChildProcess } from 'child_process';
 
 let devServerProcess: ChildProcess | null = null;
 
@@ -16,18 +16,55 @@ async function checkServerRunning(url: string, maxAttempts = 1): Promise<boolean
 			// Server not ready yet
 		}
 		if (i < maxAttempts - 1) {
-			await new Promise<void>(resolve => { setTimeout(resolve, 1000); }); // Wait 1 second between attempts
+			await new Promise<void>((resolve) => {
+				setTimeout(resolve, 1000);
+			}); // Wait 1 second between attempts
 		}
 	}
 	return false;
 }
 
+async function killProcessTree(pid: number): Promise<void> {
+	try {
+		if (process.platform === 'win32') {
+			// On Windows, use taskkill to kill the process tree
+			const { exec } = await import('child_process');
+			await new Promise<void>((resolve, reject) => {
+				exec(`taskkill /pid ${pid} /T /F`, (error) => {
+					if (error && !error.message.includes('not found')) {
+						reject(error);
+					} else {
+						resolve();
+					}
+				});
+			});
+		} else {
+			// On Unix-like systems, kill the process group
+			process.kill(-pid, 'SIGTERM');
+			// Give it a moment to terminate gracefully
+			await new Promise<void>((resolve) => {
+				setTimeout(resolve, 100);
+			});
+			// Force kill if still running
+			try {
+				process.kill(-pid, 'SIGKILL');
+			} catch (e) {
+				// Process might already be dead
+			}
+		}
+	} catch (error) {
+		console.error('Error killing process tree:', error);
+	}
+}
+
 async function startDevServer(): Promise<void> {
 	console.info('🚀 Starting development server...');
-	
+
 	devServerProcess = spawn('npm', ['run', 'dev'], {
 		stdio: 'pipe',
 		shell: true,
+		// Create a new process group
+		detached: process.platform !== 'win32',
 		env: {
 			...process.env,
 			SKIP_ENV_VALIDATION: 'true',
@@ -43,21 +80,33 @@ async function startDevServer(): Promise<void> {
 			AUTH_GOOGLE_SECRET: 'dummy-google-secret',
 			AUTH_DISCORD_SECRET: 'dummy-discord-secret',
 			AUTH_GITHUB_SECRET: 'dummy-github-secret',
-		}
+		},
 	});
 
 	// Capture server output for debugging
 	devServerProcess.stdout?.on('data', (data: Buffer) => {
-		console.info(`[dev-server] ${data.toString().trim()}`);
+		const output = data.toString().trim();
+		if (output) {
+			console.info(`[dev-server] ${output}`);
+		}
 	});
 
 	devServerProcess.stderr?.on('data', (data: Buffer) => {
-		console.error(`[dev-server-error] ${data.toString().trim()}`);
+		const output = data.toString().trim();
+		if (output) {
+			console.error(`[dev-server-error] ${output}`);
+		}
 	});
 
 	devServerProcess.on('error', (error: Error) => {
 		console.error('Failed to start dev server:', error);
 		throw error;
+	});
+
+	// Handle process exit
+	devServerProcess.on('exit', (code, signal) => {
+		console.info(`[dev-server] Process exited with code ${code} and signal ${signal}`);
+		devServerProcess = null;
 	});
 }
 
@@ -73,14 +122,14 @@ async function globalSetup(_config: FullConfig): Promise<() => Promise<void>> {
 
 	if (!isServerRunning) {
 		console.info(`📡 No server detected at ${baseURL}, starting one automatically...`);
-		
+
 		// Start the dev server
 		await startDevServer();
-		
+
 		// Wait for server to be ready (up to 60 seconds)
 		console.info('⏳ Waiting for server to be ready...');
 		isServerRunning = await checkServerRunning(baseURL, 60);
-		
+
 		if (!isServerRunning) {
 			throw new Error(`Failed to start dev server at ${baseURL} after 60 seconds`);
 		}
@@ -89,14 +138,45 @@ async function globalSetup(_config: FullConfig): Promise<() => Promise<void>> {
 	}
 
 	console.info(`✅ Server is ready at ${baseURL}`);
-	
+
+	// Register cleanup handlers for unexpected exits
+	const cleanupHandler = () => {
+		if (devServerProcess && typeof devServerProcess.pid === 'number' && devServerProcess.pid > 0) {
+			console.info('🛑 Emergency cleanup: Stopping dev server...');
+			try {
+				if (process.platform === 'win32') {
+					// Synchronous kill on Windows
+					const { execSync } = require('child_process');
+					execSync(`taskkill /pid ${devServerProcess.pid} /T /F`, { stdio: 'ignore' });
+				} else {
+					// Kill process group on Unix
+					process.kill(-devServerProcess.pid, 'SIGKILL');
+				}
+			} catch (error) {
+				// Ignore errors during emergency cleanup
+			}
+		}
+	};
+
+	process.on('SIGINT', cleanupHandler);
+	process.on('SIGTERM', cleanupHandler);
+	process.on('exit', cleanupHandler);
+
 	// Return a teardown function
 	return async () => {
-		if (devServerProcess) {
+		const serverProcess = devServerProcess;
+		if (serverProcess && typeof serverProcess.pid === 'number' && serverProcess.pid > 0) {
 			console.info('🛑 Stopping dev server...');
-			devServerProcess.kill();
-			// Give it time to shutdown gracefully
-			await new Promise<void>(resolve => { setTimeout(resolve, 1000); });
+			try {
+				await killProcessTree(serverProcess.pid);
+				// Wait a bit to ensure cleanup
+				await new Promise<void>((resolve) => {
+					setTimeout(resolve, 1000);
+				});
+				console.info('✅ Dev server stopped');
+			} catch (error) {
+				console.error('Error stopping dev server:', error);
+			}
 		}
 	};
 }
