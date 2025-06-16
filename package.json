@@ -52,7 +52,7 @@
 		"lint:prettier:debug": "prettier --write --config ./.config/.prettierrc.mjs --ignore-path ./.gitignore",
 		"lint:staged": "lint-staged",
 		"pre-commit": "lint-staged",
-		"prepare": "husky",
+		"prepare": "node scripts/prepare.cjs",
 		"preview": "next build && next start",
 		"publish:all": "npm run build && npm run test && npm publish --access=public && echo \"Successfully published to NPM!\"",
 		"start": "next start",
