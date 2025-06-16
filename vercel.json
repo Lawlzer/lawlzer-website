@@ -1,13 +1,23 @@
 {
 	"git": {
 		"deploymentEnabled": {
-			"main": true,
+			"main": false,
 			"staging": true
 		}
 	},
 	"env": {
 		"NEXT_PUBLIC_SCHEME": "https",
-		"NEXT_PUBLIC_FRONTEND_PORT": "443"
+		"NEXT_PUBLIC_FRONTEND_PORT": "443",
+		"NEXT_PUBLIC_SECOND_LEVEL_DOMAIN": "lawlzer-website",
+		"NEXT_PUBLIC_TOP_LEVEL_DOMAIN": "vercel.app",
+		"DATABASE_URL": "@database-url",
+		"GITHUB_AUTH_ID": "@github-auth-id",
+		"GITHUB_AUTH_SECRET": "@github-auth-secret",
+		"NEXTAUTH_SECRET": "@nextauth-secret",
+		"DISCORD_AUTH_ID": "@discord-auth-id",
+		"DISCORD_AUTH_SECRET": "@discord-auth-secret",
+		"TWITCH_AUTH_ID": "@twitch-auth-id",
+		"TWITCH_AUTH_SECRET": "@twitch-auth-secret"
 	},
 	"framework": "nextjs",
 	"buildCommand": "npm run build",
