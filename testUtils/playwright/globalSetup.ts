@@ -97,7 +97,7 @@ async function startDevServer(): Promise<string> {
 				if (output.includes('Port') && output.includes('is in use')) {
 					const portMatch = /using available port (\d+)/.exec(output);
 					const portString = portMatch?.[1];
-					if (portString && portString.length > 0) {
+					if (typeof portString === 'string' && portString.length > 0) {
 						actualPort = parseInt(portString, 10);
 						console.info(`📍 Server will use port ${actualPort} instead`);
 					}
