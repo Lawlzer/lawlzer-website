@@ -98,8 +98,20 @@ function getBaseDomain(): string | null {
 
 	const { hostname } = window.location;
 
-	// For localhost development, don't set domain
-	if (hostname === 'localhost' || hostname.includes('localhost')) {
+	// For localhost development with subdomains, extract the base domain
+	if (hostname.includes('localhost')) {
+		const parts = hostname.split('.');
+
+		// If we have subdomains like colors.eeeeee.localhost
+		if (parts.length > 2) {
+			// Extract everything after the first subdomain
+			// colors.eeeeee.localhost → .eeeeee.localhost
+			const baseDomain = `.${parts.slice(1).join('.')}`;
+			console.debug('Cookie domain for localhost:', baseDomain, 'from hostname:', hostname);
+			return baseDomain;
+		}
+
+		// For simple localhost or single subdomain, don't set domain
 		return null;
 	}
 
