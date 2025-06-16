@@ -5,33 +5,48 @@ import { ArrowRightOnRectangleIcon, ChevronDownIcon, UserCircleIcon } from '@her
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useEffect, useState } from 'react';
 
-import { cn, getBaseUrl } from '~/lib/utils';
+import { cn } from '~/lib/utils';
 import type { SessionData } from '~/server/db/session';
 
 interface AuthButtonProps {
 	initialSession: SessionData | null;
 }
 
-const AuthButton = ({ initialSession }: AuthButtonProps): React.JSX.Element => {
-	const [user, setUser] = useState(initialSession?.user ?? null);
+const AuthButton: React.FC<AuthButtonProps> = ({ initialSession }) => {
+	const [session, setSession] = useState<SessionData | null>(initialSession);
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		setUser(initialSession?.user ?? null);
-	}, [initialSession]);
+		// Subscribe to session changes via a custom event
+		const handleSessionChange = (event: CustomEvent<SessionData | null>) => {
+			setSession(event.detail);
+		};
 
-	// If loading, show skeleton
+		window.addEventListener('sessionChange', handleSessionChange as EventListener);
+
+		return () => {
+			window.removeEventListener('sessionChange', handleSessionChange as EventListener);
+		};
+	}, []);
+
 	if (loading) {
-		return <div className='h-10 w-32 shimmer rounded-xl bg-secondary/50 backdrop-blur-sm' data-testid='auth-loading' />;
+		return (
+			<div className='flex items-center gap-2 px-4 py-2.5 text-sm'>
+				<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className='h-4 w-4 border-2 border-primary border-t-transparent rounded-full' />
+				<span className='text-secondary-text'>Loading...</span>
+			</div>
+		);
 	}
 
-	if (user) {
+	if (session?.user !== null && session?.user !== undefined) {
 		return (
 			<Menu as='div' className='relative'>
-				<MenuButton className='group inline-flex items-center gap-2 rounded-xl bg-secondary/50 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/70 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50'>
-					<UserCircleIcon className='h-5 w-5 text-secondary-text transition-colors group-hover:text-primary' />
-					<span className='hidden sm:inline-block'>{user.name ?? user.email ?? 'Account'}</span>
-					<ChevronDownIcon aria-hidden='true' className='h-4 w-4 text-secondary-text transition-transform duration-200 group-hover:text-primary group-data-[open]:rotate-180' />
+				<MenuButton className='group flex items-center gap-3 rounded-xl bg-secondary/50 px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/50'>
+					<div className='flex items-center gap-2'>
+						<UserCircleIcon className='h-5 w-5 text-secondary-text' />
+						<span className='hidden sm:inline'>{session.user.name ?? session.user.email}</span>
+					</div>
+					<ChevronDownIcon aria-hidden='true' className='h-4 w-4 text-secondary-text transition-transform duration-200 group-data-[open]:rotate-180' />
 				</MenuButton>
 
 				<AnimatePresence>
@@ -41,7 +56,7 @@ const AuthButton = ({ initialSession }: AuthButtonProps): React.JSX.Element => {
 								{({ active }) => (
 									<a
 										className={cn('group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200', active ? 'bg-destructive/10 text-destructive' : 'text-foreground hover:bg-secondary/50')}
-										href={`${getBaseUrl()}/api/auth/logout`}
+										href='/api/auth/logout'
 										onClick={() => {
 											setLoading(true);
 										}}
@@ -121,7 +136,7 @@ const AuthButton = ({ initialSession }: AuthButtonProps): React.JSX.Element => {
 											whileHover={{ x: disabled ? 0 : 4 }}
 											whileTap={{ scale: disabled ? 1 : 0.98 }}
 											className={cn('group relative flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200', active && !disabled ? bgColor : 'hover:bg-secondary/50', disabled && 'cursor-not-allowed opacity-50')}
-											href={`${getBaseUrl()}/api/auth/login?provider=${provider}`}
+											href={`/api/auth/login?provider=${provider}`}
 											onClick={
 												disabled
 													? (e) => {
