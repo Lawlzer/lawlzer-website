@@ -31,7 +31,7 @@ const config = {
 		dangerouslyAllowSVG: true,
 		contentDispositionType: 'attachment',
 		contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-		unoptimized: process.env.VERCEL === '1', // Disable optimization on Vercel temporarily
+		// Image optimization is now working on Vercel
 	},
 	experimental: {
 		optimizeCss: true,
