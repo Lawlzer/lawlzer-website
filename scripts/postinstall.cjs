@@ -20,10 +20,18 @@ if (os.platform() === 'linux' && os.arch() === 'x64') {
 	console.log('Installing Linux x64 native dependencies...');
 
 	try {
-		// Install native dependencies with legacy-peer-deps flag
+		// Install sharp with platform-specific binaries
+		console.log('Installing sharp for Linux...');
+		execSync('npm install --include=optional --os=linux --cpu=x64 sharp --legacy-peer-deps', {
+			stdio: 'inherit',
+		});
+
+		// Install other native dependencies
+		console.log('Installing other native dependencies...');
 		execSync('npm install lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --legacy-peer-deps --no-save', {
 			stdio: 'inherit',
 		});
+
 		console.log('Native dependencies installed successfully');
 	} catch (error) {
 		console.warn('Warning: Failed to install native dependencies:', error.message);
