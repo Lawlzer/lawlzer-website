@@ -49,7 +49,7 @@ async function killProcessTree(pid: number): Promise<void> {
 			// Force kill if still running
 			try {
 				process.kill(-pid, 'SIGKILL');
-			} catch (e) {
+			} catch {
 				// Process might already be dead
 			}
 		}
@@ -96,8 +96,9 @@ async function startDevServer(): Promise<string> {
 				// Check for port in use message
 				if (output.includes('Port') && output.includes('is in use')) {
 					const portMatch = /using available port (\d+)/.exec(output);
-					if (portMatch?.[1]) {
-						actualPort = parseInt(portMatch[1], 10);
+					const portString = portMatch?.[1];
+					if (portString && portString.length > 0) {
+						actualPort = parseInt(portString, 10);
 						console.info(`📍 Server will use port ${actualPort} instead`);
 					}
 				}
@@ -186,9 +187,11 @@ async function globalSetup(_config: FullConfig): Promise<() => Promise<void>> {
 			console.info('🛑 Emergency cleanup: Stopping dev server...');
 			try {
 				if (process.platform === 'win32') {
-					// Synchronous kill on Windows
-					const { execSync } = require('child_process');
-					execSync(`taskkill /pid ${devServerProcess.pid} /T /F`, { stdio: 'ignore' });
+					// Synchronous kill on Windows using spawn
+					spawn('taskkill', ['/pid', String(devServerProcess.pid), '/T', '/F'], {
+						stdio: 'ignore',
+						shell: true,
+					});
 				} else {
 					// Kill process group on Unix
 					process.kill(-devServerProcess.pid, 'SIGKILL');
