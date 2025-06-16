@@ -41,7 +41,7 @@
 		"dev": "nodemon --watch src --ext ts,tsx,js,jsx,mdx --exec \"next dev --turbo\"",
 		"dev:simple": "next dev",
 		"dev:watch": "nodemon --watch src --ext ts,tsx,js,jsx,mdx --exec \"next dev --turbo\"",
-		"postinstall": "prisma generate && node scripts/install-native-deps.js",
+		"postinstall": "prisma generate && node scripts/install-native-deps.cjs",
 		"lint": "lint-staged",
 		"lint:all": "npm run lint:eslint && npm run lint:prettier",
 		"lint:eslint": "eslint --fix --config ./.config/.eslint.config.mjs",
