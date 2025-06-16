@@ -16,7 +16,7 @@ async function checkServerRunning(url: string, maxAttempts = 1): Promise<boolean
 			// Server not ready yet
 		}
 		if (i < maxAttempts - 1) {
-			await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between attempts
+			await new Promise<void>(resolve => setTimeout(resolve, 1000)); // Wait 1 second between attempts
 		}
 	}
 	return false;
@@ -47,21 +47,21 @@ async function startDevServer(): Promise<void> {
 	});
 
 	// Capture server output for debugging
-	devServerProcess.stdout?.on('data', (data) => {
-		console.log(`[dev-server] ${data.toString().trim()}`);
+	devServerProcess.stdout?.on('data', (data: Buffer) => {
+		console.info(`[dev-server] ${data.toString().trim()}`);
 	});
 
-	devServerProcess.stderr?.on('data', (data) => {
+	devServerProcess.stderr?.on('data', (data: Buffer) => {
 		console.error(`[dev-server-error] ${data.toString().trim()}`);
 	});
 
-	devServerProcess.on('error', (error) => {
+	devServerProcess.on('error', (error: Error) => {
 		console.error('Failed to start dev server:', error);
 		throw error;
 	});
 }
 
-async function globalSetup(_config: FullConfig): Promise<void> {
+async function globalSetup(_config: FullConfig): Promise<() => Promise<void>> {
 	const envPath = path.resolve(process.cwd(), '.test.env');
 	dotenv.config({ path: envPath });
 	expect(process.env.NEXT_PUBLIC_FRONTEND_PORT).toBeDefined();
@@ -96,7 +96,7 @@ async function globalSetup(_config: FullConfig): Promise<void> {
 			console.info('🛑 Stopping dev server...');
 			devServerProcess.kill();
 			// Give it time to shutdown gracefully
-			await new Promise(resolve => setTimeout(resolve, 1000));
+			await new Promise<void>(resolve => setTimeout(resolve, 1000));
 		}
 	};
 }
