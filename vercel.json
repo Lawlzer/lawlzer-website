@@ -11,7 +11,8 @@
 		"NEXT_PUBLIC_SECOND_LEVEL_DOMAIN": "lawlzer-website",
 		"NEXT_PUBLIC_TOP_LEVEL_DOMAIN": "vercel.app",
 		"SKIP_ENV_VALIDATION": "true",
-		"NEXT_TELEMETRY_DISABLED": "1"
+		"NEXT_TELEMETRY_DISABLED": "1",
+		"NODE_VERSION": "20.x"
 	},
 	"framework": "nextjs",
 	"buildCommand": "npm run build",
