@@ -86,7 +86,7 @@ jobs:
       - name: Install native dependencies for Linux
         run: |
           npm install --include=optional sharp --legacy-peer-deps
-          npm rebuild lightningcss
+          npm install lightningcss-linux-x64-gnu --legacy-peer-deps
 
       - name: Build application
         run: npm run build
