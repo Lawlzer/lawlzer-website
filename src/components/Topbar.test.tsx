@@ -193,9 +193,13 @@ describe('Topbar', () => {
 		const valorantLink = screen.getByText('Valorant').closest('a');
 		const colorsLink = screen.getByText('Colors').closest('a');
 
-		expect(homeLink).toHaveAttribute('href', 'http://localhost:3000');
-		expect(valorantLink).toHaveAttribute('href', 'http://localhost:3000/valorant');
-		expect(colorsLink).toHaveAttribute('href', 'http://localhost:3000/colors');
+		// Home link should always be relative
+		expect(homeLink).toHaveAttribute('href', '/');
+
+		// Subdomain links will be constructed based on window.location
+		// In test environment with localhost:3000, they generate proper subdomain URLs
+		expect(valorantLink).toHaveAttribute('href', 'http://valorant.localhost:3000');
+		expect(colorsLink).toHaveAttribute('href', 'http://colors.localhost:3000');
 	});
 
 	it('includes the AuthButton component', () => {

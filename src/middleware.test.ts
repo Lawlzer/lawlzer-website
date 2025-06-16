@@ -275,4 +275,75 @@ describe('middleware', () => {
 			(env as any).DEBUG_SUBDOMAIN_VALUE = false;
 		});
 	});
+
+	describe('WWW to Non-WWW Redirects', () => {
+		it('should redirect www.example.com to example.com', () => {
+			// Test example using example.com domain
+			const request = createMockRequest('http://www.example.com/', {
+				host: 'www.example.com',
+			});
+
+			const response = middleware(request);
+
+			expect(response).toEqual({
+				type: 'redirect',
+				url: 'http://example.com/',
+			});
+		});
+
+		it('should redirect www.staging.example.com to staging.example.com', () => {
+			// Test example using staging.example.com domain
+			const request = createMockRequest('http://www.staging.example.com/', {
+				host: 'www.staging.example.com',
+			});
+
+			const response = middleware(request);
+
+			expect(response).toEqual({
+				type: 'redirect',
+				url: 'http://staging.example.com/',
+			});
+		});
+
+		it('should preserve path when redirecting www to non-www', () => {
+			// Test example using example.com domain
+			const request = createMockRequest('http://www.example.com/about/page', {
+				host: 'www.example.com',
+			});
+
+			const response = middleware(request);
+
+			expect(response).toEqual({
+				type: 'redirect',
+				url: 'http://example.com/about/page',
+			});
+		});
+
+		it('should preserve port when redirecting www to non-www', () => {
+			const request = createMockRequest('http://www.dev.localhost:3000/', {
+				host: 'www.dev.localhost:3000',
+			});
+
+			const response = middleware(request);
+
+			expect(response).toEqual({
+				type: 'redirect',
+				url: 'http://dev.localhost:3000/',
+			});
+		});
+
+		it('should handle x-forwarded-host with www prefix', () => {
+			const request = createMockRequest('http://internal.domain/', {
+				host: 'internal.domain',
+				'x-forwarded-host': 'www.example.com',
+			});
+
+			const response = middleware(request);
+
+			expect(response).toEqual({
+				type: 'redirect',
+				url: 'http://example.com/',
+			});
+		});
+	});
 });

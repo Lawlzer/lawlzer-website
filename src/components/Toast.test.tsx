@@ -103,7 +103,7 @@ describe('Toast', () => {
 			fireEvent.click(screen.getByText('Show Error'));
 
 			const toast = screen.getByText('Error message').closest('div')?.parentElement;
-			expect(toast).toHaveClass('from-red-500/20', 'to-red-500/10', 'border-red-500/30');
+			expect(toast).toHaveClass('from-destructive/20', 'to-destructive/10', 'border-destructive/30');
 		});
 
 		it('should display warning toast', () => {

@@ -65,6 +65,7 @@ export interface Subdomain {
 export const subdomains: Subdomain[] = [
 	{ name: 'valorant', filePath: '/subdomains/valorant' },
 	{ name: 'colors', filePath: '/subdomains/colors' },
+	{ name: 'staging', filePath: '/subdomains/root' },
 ];
 
 export type SubdomainName = (typeof subdomains)[number]['name'];
