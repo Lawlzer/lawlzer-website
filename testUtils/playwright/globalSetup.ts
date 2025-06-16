@@ -16,7 +16,7 @@ async function checkServerRunning(url: string, maxAttempts = 1): Promise<boolean
 			// Server not ready yet
 		}
 		if (i < maxAttempts - 1) {
-			await new Promise<void>(resolve => setTimeout(resolve, 1000)); // Wait 1 second between attempts
+			await new Promise<void>(resolve => { setTimeout(resolve, 1000); }); // Wait 1 second between attempts
 		}
 	}
 	return false;
@@ -96,7 +96,7 @@ async function globalSetup(_config: FullConfig): Promise<() => Promise<void>> {
 			console.info('🛑 Stopping dev server...');
 			devServerProcess.kill();
 			// Give it time to shutdown gracefully
-			await new Promise<void>(resolve => setTimeout(resolve, 1000));
+			await new Promise<void>(resolve => { setTimeout(resolve, 1000); });
 		}
 	};
 }
