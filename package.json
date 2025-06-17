@@ -29,7 +29,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "node scripts/build.cjs",
+		"build": "npx --yes prisma generate && next build",
 		"build:local": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
 		"build:run": "next build && next start -p ${PORT:-3000}",
 		"check": "next lint && tsc --noEmit",
@@ -42,7 +42,6 @@
 		"dev": "nodemon --watch src --ext ts,tsx,js,jsx,mdx --exec \"next dev --turbo\"",
 		"dev:simple": "next dev",
 		"dev:watch": "nodemon --watch src --ext ts,tsx,js,jsx,mdx --exec \"next dev --turbo\"",
-		"postinstall": "node scripts/postinstall.cjs",
 		"lint": "lint-staged",
 		"lint:all": "npm run lint:eslint && npm run lint:prettier",
 		"lint:eslint": "eslint --fix --config ./.config/.eslint.config.mjs",

@@ -10,10 +10,7 @@
 		"NEXT_TELEMETRY_DISABLED": "1"
 	},
 	"framework": "nextjs",
-	"buildCommand": "npm run build",
-	"devCommand": "npm run dev",
-	"installCommand": "npm install --legacy-peer-deps",
-	"outputDirectory": ".next",
+	"installCommand": "npm install --legacy-peer-deps --production=false",
 	"functions": {
 		"app/api/**": {
 			"maxDuration": 10
