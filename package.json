@@ -29,7 +29,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "next build",
+		"build": "prisma generate && next build",
 		"build:local": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
 		"build:run": "next build && next start -p ${PORT:-3000}",
 		"check": "next lint && tsc --noEmit",
@@ -99,6 +99,7 @@
 		"react-dom": "^19.1.0",
 		"react-zoom-pan-pinch": "^3.7.0",
 		"server-only": "^0.0.1",
+		"sharp": "^0.34.2",
 		"superjson": "^2.2.2",
 		"tailwind-merge": "^3.3.1",
 		"tailwindcss": "^4.1.10",
