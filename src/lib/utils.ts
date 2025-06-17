@@ -97,6 +97,7 @@ export interface Subdomain {
 export const subdomains: Subdomain[] = [
 	{ name: 'valorant', filePath: '/subdomains/valorant' },
 	{ name: 'colors', filePath: '/subdomains/colors' },
+	{ name: 'cooking', filePath: '/subdomains/cooking' },
 	{ name: 'staging', filePath: '/subdomains/root' },
 ];
 
