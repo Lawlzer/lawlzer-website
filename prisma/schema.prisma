@@ -63,6 +63,12 @@ model User {
     sessions      Session[]
     posts         Post[]
     discordId     String?   @unique
+    
+    // Cooking relationships
+    foods         Food[]
+    recipes       Recipe[]
+    days          Day[]
+    goals         Goal[]
 }
 
 model VerificationToken {
@@ -96,4 +102,223 @@ model CommodityData {
     @@index([type])
     @@index([country, state])
     @@index([type, country, state, unixDate])
+}
+
+// ========== COOKING SUBDOMAIN MODELS ==========
+
+// Base nutrition item - can be an ingredient or a complete food
+model Food {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId      String?  @db.ObjectId // Null for system/public foods
+    barcode     String?  // For scanned products
+    name        String
+    brand       String?
+    
+    // Nutrition per 100g
+    calories    Float
+    protein     Float    @default(0)
+    carbs       Float    @default(0)
+    fat         Float    @default(0)
+    fiber       Float    @default(0)
+    sugar       Float    @default(0)
+    sodium      Float    @default(0) // in mg
+    
+    // Additional nutrition fields
+    saturatedFat     Float? @default(0)
+    transFat         Float? @default(0)
+    cholesterol      Float? @default(0) // in mg
+    potassium        Float? @default(0) // in mg
+    vitaminA         Float? @default(0) // in IU
+    vitaminC         Float? @default(0) // in mg
+    calcium          Float? @default(0) // in mg
+    iron             Float? @default(0) // in mg
+    
+    defaultServingSize Float   @default(100) // in grams
+    defaultServingUnit String  @default("g")
+    
+    isPublic    Boolean  @default(false) // System foods available to all
+    imageUrl    String?
+    
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    
+    user        User?    @relation(fields: [userId], references: [id])
+    recipeItems RecipeItem[]
+    dayEntries  DayEntry[]
+    
+    @@index([userId])
+    @@index([barcode])
+    @@index([name])
+    @@index([isPublic])
+}
+
+// Recipe that can contain foods or other recipes
+model Recipe {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId      String   @db.ObjectId
+    name        String
+    description String?
+    notes       String?  // Cooking instructions
+    prepTime    Int?     // in minutes
+    cookTime    Int?     // in minutes
+    servings    Int      @default(1)
+    
+    isPublic    Boolean  @default(false)
+    imageUrl    String?
+    
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    
+    user        User     @relation(fields: [userId], references: [id])
+    versions    RecipeVersion[]
+    currentVersion RecipeVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    currentVersionId String? @db.ObjectId @unique
+    
+    // Recipe can be used in other recipes
+    usedInRecipeItems RecipeItem[] @relation("RecipeAsIngredient")
+    
+    @@index([userId])
+    @@index([name])
+}
+
+// Version tracking for recipes
+model RecipeVersion {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    recipeId    String   @db.ObjectId
+    version     Int
+    
+    // Snapshot of recipe data at this version
+    name        String
+    description String?
+    notes       String?
+    prepTime    Int?
+    cookTime    Int?
+    servings    Int
+    
+    // Calculated nutrition per serving
+    caloriesPerServing Float
+    proteinPerServing  Float
+    carbsPerServing    Float
+    fatPerServing      Float
+    fiberPerServing    Float
+    sugarPerServing    Float
+    sodiumPerServing   Float
+    
+    createdAt   DateTime @default(now())
+    
+    recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    items       RecipeItem[]
+    dayEntries  DayEntry[]
+    
+    // For current version reference
+    currentForRecipe Recipe? @relation("CurrentVersion")
+    
+    @@unique([recipeId, version])
+    @@index([recipeId])
+}
+
+// Junction table for recipe composition
+model RecipeItem {
+    id              String   @id @default(auto()) @map("_id") @db.ObjectId
+    recipeVersionId String   @db.ObjectId
+    
+    // Either food or recipe (one must be set)
+    foodId          String?  @db.ObjectId
+    recipeId        String?  @db.ObjectId // Reference to another recipe
+    
+    amount          Float    // Amount in grams
+    unit            String   @default("g") // g, ml, tbsp, tsp, cup, etc.
+    
+    recipeVersion   RecipeVersion @relation(fields: [recipeVersionId], references: [id])
+    food            Food?         @relation(fields: [foodId], references: [id])
+    recipe          Recipe?       @relation("RecipeAsIngredient", fields: [recipeId], references: [id])
+    
+    @@index([recipeVersionId])
+}
+
+// Daily tracking
+model Day {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId      String   @db.ObjectId
+    date        DateTime @db.Date // Date only, no time
+    
+    // Daily goals (can override user defaults)
+    targetCalories Float?
+    targetProtein  Float?
+    targetCarbs    Float?
+    targetFat      Float?
+    targetFiber    Float?
+    
+    notes       String?
+    
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    
+    user        User     @relation(fields: [userId], references: [id])
+    entries     DayEntry[]
+    
+    @@unique([userId, date])
+    @@index([userId])
+    @@index([date])
+}
+
+// What was eaten on a specific day
+model DayEntry {
+    id              String   @id @default(auto()) @map("_id") @db.ObjectId
+    dayId           String   @db.ObjectId
+    
+    // Either food or recipe version
+    foodId          String?  @db.ObjectId
+    recipeVersionId String?  @db.ObjectId
+    
+    amount          Float    // Amount consumed in grams
+    mealType        String?  // breakfast, lunch, dinner, snack
+    
+    // Snapshot nutrition (in case food/recipe changes)
+    calories        Float
+    protein         Float
+    carbs           Float
+    fat             Float
+    fiber           Float
+    sugar           Float
+    sodium          Float
+    
+    consumedAt      DateTime @default(now())
+    
+    day             Day           @relation(fields: [dayId], references: [id])
+    food            Food?         @relation(fields: [foodId], references: [id])
+    recipeVersion   RecipeVersion? @relation(fields: [recipeVersionId], references: [id])
+    
+    @@index([dayId])
+}
+
+// User nutrition goals
+model Goal {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId      String   @db.ObjectId
+    
+    // Daily targets
+    calories    Float
+    protein     Float?   // in grams
+    carbs       Float?   // in grams
+    fat         Float?   // in grams
+    fiber       Float?   // in grams
+    sugar       Float?   // in grams
+    sodium      Float?   // in mg
+    
+    // Macro percentages (optional alternative to absolute values)
+    proteinPercentage Float?
+    carbsPercentage   Float?
+    fatPercentage     Float?
+    
+    isActive    Boolean  @default(true)
+    startDate   DateTime @default(now())
+    endDate     DateTime?
+    
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    
+    user        User     @relation(fields: [userId], references: [id])
+    
+    @@index([userId, isActive])
 }
