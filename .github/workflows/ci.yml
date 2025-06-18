@@ -91,6 +91,17 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: true
           NEXT_TELEMETRY_DISABLED: 1
+          # Required Next.js public env vars for build
+          NEXT_PUBLIC_SCHEME: 'http'
+          NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'dev'
+          NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'localhost'
+          NEXT_PUBLIC_FRONTEND_PORT: '3000'
+          # Dummy auth IDs for build
+          NEXT_PUBLIC_AUTH_GOOGLE_ID: 'dummy-google-id'
+          NEXT_PUBLIC_AUTH_DISCORD_ID: 'dummy-discord-id'
+          NEXT_PUBLIC_AUTH_GITHUB_ID: 'dummy-github-id'
+          # Dummy DB URL for build
+          DATABASE_URL: 'mongodb://localhost:27017/dummy'
 
       - name: Check build output
         run: |
