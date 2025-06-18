@@ -30,7 +30,7 @@
 	],
 	"scripts": {
 		"build": "next build",
-		"build:vercel": "cross-env SKIP_ENV_VALIDATION=true next build",
+		"build:vercel": "prisma generate && cross-env SKIP_ENV_VALIDATION=true next build",
 		"check": "next lint && tsc --noEmit",
 		"clean": "rimraf ./dist",
 		"db:generate": "prisma migrate dev",
