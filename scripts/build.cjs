@@ -7,16 +7,26 @@ console.log('Node version:', process.version);
 console.log('Platform:', process.platform);
 console.log('Current working directory:', process.cwd());
 console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('VERCEL environment:', process.env.VERCEL);
+console.log('CI environment:', process.env.CI);
+
+// Log all environment variables that start with NEXT_PUBLIC_ or AUTH_
+console.log('\nEnvironment variables:');
+Object.keys(process.env).forEach((key) => {
+	if (key.startsWith('NEXT_PUBLIC_') || key.startsWith('AUTH_') || key === 'DATABASE_URL' || key === 'VERCEL' || key === 'CI') {
+		console.log(`  ${key}: ${key === 'DATABASE_URL' || key.includes('SECRET') ? '[REDACTED]' : process.env[key]}`);
+	}
+});
 
 // Ensure DATABASE_URL is set for Prisma generation
 if (!process.env.DATABASE_URL) {
-	console.log('DATABASE_URL not found, using dummy MongoDB URL for Prisma generation');
+	console.log('\nDATABASE_URL not found, using dummy MongoDB URL for Prisma generation');
 	process.env.DATABASE_URL = 'mongodb+srv://dummy:dummy@dummy.mongodb.net/dummy?retryWrites=true&w=majority';
 }
 
 try {
 	// Check if Next.js exists
-	console.log('Checking for Next.js installation...');
+	console.log('\nChecking for Next.js installation...');
 	try {
 		execSync('npx next --version', { stdio: 'inherit' });
 	} catch (e) {
@@ -25,7 +35,7 @@ try {
 	}
 
 	// Generate Prisma client
-	console.log('Generating Prisma client...');
+	console.log('\nGenerating Prisma client...');
 	execSync('npx prisma generate', {
 		stdio: 'inherit',
 		env: process.env,
@@ -33,14 +43,14 @@ try {
 	console.log('Prisma client generated successfully');
 
 	// Build Next.js
-	console.log('Building Next.js application...');
+	console.log('\nBuilding Next.js application...');
 	execSync('npx next build', {
 		stdio: 'inherit',
 		env: process.env,
 	});
-	console.log('Build completed successfully');
+	console.log('\nBuild completed successfully');
 } catch (error) {
-	console.error('Build failed:', error.message);
+	console.error('\nBuild failed:', error.message);
 	console.error('Error details:', error);
 	process.exit(1);
 }
