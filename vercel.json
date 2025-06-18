@@ -1,5 +1,4 @@
 {
-	"framework": "nextjs",
 	"installCommand": "npm install && npm rebuild @tailwindcss/oxide",
 	"functions": {
 		"app/api/**": {

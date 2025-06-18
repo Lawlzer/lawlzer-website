@@ -91,7 +91,7 @@ describe('MainPage', () => {
 		// Data Platform features
 		expect(screen.getByText('Dynamic Mongoose DB for 2+ billion documents')).toBeInTheDocument();
 		expect(screen.getByText('Hourly USDA API integration')).toBeInTheDocument();
-		expect(screen.getByText('AWS EC2 & Lambda deployment')).toBeInTheDocument();
+		expect(screen.getByText('Vercel deployment with global CDN')).toBeInTheDocument();
 		expect(screen.getByText('98% test coverage (Jest & Supertest)')).toBeInTheDocument();
 	});
 });
