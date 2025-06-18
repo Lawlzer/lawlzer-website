@@ -11,6 +11,7 @@
 	},
 	"framework": "nextjs",
 	"installCommand": "npm install --legacy-peer-deps --production=false",
+	"buildCommand": "npm run build",
 	"functions": {
 		"app/api/**": {
 			"maxDuration": 10
