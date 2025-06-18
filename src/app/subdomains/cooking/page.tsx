@@ -4,42 +4,22 @@ import type { Food } from '@prisma/client';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 
+import { CookingMode } from './components/CookingMode';
 import { DayTracker } from './components/DayTracker';
+import { CalendarIcon, CameraIcon, ChefHatIcon, GoalIcon, HomeIcon, UtensilsIcon } from './components/Icons';
+import { RecipeCard } from './components/RecipeCard';
 import { RecipeCreator } from './components/RecipeCreator';
+import { RecipeEditor } from './components/RecipeEditor';
 import { useGuestDataMigration } from './hooks/useGuestDataMigration';
 import type { FoodProduct } from './services/foodDatabase';
 import { fetchFoodByBarcode } from './services/foodDatabase';
 import { addGuestFood, getGuestFoods, hasGuestData } from './services/guestStorage';
+import type { RecipeWithDetails } from './types/recipe.types';
 
 // Dynamically import BarcodeScanner to avoid SSR issues
 const BarcodeScanner = dynamic(async () => import('./components/BarcodeScanner'), {
 	ssr: false,
-	loading: () => <p>Loading scanner...</p>,
 });
-
-// Simple icon components
-const HomeIcon = () => <span>🏠</span>;
-const CameraIcon = () => <span>📷</span>;
-const UtensilsIcon = () => <span>🍴</span>;
-const CalendarIcon = () => <span>📅</span>;
-const GoalIcon = () => <span>🎯</span>;
-const ChefHatIcon = () => <span>👨‍🍳</span>;
-
-// Add type for recipe with version
-interface RecipeWithVersion {
-	id: string;
-	name: string;
-	description: string | null;
-	prepTime: number | null;
-	cookTime: number | null;
-	servings: number;
-	currentVersion: {
-		caloriesPerServing: number;
-		proteinPerServing: number;
-		carbsPerServing: number;
-		fatPerServing: number;
-	} | null;
-}
 
 export default function CookingPage() {
 	const [activeTab, setActiveTab] = useState('overview');
@@ -53,10 +33,12 @@ export default function CookingPage() {
 	const [hasUnsavedData, setHasUnsavedData] = useState(false);
 	const [guestFoodsCount, setGuestFoodsCount] = useState(0);
 	const [isCreatingRecipe, setIsCreatingRecipe] = useState(false);
+	const [editingRecipe, setEditingRecipe] = useState<RecipeWithDetails | null>(null);
 	const [availableFoods, setAvailableFoods] = useState<Food[]>([]);
-	const [recipes, setRecipes] = useState<RecipeWithVersion[]>([]);
+	const [recipes, setRecipes] = useState<RecipeWithDetails[]>([]);
+	const [filteredRecipes, setFilteredRecipes] = useState<RecipeWithDetails[]>([]);
+	const [recipeSearchTerm, setRecipeSearchTerm] = useState('');
 	const [loadingRecipes, setLoadingRecipes] = useState(false);
-	const [user, setUser] = useState<any>(null);
 
 	// Check if user is logged in
 	useEffect(() => {
@@ -65,7 +47,6 @@ export default function CookingPage() {
 				const response = await fetch('/api/auth/session');
 				const data = await response.json();
 				setIsGuest(!data.user);
-				setUser(data.user);
 			} catch (error) {
 				setIsGuest(true);
 			}
@@ -145,7 +126,9 @@ export default function CookingPage() {
 					const response = await fetch('/api/cooking/recipes');
 					if (response.ok) {
 						const data = await response.json();
-						setRecipes(data.recipes);
+						// Set recipes directly from API response
+						setRecipes(data);
+						setFilteredRecipes(data);
 					}
 				} catch (error) {
 					console.error('Error fetching recipes:', error);
@@ -282,8 +265,31 @@ export default function CookingPage() {
 		}
 
 		const data = await response.json();
-		setRecipes([...recipes, data.recipe]);
+		setRecipes([...recipes, data]);
+		setFilteredRecipes([...filteredRecipes, data]);
 		setIsCreatingRecipe(false);
+	};
+
+	const handleUpdateRecipe = async (recipeData: any) => {
+		const response = await fetch('/api/cooking/recipes', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(recipeData),
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || 'Failed to update recipe');
+		}
+
+		const data: RecipeWithDetails = await response.json();
+
+		// Update the recipe in the list
+		setRecipes(recipes.map((r) => (r.id === data.id ? data : r)));
+		setFilteredRecipes(filteredRecipes.map((r) => (r.id === data.id ? data : r)));
+		setEditingRecipe(null);
 	};
 
 	return (
@@ -485,7 +491,7 @@ export default function CookingPage() {
 					{/* Recipes Tab - show recipe management */}
 					{activeTab === 'recipes' && (
 						<div className='space-y-4'>
-							{!isCreatingRecipe ? (
+							{!isCreatingRecipe && !editingRecipe ? (
 								<>
 									<div className='flex items-center justify-between'>
 										<h2 className='text-2xl font-bold'>My Recipes</h2>
@@ -513,45 +519,124 @@ export default function CookingPage() {
 											<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500'></div>
 										</div>
 									) : recipes.length > 0 ? (
-										<div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-											{recipes.map((recipe) => (
-												<div key={recipe.id} className='rounded-lg border p-4 hover:shadow-lg transition-shadow'>
-													<h4 className='font-semibold text-lg'>{recipe.name}</h4>
-													{recipe.description != null && recipe.description !== '' && <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>{recipe.description}</p>}
-
-													<div className='mt-3 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400'>
-														{recipe.prepTime != null && recipe.prepTime > 0 && <span>⏱️ Prep: {recipe.prepTime}min</span>}
-														{recipe.cookTime != null && recipe.cookTime > 0 && <span>🔥 Cook: {recipe.cookTime}min</span>}
-													</div>
-
-													{recipe.currentVersion && (
-														<div className='mt-3 text-sm'>
-															<span className='font-medium'>Per serving:</span>
-															<div className='grid grid-cols-2 gap-1 mt-1'>
-																<span>Calories: {recipe.currentVersion.caloriesPerServing.toFixed(0)}</span>
-																<span>Protein: {recipe.currentVersion.proteinPerServing.toFixed(1)}g</span>
-																<span>Carbs: {recipe.currentVersion.carbsPerServing.toFixed(1)}g</span>
-																<span>Fat: {recipe.currentVersion.fatPerServing.toFixed(1)}g</span>
-															</div>
-														</div>
-													)}
-
-													<div className='mt-4 flex gap-2'>
-														<button className='flex-1 px-3 py-1 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'>View</button>
-														<button className='flex-1 px-3 py-1 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'>Cook</button>
-													</div>
+										<div>
+											{/* Recipe list header */}
+											<div className='flex justify-between items-center mb-6'>
+												<div>
+													<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>Your Recipes</h3>
+													<p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+														{recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
+													</p>
 												</div>
-											))}
+												<button
+													onClick={() => {
+														setIsCreatingRecipe(true);
+													}}
+													className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2'
+													disabled={isGuest}
+												>
+													<svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+														<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' />
+													</svg>
+													Create Recipe
+												</button>
+											</div>
+
+											{/* Recipe search/filter */}
+											{recipes.length > 0 && (
+												<div className='mb-4'>
+													<input
+														type='text'
+														placeholder='Search recipes...'
+														className='w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+														value={recipeSearchTerm}
+														onChange={(e) => {
+															const search = e.target.value.toLowerCase();
+															setRecipeSearchTerm(e.target.value);
+															const filtered = recipes.filter((r) => r.name.toLowerCase().includes(search) || r.description?.toLowerCase().includes(search));
+															setFilteredRecipes(filtered);
+														}}
+													/>
+												</div>
+											)}
+
+											{/* Recipe grid */}
+											{recipes.length === 0 ? (
+												<div className='text-center py-12'>
+													<svg className='w-16 h-16 mx-auto text-gray-400 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+														<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' />
+													</svg>
+													<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>No recipes yet</h3>
+													<p className='text-gray-600 dark:text-gray-400 mb-6'>Create your first recipe to start building your cookbook</p>
+													{!isGuest && (
+														<button
+															onClick={() => {
+																setIsCreatingRecipe(true);
+															}}
+															className='px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
+														>
+															Create Your First Recipe
+														</button>
+													)}
+												</div>
+											) : (
+												<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+													{filteredRecipes.map((recipe) => (
+														<RecipeCard
+															key={recipe.id}
+															recipe={recipe}
+															isOwner={true}
+															onEdit={() => {
+																setEditingRecipe(recipe);
+															}}
+															onCook={() => {
+																setActiveTab('cooking');
+																// You could add state to select this recipe in cooking mode
+															}}
+															onDelete={() => {
+																// Add delete functionality
+																void (async () => {
+																	const response = await fetch(`/api/cooking/recipes?id=${recipe.id}`, {
+																		method: 'DELETE',
+																	});
+																	if (response.ok) {
+																		setRecipes(recipes.filter((r) => r.id !== recipe.id));
+																		setFilteredRecipes(filteredRecipes.filter((r) => r.id !== recipe.id));
+																	}
+																})();
+															}}
+														/>
+													))}
+												</div>
+											)}
+
+											{isGuest && (
+												<div className='mt-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg'>
+													<p className='text-sm text-yellow-800 dark:text-yellow-200'>Sign in to save your recipes and access them from any device</p>
+												</div>
+											)}
 										</div>
 									) : (
-										<div className='rounded-lg border p-10 flex flex-col items-center justify-center'>
-											<UtensilsIcon />
-											<p className='text-lg font-medium mt-4'>No recipes yet</p>
-											<p className='text-sm text-gray-600 dark:text-gray-400'>Create your first recipe to get started</p>
+										<div className='text-center py-12'>
+											<svg className='w-16 h-16 mx-auto text-gray-400 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+												<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' />
+											</svg>
+											<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>No recipes yet</h3>
+											<p className='text-gray-600 dark:text-gray-400 mb-6'>Create your first recipe to start building your cookbook</p>
+											{!isGuest && (
+												<button
+													onClick={() => {
+														setIsCreatingRecipe(true);
+													}}
+													className='px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
+												>
+													Create Your First Recipe
+												</button>
+											)}
 										</div>
 									)}
 								</>
-							) : (
+							) : isCreatingRecipe ? (
 								<RecipeCreator
 									availableFoods={availableFoods}
 									onSave={handleSaveRecipe}
@@ -559,14 +644,23 @@ export default function CookingPage() {
 										setIsCreatingRecipe(false);
 									}}
 								/>
-							)}
+							) : editingRecipe ? (
+								<RecipeEditor
+									recipe={editingRecipe}
+									availableFoods={availableFoods}
+									onSave={handleUpdateRecipe}
+									onCancel={() => {
+										setEditingRecipe(null);
+									}}
+								/>
+							) : null}
 						</div>
 					)}
 
 					{/* Days Tab */}
 					{activeTab === 'days' && (
 						<div>
-							<DayTracker user={user} />
+							<DayTracker />
 						</div>
 					)}
 
@@ -587,15 +681,10 @@ export default function CookingPage() {
 
 					{/* Cooking Mode Tab */}
 					{activeTab === 'cooking' && (
-						<div className='rounded-lg border p-6'>
-							<h2 className='text-xl font-bold mb-2'>Cooking Mode</h2>
-							<p className='text-gray-600 dark:text-gray-400 mb-6'>Select a recipe and set ingredient weights for perfect proportions</p>
-							<div className='flex flex-col items-center justify-center py-10'>
-								<ChefHatIcon />
-								<p className='text-lg font-medium mt-4'>No recipes available</p>
-								<p className='text-sm text-gray-600 dark:text-gray-400'>Create recipes first to use cooking mode</p>
-							</div>
-						</div>
+						<CookingMode
+							recipes={recipes as any} // Type casting due to RecipeWithDetails mismatch
+							isGuest={isGuest}
+						/>
 					)}
 				</div>
 			</div>
