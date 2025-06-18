@@ -4,10 +4,11 @@ const { execSync } = require('child_process');
 
 console.log('Starting build process...');
 
-// Ensure DATABASE_URL is set for Prisma generation
+// For Vercel builds, Prisma needs a DATABASE_URL even if just for generating the client
+// This is safe because we're only generating the client, not connecting to the database
 if (!process.env.DATABASE_URL) {
-	console.log('DATABASE_URL not found, using dummy MongoDB URL for Prisma generation');
-	process.env.DATABASE_URL = 'mongodb+srv://dummy:dummy@dummy.mongodb.net/dummy?retryWrites=true&w=majority';
+	console.log('DATABASE_URL not found - using placeholder for Prisma client generation');
+	process.env.DATABASE_URL = 'mongodb://localhost:27017/placeholder';
 }
 
 try {
@@ -17,7 +18,6 @@ try {
 		stdio: 'inherit',
 		env: process.env,
 	});
-	console.log('Prisma client generated successfully');
 
 	// Build Next.js
 	console.log('Building Next.js application...');
@@ -25,6 +25,7 @@ try {
 		stdio: 'inherit',
 		env: process.env,
 	});
+
 	console.log('Build completed successfully');
 } catch (error) {
 	console.error('Build failed:', error.message);

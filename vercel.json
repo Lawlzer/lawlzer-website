@@ -1,22 +1,11 @@
 {
-	"git": {
-		"deploymentEnabled": {
-			"main": false,
-			"staging": true
-		}
-	},
-	"env": {
-		"SKIP_ENV_VALIDATION": "true",
-		"NEXT_TELEMETRY_DISABLED": "1"
-	},
 	"framework": "nextjs",
-	"installCommand": "npm install --legacy-peer-deps --production=false",
+	"installCommand": "npm install --legacy-peer-deps --production=false && npm rebuild @tailwindcss/oxide lightningcss sharp",
 	"functions": {
 		"app/api/**": {
 			"maxDuration": 10
 		}
 	},
-	"rewrites": [],
 	"headers": [
 		{
 			"source": "/(.*)",
