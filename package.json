@@ -30,7 +30,6 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.cjs",
-		"build:local": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
 		"build:run": "next build && next start -p ${PORT:-3000}",
 		"check": "next lint && tsc --noEmit",
 		"clean": "rimraf ./dist",
