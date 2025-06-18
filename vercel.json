@@ -1,5 +1,6 @@
 {
 	"installCommand": "npm install && npm rebuild @tailwindcss/oxide",
+	"buildCommand": "npm run build:vercel",
 	"functions": {
 		"app/api/**": {
 			"maxDuration": 10

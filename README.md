@@ -15,6 +15,16 @@ This project is deployed on **Vercel** with automatic deployments:
 - ✅ Global CDN
 - ✅ Preview deployments for PRs
 - ✅ Environment variable management via Vercel dashboard
+- ✅ Optimized configuration with security headers
+- ✅ Automatic caching for static assets
+
+### Deployment Configuration:
+
+The deployment is configured via `vercel.json` which includes:
+
+- API function timeout limits (10 seconds)
+- Security headers (X-Frame-Options, CSP, etc.)
+- Aggressive caching for static assets
 
 ## 🛠️ Local Development
 
