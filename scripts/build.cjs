@@ -6,8 +6,8 @@ console.log('Starting build process...');
 
 // Ensure DATABASE_URL is set for Prisma generation
 if (!process.env.DATABASE_URL) {
-	console.log('DATABASE_URL not found, using dummy URL for Prisma generation');
-	process.env.DATABASE_URL = 'mongodb://localhost:27017/dummy';
+	console.log('DATABASE_URL not found, using dummy MongoDB URL for Prisma generation');
+	process.env.DATABASE_URL = 'mongodb+srv://dummy:dummy@dummy.mongodb.net/dummy?retryWrites=true&w=majority';
 }
 
 try {
