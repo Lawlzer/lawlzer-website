@@ -109,31 +109,17 @@ NEXT_PUBLIC_AUTH_GITHUB_ID=...
 
 For production, set these in the [Vercel dashboard](https://vercel.com/dashboard/project/settings/environment-variables).
 
-# responsive
+## 📊 Performance
 
-GitHub
-Lighthouse score of
-Performance: 100
-Accessibility: 95-100 (depending on colour palette chosen)
-Best practices: 100
-SEO: 100
+- Lighthouse scores:
+  - Performance: 100
+  - Accessibility: 95-100 (depending on color palette)
+  - Best practices: 100
+  - SEO: 100
 
-todo: mention backend features lol (testing, eslint/pre-commit, )
+## 🧪 Testing & Code Quality
 
-##
-
-##
-
-##
-
-docker build -t lawlzer-site .
-docker run -p 3000:3000 --env-file .env lawlzer-site
-
-or
-
-docker compose up --build -d
-
-Mongodb atlas for the db
-2fohgI5OCl7p7bXL
-
-todo: readiness/healthcheck
+- Comprehensive test suite with unit and E2E tests
+- Pre-commit hooks with ESLint and Prettier
+- Type-safe with TypeScript strict mode
+- Automated CI/CD pipeline

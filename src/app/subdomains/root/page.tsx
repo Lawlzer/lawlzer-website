@@ -75,7 +75,7 @@ export default function MainPage(): JSX.Element {
 			icon: ChartBarIcon,
 			gradient: 'from-primary/80 to-primary/40',
 			isClickable: true,
-			features: [{ text: 'Dynamic Mongoose DB for 2+ billion documents' }, { text: 'Hourly USDA API integration' }, { text: 'AWS EC2 & Lambda deployment' }, { text: '98% test coverage (Jest & Supertest)' }],
+			features: [{ text: 'Dynamic Mongoose DB for 2+ billion documents' }, { text: 'Hourly USDA API integration' }, { text: 'Vercel deployment with global CDN' }, { text: '98% test coverage (Jest & Supertest)' }],
 		},
 		{
 			id: 'scrapers',
