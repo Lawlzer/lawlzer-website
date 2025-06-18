@@ -1,7 +1,6 @@
 {
 	"framework": "nextjs",
-	"installCommand": "npm install --legacy-peer-deps --production=false && npm rebuild @tailwindcss/oxide lightningcss sharp",
-	"buildCommand": "if [ -z \"$DATABASE_URL\" ]; then export DATABASE_URL='mongodb://localhost:27017/placeholder'; fi && npx prisma generate && next build",
+	"installCommand": "npm install && npm rebuild @tailwindcss/oxide",
 	"functions": {
 		"app/api/**": {
 			"maxDuration": 10
@@ -42,6 +41,5 @@
 				}
 			]
 		}
-	],
-	"regions": ["iad1"]
+	]
 }
