@@ -1,4 +1,5 @@
 import type React from 'react';
+
 import * as ascentLineups from '../maps/ascent/lineups';
 import Ascent from '../maps/ascent/map';
 import * as bindLineups from '../maps/bind/lineups';
@@ -13,7 +14,6 @@ import * as lotusLineups from '../maps/lotus/lineups';
 import Lotus from '../maps/lotus/map';
 import * as splitLineups from '../maps/split/lineups';
 import Split from '../maps/split/map';
-
 import type { Lineup } from '../types';
 
 interface AreaFrom {
@@ -79,6 +79,4 @@ const mapDataDefinition: Record<string, MapData> = {
 };
 
 // Hook now simply returns the stable map data object
-export const useMapMap = (): Record<string, MapData> => {
-	return mapDataDefinition;
-};
+export const useMapMap = (): Record<string, MapData> => mapDataDefinition;

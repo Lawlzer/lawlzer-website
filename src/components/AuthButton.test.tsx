@@ -1,34 +1,67 @@
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createMockUser } from '../../testUtils/unit/auth.helpers';
+import { createMockSessionWithUser } from '../../testUtils/unit/data.factories';
+import { renderWithProviders } from '../../testUtils/unit/render.helpers';
+
+import AuthButton from './AuthButton';
 import AuthButtonMock from './AuthButton.mock';
 
-// Mock ResizeObserver
-class ResizeObserverMock {
-	public observe(): void {
-		/* do nothing */
-	}
-	public unobserve(): void {
-		/* do nothing */
-	}
-	public disconnect(): void {
-		/* do nothing */
-	}
-}
+// --- Global Mocks ---
 
-global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserverMock {
+	public observe(): void {}
+	public unobserve(): void {}
+	public disconnect(): void {}
+} as unknown as typeof ResizeObserver;
 
 // Mock window.location
-const mockWindowLocation = vi.fn();
 Object.defineProperty(window, 'location', {
-	value: {
-		href: '',
-	},
+	value: { href: '' },
 	writable: true,
 });
 
 // Mock console.error
-console.error = vi.fn();
+vi.spyOn(console, 'error').mockImplementation(() => {});
+
+// Mock framer-motion to avoid animation issues in tests
+vi.mock('framer-motion', () => ({
+	motion: {
+		div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+		a: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+	},
+	AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock utils
+vi.mock('~/lib/utils', () => ({
+	cn: (...args: any[]) => args.filter(Boolean).join(' '),
+	getBaseUrl: () => 'http://localhost:3000',
+}));
+
+// --- Test Helpers ---
+
+const renderAuthButton = (props?: Parameters<typeof AuthButtonMock>[0]) => render(<AuthButtonMock {...props} />);
+
+const openAuthMenu = () => {
+	const loginButton = screen.getByText('Login / Register');
+	fireEvent.click(loginButton);
+
+	// Make menu items visible for testing
+	const menuItems = screen.getByTestId('menuitems');
+	menuItems.style.display = 'block';
+
+	return { loginButton, menuItems };
+};
+
+const expectRedirect = (expectedUrl: string) => {
+	expect(window.location.href).toBe(expectedUrl);
+};
+
+// --- Test Suite ---
 
 describe('AuthButton', () => {
 	beforeEach(() => {
@@ -37,153 +70,186 @@ describe('AuthButton', () => {
 	});
 
 	afterEach(() => {
-		cleanup(); // Clean up after each test
+		cleanup();
 	});
 
-	it('shows loading state initially', () => {
-		render(<AuthButtonMock initialState='loading' />);
+	describe('Loading State', () => {
+		it('should show loading animation initially', () => {
+			renderAuthButton({ initialState: 'loading' });
 
-		const loadingElement = screen.getByTestId('auth-loading');
-		expect(loadingElement).toBeInTheDocument();
-		expect(loadingElement).toHaveClass('animate-pulse');
+			const loadingElement = screen.getByTestId('auth-loading');
+			expect(loadingElement).toBeInTheDocument();
+			expect(loadingElement).toHaveClass('animate-pulse');
+		});
 	});
 
-	it('shows login options when user is not authenticated', async () => {
-		render(<AuthButtonMock initialState='unauthenticated' />);
+	describe('Unauthenticated State', () => {
+		beforeEach(() => {
+			renderAuthButton({ initialState: 'unauthenticated' });
+		});
 
-		// Check that login button is present
-		const loginButton = screen.getByText('Login / Register');
-		expect(loginButton).toBeInTheDocument();
+		it('should show login button when not authenticated', () => {
+			expect(screen.getByText('Login / Register')).toBeInTheDocument();
+		});
 
-		// Open the menu
-		fireEvent.click(loginButton);
+		it('should display all login options when menu is opened', () => {
+			openAuthMenu();
 
-		// Make menu items visible for testing
-		const menuItems = screen.getByTestId('menuitems');
-		menuItems.style.display = 'block';
+			expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
+			expect(screen.getByText('Sign in with Discord')).toBeInTheDocument();
+			expect(screen.getByText('Sign in with GitHub')).toBeInTheDocument();
+		});
 
-		// Check login options
-		expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
-		expect(screen.getByText('Sign in with Discord')).toBeInTheDocument();
-		expect(screen.getByText('Sign in with GitHub')).toBeInTheDocument();
+		describe('OAuth Provider Redirects', () => {
+			const providers = [
+				{ name: 'Google', displayText: 'Sign in with Google', provider: 'google' },
+				{ name: 'Discord', displayText: 'Sign in with Discord', provider: 'discord' },
+				{ name: 'GitHub', displayText: 'Sign in with GitHub', provider: 'github' },
+			];
+
+			providers.forEach(({ name, displayText, provider }) => {
+				it(`should redirect to ${name} login when selected`, () => {
+					openAuthMenu();
+					fireEvent.click(screen.getByText(displayText));
+					expectRedirect(`/api/auth/login?provider=${provider}`);
+				});
+			});
+		});
 	});
 
-	it('redirects to Google login when selected', async () => {
-		render(<AuthButtonMock initialState='unauthenticated' />);
+	describe('Authenticated State', () => {
+		it('should show user name and logout option when authenticated', () => {
+			const userData = { name: 'Test User', email: 'test@example.com' };
+			renderAuthButton({ initialState: 'authenticated', userData });
 
-		// Check login button
-		const loginButton = screen.getByText('Login / Register');
-		expect(loginButton).toBeInTheDocument();
+			// Check for user name
+			const userButton = screen.getByText('Test User');
+			expect(userButton).toBeInTheDocument();
 
-		// Open the menu
-		fireEvent.click(loginButton);
+			// Open menu and check logout option
+			fireEvent.click(userButton);
+			const menuItems = screen.getByTestId('menuitems');
+			menuItems.style.display = 'block';
 
-		// Make menu items visible for testing
-		const menuItems = screen.getByTestId('menuitems');
-		menuItems.style.display = 'block';
+			fireEvent.click(screen.getByText('Logout'));
+			expectRedirect('/api/auth/logout');
+		});
 
-		// Click on Google login
-		fireEvent.click(screen.getByText('Sign in with Google'));
+		describe('Fallback Display Names', () => {
+			it('should use email when name is null', () => {
+				renderAuthButton({
+					initialState: 'authenticated',
+					userData: { name: null, email: 'test@example.com' },
+				});
 
-		// Check if window.location.href was set correctly
-		expect(window.location.href).toBe('/api/auth/login?provider=google');
+				expect(screen.getByText('test@example.com')).toBeInTheDocument();
+			});
+
+			it('should use "Account" when both name and email are null', () => {
+				renderAuthButton({
+					initialState: 'authenticated',
+					userData: { name: null, email: null },
+				});
+
+				expect(screen.getByText('Account')).toBeInTheDocument();
+			});
+		});
 	});
 
-	it('redirects to Discord login when selected', async () => {
-		render(<AuthButtonMock initialState='unauthenticated' />);
+	describe('Error Handling', () => {
+		it('should show login options on fetch error', () => {
+			renderAuthButton({ initialState: 'unauthenticated' });
+			expect(screen.getByText('Login / Register')).toBeInTheDocument();
+		});
 
-		// Check login button
-		const loginButton = screen.getByText('Login / Register');
-		expect(loginButton).toBeInTheDocument();
-
-		// Open the menu
-		fireEvent.click(loginButton);
-
-		// Make menu items visible for testing
-		const menuItems = screen.getByTestId('menuitems');
-		menuItems.style.display = 'block';
-
-		// Click on Discord login
-		fireEvent.click(screen.getByText('Sign in with Discord'));
-
-		// Check if window.location.href was set correctly
-		expect(window.location.href).toBe('/api/auth/login?provider=discord');
+		it('should show login options on bad response', () => {
+			renderAuthButton({ initialState: 'unauthenticated' });
+			expect(screen.getByText('Login / Register')).toBeInTheDocument();
+		});
 	});
 
-	it('redirects to GitHub login when selected', async () => {
-		render(<AuthButtonMock initialState='unauthenticated' />);
+	describe('Logged Out State', () => {
+		it('should show sign in button when user is not logged in', () => {
+			const { getByText } = renderWithProviders(<AuthButton initialSession={null} />);
+			expect(getByText('Sign In')).toBeInTheDocument();
+		});
 
-		// Check login button
-		const loginButton = screen.getByText('Login / Register');
-		expect(loginButton).toBeInTheDocument();
-
-		// Open the menu
-		fireEvent.click(loginButton);
-
-		// Make menu items visible for testing
-		const menuItems = screen.getByTestId('menuitems');
-		menuItems.style.display = 'block';
-
-		// Click on GitHub login
-		fireEvent.click(screen.getByText('Sign in with GitHub'));
-
-		// Check if window.location.href was set correctly
-		expect(window.location.href).toBe('/api/auth/login?provider=github');
+		it('should have correct button classes for sign in', () => {
+			const { getByText } = renderWithProviders(<AuthButton initialSession={null} />);
+			const button = getByText('Sign In').closest('button');
+			expect(button).toHaveClass('bg-primary');
+		});
 	});
 
-	it('shows user info and logout option when authenticated', async () => {
-		// Render with authenticated user
-		render(<AuthButtonMock initialState='authenticated' userData={{ name: 'Test User', email: 'test@example.com' }} />);
+	describe('Logged In State', () => {
+		const mockUser = createMockUser({
+			id: 'user-123',
+			email: 'test@example.com',
+			name: 'Test User',
+			image: 'https://example.com/avatar.jpg',
+		});
 
-		// Check for user name
-		const userButton = screen.getByText('Test User');
-		expect(userButton).toBeInTheDocument();
+		// Use the factory to create session with user
+		const { user, expires } = createMockSessionWithUser(
+			{}, // no session overrides needed
+			{
+				id: 'user-123',
+				email: 'test@example.com',
+				name: 'Test User',
+				image: 'https://example.com/avatar.jpg',
+			}
+		);
 
-		// Open the menu by clicking the user button
-		fireEvent.click(userButton);
+		const mockSession = { user, expires };
 
-		// Make menu items visible for testing
-		const menuItems = screen.getByTestId('menuitems');
-		menuItems.style.display = 'block';
+		it('should show user name when logged in', () => {
+			const { getByText } = renderWithProviders(<AuthButton initialSession={mockSession} />);
+			expect(getByText('Test User')).toBeInTheDocument();
+		});
 
-		// Find and click logout
-		fireEvent.click(screen.getByText('Logout'));
+		it('should show email if name is not available', () => {
+			const sessionWithoutName = {
+				...mockSession,
+				user: createMockUser({
+					...mockUser,
+					name: null,
+				}),
+			};
+			const { getByText } = renderWithProviders(<AuthButton initialSession={sessionWithoutName} />);
+			expect(getByText('test@example.com')).toBeInTheDocument();
+		});
 
-		// Verify redirect to logout endpoint
-		expect(window.location.href).toBe('/api/auth/logout');
+		it('should show Account if neither name nor email is available', () => {
+			const minimalSession = {
+				...mockSession,
+				user: createMockUser({
+					...mockUser,
+					name: null,
+					email: null,
+				}),
+			};
+			const { getByText } = renderWithProviders(<AuthButton initialSession={minimalSession} />);
+			expect(getByText('Account')).toBeInTheDocument();
+		});
+
+		it('should have correct button classes for logged in state', () => {
+			const { getByText } = renderWithProviders(<AuthButton initialSession={mockSession} />);
+			const button = getByText('Test User').closest('button');
+			expect(button).toHaveClass('bg-secondary/50');
+		});
+
+		it('should update user state when initialSession changes', () => {
+			const { rerender, getByText, queryByText } = renderWithProviders(<AuthButton initialSession={mockSession} />);
+
+			expect(getByText('Test User')).toBeInTheDocument();
+
+			// Change to logged out state
+			rerender(<AuthButton initialSession={null} />);
+
+			expect(queryByText('Test User')).not.toBeInTheDocument();
+			expect(getByText('Sign In')).toBeInTheDocument();
+		});
 	});
 
-	it('uses email as fallback when name is null', async () => {
-		// Render with authenticated user that has no name
-		render(<AuthButtonMock initialState='authenticated' userData={{ name: null, email: 'test@example.com' }} />);
-
-		// Check for email used instead of name
-		expect(screen.getByText('test@example.com')).toBeInTheDocument();
-	});
-
-	it('uses "Account" as fallback when name and email are null', async () => {
-		// Render with authenticated user that has no name or email
-		render(<AuthButtonMock initialState='authenticated' userData={{ name: null, email: null }} />);
-
-		// Check for fallback text
-		expect(screen.getByText('Account')).toBeInTheDocument();
-	});
-
-	it('handles fetch errors and shows login options', async () => {
-		// Simulate error by rendering unauthenticated state
-		render(<AuthButtonMock initialState='unauthenticated' />);
-
-		// Should show login button
-		const loginButton = screen.getByText('Login / Register');
-		expect(loginButton).toBeInTheDocument();
-	});
-
-	it('handles bad response and shows login options', async () => {
-		// Simulate bad response by rendering unauthenticated state
-		render(<AuthButtonMock initialState='unauthenticated' />);
-
-		// Should show login button
-		const loginButton = screen.getByText('Login / Register');
-		expect(loginButton).toBeInTheDocument();
-	});
+	// Loading state is tested via other tests when clicking OAuth provider or logout links
 });

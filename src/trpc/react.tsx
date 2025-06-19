@@ -1,16 +1,17 @@
 'use client';
 
-import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchStreamLink, loggerLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { type ReactElement, type ReactNode, useState } from 'react';
 import SuperJSON from 'superjson';
-import { env } from '~/env.mjs';
 
-import type { AppRouter } from '~/server/api/root';
 import { createQueryClient } from './query-client';
+
+import { env } from '~/env.mjs';
 import { getBaseUrl } from '~/lib/utils';
+import type { AppRouter } from '~/server/api/root';
 
 let clientQueryClientSingleton: QueryClient | undefined = undefined;
 
@@ -41,7 +42,7 @@ export type RouterInputs = inferRouterInputs<AppRouter>;
  */
 export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
-export function TRPCReactProvider(props: { children: ReactNode }): ReactElement {
+export const TRPCReactProvider = (props: { children: ReactNode }): ReactElement => {
 	const queryClient = getQueryClient();
 
 	const [trpcClient] = useState(() =>
@@ -52,7 +53,7 @@ export function TRPCReactProvider(props: { children: ReactNode }): ReactElement 
 				}),
 				httpBatchStreamLink({
 					transformer: SuperJSON,
-					url: getBaseUrl() + '/api/trpc',
+					url: `${getBaseUrl()}/api/trpc`,
 					headers() {
 						const headers: Record<string, string> = {};
 						headers['x-trpc-source'] = 'nextjs-react';
@@ -70,4 +71,4 @@ export function TRPCReactProvider(props: { children: ReactNode }): ReactElement 
 			</api.Provider>
 		</QueryClientProvider>
 	);
-}
+};

@@ -1,7 +1,7 @@
-import { MongoClient, ObjectId } from 'mongodb';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import type { Document as MongoDocument } from 'mongodb';
+
+import { db } from '~/server/db';
 
 // Define the structure for a single filter value with its count
 interface FilterValueCount {
@@ -19,73 +19,21 @@ export interface FiltersResponse {
 // Define the structure for filters passed in the query string
 type InputFilters = Record<string, string[]>; // Assuming values are always arrays from FE
 
-// Type for the aggregation result from MongoDB for filter counts using $facet
-type FacetResult = Record<string, { _id: string | null; count: number }[]>;
-
 // List of fields in CommodityData to be used as filters
-// TODO: Adjust this list based on actual desired filterable fields
-const FILTERABLE_FIELDS: string[] = ['type', 'category', 'country', 'state', 'Cattle Type', 'Choice Grade'];
+const FILTERABLE_FIELDS: string[] = ['type', 'category', 'country', 'state', 'cattleType', 'choiceGrade'];
 
-// Ensure DATABASE_URL is set in your environment variables
-const uri = process.env.DATABASE_URL;
-if (!uri) {
-	throw new Error('Missing environment variable: DATABASE_URL');
-}
+// Helper to build the where clause from input filters
+function buildWhereClause(inputFilters: InputFilters): Record<string, any> {
+	const where: Record<string, any> = {};
 
-let client: MongoClient | null = null;
-let clientPromise: Promise<MongoClient> | null = null;
-
-async function getMongoClient(): Promise<MongoClient> {
-	// Add explicit checks for uri inside the function
-	if (!uri) {
-		throw new Error('Missing environment variable: DATABASE_URL');
-	}
-	if (process.env.NODE_ENV === 'development') {
-		// @ts-expect-error - Use global variable in dev
-		if (!global._mongoClientPromise) {
-			// Explicit check before usage
-			if (!uri) throw new Error('Missing DATABASE_URL for MongoClient');
-			client = new MongoClient(uri);
-			// @ts-expect-error - Use global variable in dev
-			global._mongoClientPromise = client.connect();
-		}
-		// @ts-expect-error - Use global variable in dev
-		clientPromise = global._mongoClientPromise;
-	} else {
-		// Explicit check before usage
-		if (!uri) throw new Error('Missing DATABASE_URL for MongoClient');
-		client = new MongoClient(uri);
-		clientPromise = client.connect();
-	}
-	if (!clientPromise) {
-		throw new Error('MongoDB client promise initialization failed.');
-	}
-	return clientPromise;
-}
-
-// Helper to build the $match stage from input filters
-function buildMatchStage(inputFilters: InputFilters): MongoDocument {
-	const matchQuery: MongoDocument = {};
 	for (const [key, values] of Object.entries(inputFilters)) {
 		// Ensure field is considered filterable
 		if (FILTERABLE_FIELDS.includes(key) && values.length > 0) {
-			matchQuery[key] = { $in: values };
+			where[key] = { in: values };
 		}
 	}
-	return { $match: matchQuery };
-}
 
-// Helper to build the $facet stage for filterable fields
-function buildFacetStage(): MongoDocument {
-	const facet: MongoDocument = {};
-	for (const field of FILTERABLE_FIELDS) {
-		facet[field] = [
-			{ $match: { [field]: { $ne: null, $exists: true } } }, // Exclude null/missing values for this field
-			{ $group: { _id: `$${field}`, count: { $sum: 1 } } },
-			{ $sort: { count: -1 } }, // Sort by count descending within the facet
-		];
-	}
-	return { $facet: facet };
+	return where;
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -93,10 +41,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 	const filtersParam = url.searchParams.get('filters');
 	let inputFilters: InputFilters = {};
 
-	if (filtersParam) {
+	if (filtersParam !== null && filtersParam !== '') {
 		try {
 			inputFilters = JSON.parse(filtersParam);
-			console.log('[Filters API] Parsed inputFilters:', JSON.stringify(inputFilters));
+			console.debug('[Filters API] Parsed inputFilters:', JSON.stringify(inputFilters));
 		} catch (error) {
 			console.error('Failed to parse filters:', error);
 			return NextResponse.json({ error: 'Invalid filters format' }, { status: 400 });
@@ -104,95 +52,79 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 	}
 
 	try {
-		const mongoClient = await getMongoClient();
-		const db = mongoClient.db();
-		// --- Use CommodityData Collection Directly ---
-		const commodityCollection = db.collection('CommodityData');
-		console.log(`[Filters API] Using DB: ${db.databaseName}, Collection: ${commodityCollection.collectionName}`);
-
 		let totalDocuments: number;
-		const aggregationPipeline: MongoDocument[] = [];
 		const hasInputFilters = Object.keys(inputFilters).length > 0;
+		const whereClause = buildWhereClause(inputFilters);
 
-		// 1. Build $match stage if filters are present
+		// Count documents based on filters
 		if (hasInputFilters) {
-			const matchStage = buildMatchStage(inputFilters);
-			console.log('[Filters API] Filters applied. Match stage:', JSON.stringify(matchStage));
-			aggregationPipeline.push(matchStage);
-			// Recalculate totalDocuments based on the filter match
-			totalDocuments = await commodityCollection.countDocuments(matchStage.$match);
-			console.log(`[Filters API] Filtered document count: ${totalDocuments}`);
+			console.debug('[Filters API] Filters applied. Where clause:', JSON.stringify(whereClause));
+			totalDocuments = await db.commodityData.count({ where: whereClause });
+			console.debug(`[Filters API] Filtered document count: ${totalDocuments}`);
 		} else {
-			console.log('[Filters API] No input filters. Counting all documents.');
-			// Count all documents if no filters are applied
-			totalDocuments = await commodityCollection.countDocuments({});
-			console.log(`[Filters API] Total document count: ${totalDocuments}`);
+			console.debug('[Filters API] No input filters. Counting all documents.');
+			totalDocuments = await db.commodityData.count();
+			console.debug(`[Filters API] Total document count: ${totalDocuments}`);
 		}
-
-		// 2. Build $facet stage
-		const facetStage = buildFacetStage();
-		aggregationPipeline.push(facetStage);
-
-		// 3. Execute aggregation
-		console.log('[Filters API] Executing aggregation pipeline...');
-		const aggregationResult = await commodityCollection.aggregate(aggregationPipeline).toArray();
 
 		const formattedFilters: Record<string, FilterValueCount[]> = {};
 		const commonFields: Record<string, any> = {};
 
-		// Check if aggregation returned any result (it should return one document with facets)
-		if (aggregationResult.length > 0) {
-			const facetResult = aggregationResult[0] as FacetResult;
-			console.log(`[Filters API] Aggregation returned ${Object.keys(facetResult).length} facets.`);
+		// Process each filterable field
+		for (const field of FILTERABLE_FIELDS) {
+			// Get unique values and counts for this field
+			const groupBy = await db.commodityData.groupBy({
+				by: [field as any],
+				where: whereClause,
+				_count: true,
+			});
 
-			// 4. Process facet results
-			for (const [field, values] of Object.entries(facetResult)) {
-				if (values.length === 0) continue; // Skip empty facets
+			if (groupBy.length === 0) continue;
 
-				// Map to desired format { value: string, count: number }
-				const mappedValues: FilterValueCount[] = values
-					.filter((v) => v._id !== null) // Filter out potential null grouping
-					.map((v) => ({ value: String(v._id), count: v.count }));
+			// Map to desired format and sort by count
+			const mappedValues: FilterValueCount[] = groupBy
+				.filter((g: any) => g[field] !== null)
+				.map((g: any) => ({
+					value: String(g[field]),
+					count: g._count,
+				}))
+				.sort((a, b) => b.count - a.count);
 
-				if (mappedValues.length === 0) continue; // Skip if only null values existed
+			if (mappedValues.length === 0) continue;
 
-				// Check for common field (only one value for this field in the *current* result set)
-				if (mappedValues.length === 1) {
-					// Check if the single value's count matches the relevant total
-					const totalCountForSingleValue = mappedValues[0].count;
-					if (totalCountForSingleValue === totalDocuments && totalDocuments > 0) {
-						commonFields[field] = mappedValues[0].value;
-					}
-				}
-
-				// Apply the filter inclusion logic (maxCount > 15 or only one value)
-				const maxCount = mappedValues.reduce((max, curr) => Math.max(max, curr.count), 0);
-				const hasOnlyOneValue = mappedValues.length === 1;
-
-				if (maxCount > 15 || hasOnlyOneValue) {
-					// Already sorted by count descending from facet stage
-					// Add secondary sort by value ascending
-					formattedFilters[field] = mappedValues.sort((a, b) => {
-						if (a.count !== b.count) return 0; // Primary sort already done
-						return a.value.localeCompare(b.value);
-					});
-				} else {
-					// console.log(`[Filters API] Excluding filter key "${field}" because max count (${maxCount}) <= 15 and it has multiple values.`);
+			// Check for common field
+			if (mappedValues.length === 1) {
+				const totalCountForSingleValue = mappedValues[0].count;
+				if (totalCountForSingleValue === totalDocuments && totalDocuments > 0) {
+					commonFields[field] = mappedValues[0].value;
 				}
 			}
-		} else {
-			console.log('[Filters API] Aggregation returned no results.');
+
+			// Apply the filter inclusion logic
+			const maxCount = mappedValues.reduce((max, curr) => Math.max(max, curr.count), 0);
+			const hasOnlyOneValue = mappedValues.length === 1;
+
+			if (maxCount > 15 || hasOnlyOneValue) {
+				// Sort by count desc, then by value asc
+				formattedFilters[field] = mappedValues.sort((a, b) => {
+					if (a.count !== b.count) return b.count - a.count;
+					return a.value.localeCompare(b.value);
+				});
+			}
 		}
 
 		// Return results
-		console.log(`[Filters API] Successfully processed. Returning totalDocuments: ${totalDocuments}, Filter keys: ${Object.keys(formattedFilters).join(', ')}`);
-		return NextResponse.json({ filters: formattedFilters, totalDocuments, commonFields });
+		console.debug(`[Filters API] Successfully processed. Returning totalDocuments: ${totalDocuments}, Filter keys: ${Object.keys(formattedFilters).join(', ')}`);
+
+		const response = NextResponse.json({ filters: formattedFilters, totalDocuments, commonFields });
+
+		// Set cache headers for 24 hours
+		response.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=3600');
+
+		return response;
 	} catch (error) {
 		console.error('Failed to fetch filters:', error);
 		const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 		return NextResponse.json({ error: errorMessage, filters: {}, totalDocuments: 0 }, { status: 500 });
-	} finally {
-		// No explicit disconnect needed if using the connection pattern above for serverless
-		// If running in a non-serverless environment, you might manage connections differently.
 	}
 }

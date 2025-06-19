@@ -1,11 +1,17 @@
-import React from 'react';
 import type { JSX } from 'react';
+import React from 'react';
 
-export default function Loading(): JSX.Element {
-	// You can add any skeleton UI, spinner, etc. here
-	return (
-		<div className='flex h-full w-full items-center justify-center'>
-			<p>Loading...</p> {/* Replace with a spinner or skeleton */}
+const Loading = (): JSX.Element => (
+	<div className='flex h-full w-full items-center justify-center'>
+		<div className='relative'>
+			{/* Outer ring with gradient */}
+			<div className='h-16 w-16 animate-spin rounded-full bg-gradient-to-r from-primary via-primary/50 to-transparent p-1'>
+				<div className='h-full w-full rounded-full bg-background' />
+			</div>
+			{/* Inner dot */}
+			<div className='absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-primary' />
 		</div>
-	);
-}
+	</div>
+);
+
+export default Loading;

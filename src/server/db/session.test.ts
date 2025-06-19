@@ -1,8 +1,9 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Session } from '@prisma/client';
 import { cookies } from 'next/headers';
-import { db } from '~/server/db';
-import { getSession, getUserFromSession, createSession, destroySession } from './session';
-import type { User, Session } from '@prisma/client';
+import { createExpiredSession, createMockSessionWithUser, createMockUser } from 'testUtils/unit/data.factories';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createSession, destroySession, getSession, getUserFromSession } from './session';
 
 // Mock dependencies
 vi.mock('next/headers', () => ({
@@ -10,18 +11,16 @@ vi.mock('next/headers', () => ({
 }));
 
 // Hoist mock definitions
-const { mockSessionFindUnique, mockSessionDelete, mockSessionCreate, mockSessionDeleteMany } = vi.hoisted(() => {
-	return {
-		mockSessionFindUnique: vi.fn(),
-		mockSessionDelete: vi.fn(),
-		mockSessionCreate: vi.fn(),
-		mockSessionDeleteMany: vi.fn(),
-	};
-});
+const { mockSessionFindUnique, mockSessionDelete, mockSessionCreate, mockSessionDeleteMany } = vi.hoisted(() => ({
+	mockSessionFindUnique: vi.fn(),
+	mockSessionDelete: vi.fn(),
+	mockSessionCreate: vi.fn(),
+	mockSessionDeleteMany: vi.fn(),
+}));
 
-vi.mock('~/server/db', () => {
+vi.mock('~/server/db', () =>
 	// Now these variables are guaranteed to be initialized
-	return {
+	({
 		db: {
 			session: {
 				findUnique: mockSessionFindUnique,
@@ -30,8 +29,8 @@ vi.mock('~/server/db', () => {
 				deleteMany: mockSessionDeleteMany,
 			},
 		},
-	};
-});
+	})
+);
 
 // Helper to mock cookies() behavior
 const mockCookies = (returnValue: { value: string } | undefined): void => {
@@ -46,38 +45,20 @@ const mockCookies = (returnValue: { value: string } | undefined): void => {
 };
 
 describe('Session Management', () => {
-	const mockUser: User = {
-		id: 'user123',
-		email: 'test@example.com',
-		name: 'Test User',
-		emailVerified: new Date(),
-		image: null,
-		discordId: null,
-	};
-
+	const mockUser = createMockUser();
 	const validSessionToken = 'valid-session-token';
 	const expiredSessionToken = 'expired-session-token';
 	const notFoundSessionToken = 'not-found-session-token';
 
-	const now = new Date();
-	const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days in the future
-	const pastDate = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000); // 1 day in the past
+	const mockValidSession = createMockSessionWithUser({ sessionToken: validSessionToken }, { id: mockUser.id });
 
-	const mockValidSession = {
-		id: 'session1',
-		sessionToken: validSessionToken,
-		userId: mockUser.id,
-		expires: futureDate,
-		user: mockUser,
-	};
-
-	const mockExpiredSession = {
-		id: 'session2',
-		sessionToken: expiredSessionToken,
-		userId: mockUser.id,
-		expires: pastDate,
-		user: mockUser,
-	};
+	const mockExpiredSession = createMockSessionWithUser(
+		{
+			...createExpiredSession({ sessionToken: expiredSessionToken }),
+			userId: mockUser.id,
+		},
+		{ id: mockUser.id }
+	);
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -133,8 +114,8 @@ describe('Session Management', () => {
 			mockCookies({ value: validSessionToken });
 			const session = await getSession();
 			expect(session).toEqual({
-				user: mockUser,
-				expires: futureDate,
+				user: mockValidSession.user,
+				expires: mockValidSession.expires,
 			});
 			expect(mockSessionFindUnique).toHaveBeenCalledWith({
 				where: { sessionToken: validSessionToken },
@@ -154,7 +135,7 @@ describe('Session Management', () => {
 		it('should return the user if getSession returns a valid session', async () => {
 			mockCookies({ value: validSessionToken });
 			const user = await getUserFromSession();
-			expect(user).toEqual(mockUser);
+			expect(user).toEqual(mockValidSession.user);
 		});
 	});
 

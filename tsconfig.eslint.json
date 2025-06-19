@@ -1,0 +1,6 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {},
+	"include": ["./src", "./.config", "./test-utils", "./.config/tsup.config.ts", "build.ts", "./scripts", "./testUtils", "./pulumi", "next-env.d.ts", "playwright.config.ts", "vitest.config.ts", "./tests"],
+	"exclude": []
+}

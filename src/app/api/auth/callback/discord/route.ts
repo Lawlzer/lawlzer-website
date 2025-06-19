@@ -1,10 +1,10 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
-import { env } from '~/env.mjs';
 import type { User } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+import { env } from '~/env.mjs';
 import { handleAndGenerateSessionToken } from '~/lib/auth';
-import { createSession } from '~/server/db/session';
 import { getBaseUrl } from '~/lib/utils';
 
 const prisma = new PrismaClient();
@@ -26,7 +26,7 @@ interface DiscordUserInfo {
 	verified: boolean;
 }
 
-async function getDiscordOAuthTokens(code: string, request: NextRequest): Promise<DiscordTokenResponse> {
+async function getDiscordOAuthTokens(code: string, _request: NextRequest): Promise<DiscordTokenResponse> {
 	const url = 'https://discord.com/api/oauth2/token';
 
 	// Use the configured base URL and port for the callback
@@ -92,6 +92,7 @@ async function upsertUser(discordUser: DiscordUserInfo, tokens: DiscordTokenResp
 		update: {
 			name: discordUser.username,
 			image: avatarUrl,
+			discordId: discordUser.id,
 			accounts: {
 				upsert: {
 					where: {
@@ -124,6 +125,7 @@ async function upsertUser(discordUser: DiscordUserInfo, tokens: DiscordTokenResp
 			email: discordUser.email,
 			name: discordUser.username,
 			image: avatarUrl,
+			discordId: discordUser.id,
 			emailVerified: discordUser.verified ? new Date() : null,
 			accounts: {
 				create: {
@@ -142,10 +144,10 @@ async function upsertUser(discordUser: DiscordUserInfo, tokens: DiscordTokenResp
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-	const searchParams = request.nextUrl.searchParams;
+	const { searchParams } = request.nextUrl;
 	const code = searchParams.get('code');
 
-	if (!code) {
+	if (code === null || code === '') {
 		return NextResponse.redirect(new URL('/error/auth?error=no_code', request.url));
 	}
 

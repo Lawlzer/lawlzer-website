@@ -1,132 +1,171 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Menu, MenuButton, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
-import { ChevronDownIcon } from '@heroicons/react/20/solid';
-import type { SessionData } from '~/server/db/session'; // Assuming SessionData is exported
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { ArrowRightOnRectangleIcon, ChevronDownIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
 
-// Define props type to include initialSession
+import { cn } from '~/lib/utils';
+import type { SessionData } from '~/server/db/session';
+
 interface AuthButtonProps {
 	initialSession: SessionData | null;
 }
 
-export default function AuthButton({ initialSession }: AuthButtonProps): React.JSX.Element {
-	// Initialize state with the prop
+const AuthButton: React.FC<AuthButtonProps> = ({ initialSession }) => {
 	const [session, setSession] = useState<SessionData | null>(initialSession);
-	// No longer loading initially as data is provided
 	const [loading, setLoading] = useState(false);
-	const isDevelopment = process.env.NODE_ENV === 'development'; // Check NODE_ENV
 
-	const user = session?.user;
+	useEffect(() => {
+		// Update session when initialSession prop changes
+		setSession(initialSession);
+	}, [initialSession]);
+
+	useEffect(() => {
+		// Subscribe to session changes via a custom event
+		const handleSessionChange = (event: CustomEvent<SessionData | null>) => {
+			setSession(event.detail);
+		};
+
+		window.addEventListener('sessionChange', handleSessionChange as EventListener);
+
+		return () => {
+			window.removeEventListener('sessionChange', handleSessionChange as EventListener);
+		};
+	}, []);
 
 	if (loading) {
-		return <div data-testid='auth-loading' className='animate-pulse bg-muted rounded w-20 h-10'></div>;
+		return (
+			<div className='flex items-center gap-2 px-4 py-2.5 text-sm'>
+				<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className='h-4 w-4 border-2 border-primary border-t-transparent rounded-full' />
+				<span className='text-secondary-text'>Loading...</span>
+			</div>
+		);
 	}
 
-	if (user) {
+	if (session?.user !== null && session?.user !== undefined) {
 		return (
-			<Menu as='div' className='relative inline-block text-left'>
-				<div>
-					<MenuButton className='inline-flex w-full justify-center rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'>
-						{user.name ?? user.email ?? 'Account'}
-						<ChevronDownIcon className='-mr-1 ml-2 h-5 w-5 text-muted-foreground' aria-hidden='true' />
-					</MenuButton>
-				</div>
-				<Transition as={Fragment} enter='transition ease-out duration-100' enterFrom='transform opacity-0 scale-95' enterTo='transform opacity-100 scale-100' leave='transition ease-in duration-75' leaveFrom='transform opacity-100 scale-100' leaveTo='transform opacity-0 scale-95'>
-					<Menu.Items data-testid='menuitems' className='absolute right-0 mt-2 w-56 origin-top-right divide-y divide-border rounded-md bg-popover text-popover-foreground shadow-lg ring-1 ring-border focus:outline-none z-50'>
-						<div className='px-1 py-1'>
-							<Menu.Item>
+			<Menu as='div' className='relative'>
+				<MenuButton className='group flex items-center gap-3 rounded-xl bg-secondary/50 px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/50'>
+					<div className='flex items-center gap-2'>
+						<UserCircleIcon className='h-5 w-5 text-secondary-text' />
+						<span className='hidden sm:inline'>{session.user.name ?? session.user.email ?? 'Account'}</span>
+					</div>
+					<ChevronDownIcon aria-hidden='true' className='h-4 w-4 text-secondary-text transition-transform duration-200 group-data-[open]:rotate-180' />
+				</MenuButton>
+
+				<AnimatePresence>
+					<MenuItems as={motion.div} initial={{ opacity: 0, scale: 0.95, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: -10 }} className='absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-xl bg-popover/95 backdrop-blur-lg shadow-xl ring-1 ring-border/50 focus:outline-none' data-testid='menuitems'>
+						<div className='p-1.5'>
+							<MenuItem>
 								{({ active }) => (
-									<button
-										role='menuitem'
+									<a
+										className={cn('group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200', active ? 'bg-destructive/10 text-destructive' : 'text-foreground hover:bg-secondary/50')}
+										href='/api/auth/logout'
 										onClick={() => {
-											// Use custom logout endpoint
-											window.location.href = '/api/auth/logout';
+											setLoading(true);
 										}}
-										className={`${active ? 'bg-accent text-accent-foreground' : 'text-foreground'} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
 									>
-										Logout
-									</button>
+										<ArrowRightOnRectangleIcon className='h-5 w-5' />
+										Sign out
+									</a>
 								)}
-							</Menu.Item>
+							</MenuItem>
 						</div>
-					</Menu.Items>
-				</Transition>
+					</MenuItems>
+				</AnimatePresence>
 			</Menu>
 		);
 	}
 
-	// Not authenticated
+	// User is not logged in
 	return (
-		<Menu as='div' className='relative inline-block text-left'>
-			<div>
-				<MenuButton className='inline-flex w-full justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'>
-					Login / Register
-					<ChevronDownIcon className='-mr-1 ml-2 h-5 w-5 text-primary-foreground/80' aria-hidden='true' />
-				</MenuButton>
-			</div>
-			<Transition as={Fragment} enter='transition ease-out duration-100' enterFrom='transform opacity-0 scale-95' enterTo='transform opacity-100 scale-100' leave='transition ease-in duration-75' leaveFrom='transform opacity-100 scale-100' leaveTo='transform opacity-0 scale-95'>
-				<Menu.Items data-testid='menuitems' className='absolute right-0 mt-2 w-56 origin-top-right divide-y divide-border rounded-md bg-popover text-popover-foreground shadow-lg ring-1 ring-border focus:outline-none z-50'>
-					<div className='px-1 py-1'>
-						<Menu.Item disabled={isDevelopment}>
-							{({ active, disabled }) => (
-								<button
-									role='menuitem'
-									onClick={() => {
-										if (!disabled) {
-											window.location.href = '/api/auth/login?provider=google';
-										}
-									}}
-									disabled={disabled}
-									title={disabled ? "NODE_ENV === 'development', and Google OAuth does not work on localhost" : undefined}
-									className={`${active ? 'bg-accent text-accent-foreground' : 'text-foreground'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-								>
-									<svg className='w-5 h-5 mr-2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
-										<path fill='#EA4335' d='M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z' />
-										<path fill='#34A853' d='M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 0 1-6.723-4.823l-4.04 3.067A11.965 11.965 0 0 0 12 24c2.933 0 5.735-1.043 7.834-3l-3.793-2.987Z' />
-										<path fill='#4A90E2' d='M19.834 21c2.195-2.048 3.62-5.096 3.62-9 0-.71-.109-1.473-.272-2.182H12v4.637h6.436c-.317 1.559-1.17 2.766-2.395 3.558L19.834 21Z' />
-										<path fill='#FBBC05' d='M5.277 14.268A7.12 7.12 0 0 1 4.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 0 0 0 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067Z' />
-									</svg>
-									Sign in with Google
-								</button>
-							)}
-						</Menu.Item>
-						<Menu.Item>
-							{({ active }) => (
-								<button
-									role='menuitem'
-									onClick={() => {
-										window.location.href = '/api/auth/login?provider=discord';
-									}}
-									className={`${active ? 'bg-accent text-accent-foreground' : 'text-foreground'} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-								>
-									<svg className='w-5 h-5 mr-2' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 127.14 96.36'>
-										<path fill='#5865F2' d='M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z' />
-									</svg>
-									Sign in with Discord
-								</button>
-							)}
-						</Menu.Item>
-						<Menu.Item>
-							{({ active }) => (
-								<button
-									role='menuitem'
-									onClick={() => {
-										window.location.href = '/api/auth/login?provider=github';
-									}}
-									className={`${active ? 'bg-accent text-accent-foreground' : 'text-foreground'} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-								>
-									<svg className='w-5 h-5 mr-2' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>
-										<path fill='currentColor' d='M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z' />
-									</svg>
-									Sign in with GitHub
-								</button>
-							)}
-						</Menu.Item>
+		<Menu as='div' className='relative'>
+			<MenuButton className='group inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-primary hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 glow'>
+				<span>Sign In</span>
+				<ChevronDownIcon aria-hidden='true' className='h-4 w-4 transition-transform duration-200 group-data-[open]:rotate-180' />
+			</MenuButton>
+
+			<AnimatePresence>
+				<MenuItems as={motion.div} initial={{ opacity: 0, scale: 0.95, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: -10 }} className='absolute right-0 z-50 mt-2 w-64 origin-top-right rounded-xl bg-popover/95 backdrop-blur-lg shadow-xl ring-1 ring-border/50 focus:outline-none' data-testid='menuitems'>
+					<div className='p-2'>
+						<div className='mb-3 px-3 pt-2'>
+							<h3 className='text-sm font-semibold text-foreground'>Welcome back!</h3>
+							<p className='text-xs text-secondary-text mt-1'>Sign in to your account</p>
+						</div>
+
+						<div className='space-y-1'>
+							{[
+								{
+									provider: 'google',
+									label: 'Continue with Google',
+									icon: (
+										<svg className='h-5 w-5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
+											<g transform='matrix(1, 0, 0, 1, 27.009001, -39.238998)'>
+												<path d='M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z' fill='#4285F4' />
+												<path d='M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z' fill='#34A853' />
+												<path d='M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z' fill='#FBBC05' />
+												<path d='M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z' fill='#EA4335' />
+											</g>
+										</svg>
+									),
+									bgColor: 'hover:bg-primary/10',
+									disabled: false,
+								},
+								{
+									provider: 'github',
+									label: 'Continue with GitHub',
+									icon: (
+										<svg className='h-5 w-5' viewBox='0 0 127.14 96.36' xmlns='http://www.w3.org/2000/svg'>
+											<path clipRule='evenodd' d='M63.996 0C40.054 0 19.32 16.73 14.565 39.335C10.24 59.668 20.88 79.41 39.09 88.41a4.68 4.68 0 0 0 1.59.286c0-.698-.03-4.825-.03-8.098c-13.424 2.488-16.445-2.802-17.48-5.374c-.587-1.496-3.115-5.375-5.327-6.46c-1.82-.983-4.423-3.407-.07-3.466c4.102-.058 7.028 3.777 8.004 5.345c4.68 7.867 12.18 5.658 15.156 4.292c.469-3.377 1.81-5.658 3.3-6.96c-11.553-1.302-23.642-5.775-23.642-25.645c0-5.66 2.023-10.306 5.346-13.944c-.528-1.302-2.32-6.602.515-13.74c0 0 1.114-.285 3.094-.285c2.91 0 6.717 1.086 10.788 4.695a46.543 46.543 0 0 1 12.363-1.658c4.194 0 8.387.565 12.362 1.658c4.07-3.61 7.878-4.695 10.788-4.695c1.98 0 3.094.285 3.094.285c2.834 7.138 1.043 12.438.515 13.74c3.323 3.638 5.346 8.274 5.346 13.944c0 19.93-12.128 24.343-23.7 25.645c1.86 1.604 3.514 4.76 3.514 9.603c0 6.96-.06 12.554-.06 14.275c0 .385.082.748.234 1.086c12.89 11.368 29.905 9.07 41.273-5.584s9.07-33.67-5.584-45.038A47.893 47.893 0 0 0 63.996 0Z' fill='currentColor' fillRule='evenodd' />
+										</svg>
+									),
+									bgColor: 'hover:bg-secondary',
+									disabled: false,
+								},
+								{
+									provider: 'discord',
+									label: 'Continue with Discord',
+									icon: (
+										<svg className='h-5 w-5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
+											<path d='M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418Z' fill='#7289DA' />
+										</svg>
+									),
+									bgColor: 'hover:bg-accent/10',
+									disabled: true,
+								},
+							].map(({ provider, label, icon, disabled, bgColor }) => (
+								<MenuItem key={provider}>
+									{({ active }) => (
+										<motion.a
+											whileHover={{ x: disabled ? 0 : 4 }}
+											whileTap={{ scale: disabled ? 1 : 0.98 }}
+											className={cn('group relative flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200', active && !disabled ? bgColor : 'hover:bg-secondary/50', disabled && 'cursor-not-allowed opacity-50')}
+											href={`/api/auth/login?provider=${provider}`}
+											onClick={
+												disabled
+													? (e) => {
+															e.preventDefault();
+														}
+													: () => {
+															setLoading(true);
+														}
+											}
+										>
+											<span className='flex-shrink-0'>{icon}</span>
+											<span className='flex-1'>{label}</span>
+											{disabled && <span className='absolute right-3 top-1 text-[10px] font-semibold text-secondary-text'>SOON</span>}
+											{!disabled && <ChevronDownIcon className='h-4 w-4 rotate-[-90deg] opacity-0 transition-all duration-200 group-hover:opacity-100' />}
+										</motion.a>
+									)}
+								</MenuItem>
+							))}
+						</div>
 					</div>
-				</Menu.Items>
-			</Transition>
+				</MenuItems>
+			</AnimatePresence>
 		</Menu>
 	);
-}
+};
+
+export default AuthButton;
