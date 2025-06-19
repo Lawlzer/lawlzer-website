@@ -7,9 +7,29 @@ export interface GuestFood extends Omit<Food, 'createdAt' | 'id' | 'updatedAt' |
 	updatedAt: string;
 }
 
+export interface GuestRecipeItem {
+	foodId?: string;
+	recipeId?: string;
+	amount: number;
+	unit: string;
+}
+
+export interface GuestRecipe {
+	guestId: string;
+	name: string;
+	description?: string | null;
+	notes?: string | null;
+	prepTime?: number | null;
+	cookTime?: number | null;
+	servings: number;
+	items: GuestRecipeItem[];
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface GuestData {
 	foods: GuestFood[];
-	recipes: any[]; // Will be implemented later
+	recipes: GuestRecipe[];
 	days: any[]; // Will be implemented later
 	goals: any[]; // Will be implemented later
 }
@@ -157,4 +177,59 @@ export const prepareGuestDataForMigration = () => {
 		days: guestData.days,
 		goals: guestData.goals,
 	};
+};
+
+// Add a recipe for guest
+export const addGuestRecipe = (recipe: Omit<GuestRecipe, 'createdAt' | 'guestId' | 'updatedAt'>): GuestRecipe => {
+	const guestData = getGuestData();
+
+	const newRecipe: GuestRecipe = {
+		...recipe,
+		guestId: crypto.randomUUID(),
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString(),
+	};
+
+	guestData.recipes.push(newRecipe);
+	saveGuestData(guestData);
+	return newRecipe;
+};
+
+// Get all guest recipes
+export const getGuestRecipes = (): GuestRecipe[] => {
+	const guestData = getGuestData();
+	return guestData.recipes;
+};
+
+// Update a guest recipe
+export const updateGuestRecipe = (guestId: string, recipe: Partial<Omit<GuestRecipe, 'createdAt' | 'guestId' | 'updatedAt'>>): GuestRecipe | null => {
+	const guestData = getGuestData();
+	const recipeIndex = guestData.recipes.findIndex((r) => r.guestId === guestId);
+
+	if (recipeIndex === -1) return null;
+
+	const updatedRecipe: GuestRecipe = {
+		...guestData.recipes[recipeIndex],
+		...recipe,
+		updatedAt: new Date().toISOString(),
+	};
+
+	guestData.recipes[recipeIndex] = updatedRecipe;
+	saveGuestData(guestData);
+	return updatedRecipe;
+};
+
+// Delete a guest recipe
+export const deleteGuestRecipe = (guestId: string): boolean => {
+	const guestData = getGuestData();
+	const initialLength = guestData.recipes.length;
+
+	guestData.recipes = guestData.recipes.filter((recipe) => recipe.guestId !== guestId);
+
+	if (guestData.recipes.length < initialLength) {
+		saveGuestData(guestData);
+		return true;
+	}
+
+	return false;
 };

@@ -1,36 +1,14 @@
 'use client';
 
-import type { Food, Recipe } from '@prisma/client';
+import type { Food } from '@prisma/client';
 import { useEffect, useState } from 'react';
 
-interface RecipeWithDetails extends Recipe {
-	currentVersion: {
-		id: string;
-		version: number;
-		caloriesPerServing: number;
-		proteinPerServing: number;
-		carbsPerServing: number;
-		fatPerServing: number;
-		items: {
-			id: string;
-			foodId: string | null;
-			recipeId: string | null;
-			amount: number;
-			unit: string;
-			food: Food | null;
-			recipe: Recipe | null;
-		}[];
-	} | null;
-	versions: {
-		id: string;
-		version: number;
-		createdAt: Date;
-	}[];
-}
+import type { RecipeWithDetails } from '../types/recipe.types';
 
 interface RecipeEditorProps {
 	recipe: RecipeWithDetails;
 	availableFoods: Food[];
+	availableRecipes?: RecipeWithDetails[];
 	onSave: (recipeData: any) => Promise<void>;
 	onCancel: () => void;
 }

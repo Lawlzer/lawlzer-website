@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 
 import { CookingMode } from './components/CookingMode';
 import { DayTracker } from './components/DayTracker';
+import { GoalsManager } from './components/GoalsManager';
+import { GuestModeBanner } from './components/GuestModeBanner';
 import { CalendarIcon, CameraIcon, ChefHatIcon, GoalIcon, HomeIcon, UtensilsIcon } from './components/Icons';
 import { RecipeCard } from './components/RecipeCard';
 import { RecipeCreator } from './components/RecipeCreator';
@@ -13,7 +15,7 @@ import { RecipeEditor } from './components/RecipeEditor';
 import { useGuestDataMigration } from './hooks/useGuestDataMigration';
 import type { FoodProduct } from './services/foodDatabase';
 import { fetchFoodByBarcode } from './services/foodDatabase';
-import { addGuestFood, getGuestFoods, hasGuestData } from './services/guestStorage';
+import { addGuestFood, addGuestRecipe, getGuestFoods, getGuestRecipes, hasGuestData } from './services/guestStorage';
 import type { RecipeWithDetails } from './types/recipe.types';
 
 // Dynamically import BarcodeScanner to avoid SSR issues
@@ -22,16 +24,14 @@ const BarcodeScanner = dynamic(async () => import('./components/BarcodeScanner')
 });
 
 export default function CookingPage() {
-	const [activeTab, setActiveTab] = useState('overview');
+	const [activeTab, setActiveTab] = useState<'cooking' | 'days' | 'goals' | 'history' | 'overview' | 'recipes' | 'scan'>('overview');
 	const [isScanning, setIsScanning] = useState(false);
 	const [scannedProduct, setScannedProduct] = useState<FoodProduct | null>(null);
 	const [scanError, setScanError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveStatus, setSaveStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
-	const [isGuest, setIsGuest] = useState(true);
-	const [hasUnsavedData, setHasUnsavedData] = useState(false);
-	const [guestFoodsCount, setGuestFoodsCount] = useState(0);
+	const [isGuest, setIsGuest] = useState(false);
 	const [isCreatingRecipe, setIsCreatingRecipe] = useState(false);
 	const [editingRecipe, setEditingRecipe] = useState<RecipeWithDetails | null>(null);
 	const [availableFoods, setAvailableFoods] = useState<Food[]>([]);
@@ -58,8 +58,8 @@ export default function CookingPage() {
 	// Check for guest data
 	useEffect(() => {
 		if (isGuest) {
-			setHasUnsavedData(hasGuestData());
-			setGuestFoodsCount(getGuestFoods().length);
+			// Check for guest data when status changes
+			hasGuestData();
 		}
 	}, [isGuest, saveStatus]);
 
@@ -120,9 +120,31 @@ export default function CookingPage() {
 	// Fetch user's recipes
 	useEffect(() => {
 		const fetchRecipes = async () => {
-			if (!isGuest) {
-				setLoadingRecipes(true);
-				try {
+			setLoadingRecipes(true);
+			try {
+				if (isGuest) {
+					// Convert guest recipes to RecipeWithDetails format
+					const guestRecipes = getGuestRecipes();
+					const convertedRecipes: RecipeWithDetails[] = guestRecipes.map((recipe) => ({
+						id: recipe.guestId,
+						userId: '',
+						name: recipe.name,
+						description: recipe.description ?? null,
+						notes: recipe.notes ?? null,
+						prepTime: recipe.prepTime ?? null,
+						cookTime: recipe.cookTime ?? null,
+						servings: recipe.servings,
+						isPublic: false,
+						imageUrl: null,
+						createdAt: new Date(recipe.createdAt),
+						updatedAt: new Date(recipe.updatedAt),
+						currentVersionId: null,
+						currentVersion: null,
+						versions: [],
+					}));
+					setRecipes(convertedRecipes);
+					setFilteredRecipes(convertedRecipes);
+				} else {
 					const response = await fetch('/api/cooking/recipes');
 					if (response.ok) {
 						const data = await response.json();
@@ -130,16 +152,16 @@ export default function CookingPage() {
 						setRecipes(data);
 						setFilteredRecipes(data);
 					}
-				} catch (error) {
-					console.error('Error fetching recipes:', error);
-				} finally {
-					setLoadingRecipes(false);
 				}
+			} catch (error) {
+				console.error('Error fetching recipes:', error);
+			} finally {
+				setLoadingRecipes(false);
 			}
 		};
 
 		void fetchRecipes();
-	}, [isGuest]);
+	}, [isGuest, saveStatus]);
 
 	const tabs = [
 		{ id: 'overview', label: 'Overview', icon: <HomeIcon /> },
@@ -251,23 +273,68 @@ export default function CookingPage() {
 	};
 
 	const handleSaveRecipe = async (recipeData: any) => {
-		const response = await fetch('/api/cooking/recipes', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(recipeData),
-		});
+		if (isGuest) {
+			// Save to guest storage
+			const guestRecipe = addGuestRecipe({
+				name: recipeData.name,
+				description: recipeData.description || null,
+				notes: recipeData.notes || null,
+				prepTime: recipeData.prepTime,
+				cookTime: recipeData.cookTime,
+				servings: recipeData.servings,
+				items: recipeData.items,
+			});
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || 'Failed to save recipe');
+			// Convert to RecipeWithDetails format
+			const newRecipe: RecipeWithDetails = {
+				id: guestRecipe.guestId,
+				userId: '',
+				name: guestRecipe.name,
+				description: guestRecipe.description ?? null,
+				notes: guestRecipe.notes ?? null,
+				prepTime: guestRecipe.prepTime ?? null,
+				cookTime: guestRecipe.cookTime ?? null,
+				servings: guestRecipe.servings,
+				isPublic: false,
+				imageUrl: null,
+				createdAt: new Date(guestRecipe.createdAt),
+				updatedAt: new Date(guestRecipe.updatedAt),
+				currentVersionId: null,
+				currentVersion: null,
+				versions: [],
+			};
+
+			setRecipes([...recipes, newRecipe]);
+			setFilteredRecipes([...filteredRecipes, newRecipe]);
+			setIsCreatingRecipe(false);
+
+			// Trigger re-render of guest data count
+			setSaveStatus({
+				type: 'success',
+				message: 'Recipe saved locally! Sign in to sync across devices.',
+			});
+			setTimeout(() => {
+				setSaveStatus(null);
+			}, 3000);
+		} else {
+			const response = await fetch('/api/cooking/recipes', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(recipeData),
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to save recipe');
+			}
+
+			const data = await response.json();
+			setRecipes([...recipes, data]);
+			setFilteredRecipes([...filteredRecipes, data]);
+			setIsCreatingRecipe(false);
 		}
-
-		const data = await response.json();
-		setRecipes([...recipes, data]);
-		setFilteredRecipes([...filteredRecipes, data]);
-		setIsCreatingRecipe(false);
 	};
 
 	const handleUpdateRecipe = async (recipeData: any) => {
@@ -320,29 +387,8 @@ export default function CookingPage() {
 				</div>
 			)}
 
-			{/* Guest Mode Notice */}
-			{isGuest && (
-				<div className='rounded-lg border border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 p-4'>
-					<div className='flex items-start justify-between'>
-						<div className='flex-1'>
-							<h3 className='text-lg font-semibold mb-1'>You&apos;re in Guest Mode</h3>
-							<p className='text-sm text-gray-600 dark:text-gray-400'>
-								Your data is saved locally on this device.
-								{hasUnsavedData && guestFoodsCount > 0 && (
-									<span className='font-medium'>
-										{' '}
-										You have {guestFoodsCount} saved food{guestFoodsCount !== 1 ? 's' : ''}.
-									</span>
-								)}{' '}
-								Sign in to sync across devices and never lose your data!
-							</p>
-						</div>
-						<a href='/api/auth/login' className='ml-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium'>
-							Sign In
-						</a>
-					</div>
-				</div>
-			)}
+			{/* Guest Mode Banner - now persistent and floating */}
+			<GuestModeBanner isGuest={isGuest} />
 
 			{/* Main Navigation Tabs */}
 			<div className='space-y-4'>
@@ -352,7 +398,7 @@ export default function CookingPage() {
 						<button
 							key={tab.id}
 							onClick={() => {
-								setActiveTab(tab.id);
+								setActiveTab(tab.id as 'cooking' | 'days' | 'goals' | 'history' | 'overview' | 'recipes' | 'scan');
 							}}
 							className={`flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}`}
 						>
@@ -500,21 +546,12 @@ export default function CookingPage() {
 												setIsCreatingRecipe(true);
 											}}
 											className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
-											disabled={isGuest}
 										>
 											Create Recipe
 										</button>
 									</div>
 
-									{isGuest ? (
-										<div className='rounded-lg border border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 p-6'>
-											<h3 className='text-lg font-semibold mb-2'>Sign In to Create Recipes</h3>
-											<p className='text-sm text-gray-600 dark:text-gray-400 mb-4'>Recipe creation requires an account to save your creations and access them from any device.</p>
-											<a href='/api/auth/login' className='inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'>
-												Sign In
-											</a>
-										</div>
-									) : loadingRecipes ? (
+									{loadingRecipes ? (
 										<div className='flex justify-center py-8'>
 											<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500'></div>
 										</div>
@@ -533,7 +570,6 @@ export default function CookingPage() {
 														setIsCreatingRecipe(true);
 													}}
 													className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2'
-													disabled={isGuest}
 												>
 													<svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
 														<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' />
@@ -568,16 +604,14 @@ export default function CookingPage() {
 													</svg>
 													<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>No recipes yet</h3>
 													<p className='text-gray-600 dark:text-gray-400 mb-6'>Create your first recipe to start building your cookbook</p>
-													{!isGuest && (
-														<button
-															onClick={() => {
-																setIsCreatingRecipe(true);
-															}}
-															className='px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
-														>
-															Create Your First Recipe
-														</button>
-													)}
+													<button
+														onClick={() => {
+															setIsCreatingRecipe(true);
+														}}
+														className='px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
+													>
+														Create Your First Recipe
+													</button>
 												</div>
 											) : (
 												<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
@@ -623,22 +657,21 @@ export default function CookingPage() {
 											</svg>
 											<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>No recipes yet</h3>
 											<p className='text-gray-600 dark:text-gray-400 mb-6'>Create your first recipe to start building your cookbook</p>
-											{!isGuest && (
-												<button
-													onClick={() => {
-														setIsCreatingRecipe(true);
-													}}
-													className='px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
-												>
-													Create Your First Recipe
-												</button>
-											)}
+											<button
+												onClick={() => {
+													setIsCreatingRecipe(true);
+												}}
+												className='px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
+											>
+												Create Your First Recipe
+											</button>
 										</div>
 									)}
 								</>
 							) : isCreatingRecipe ? (
 								<RecipeCreator
 									availableFoods={availableFoods}
+									availableRecipes={recipes}
 									onSave={handleSaveRecipe}
 									onCancel={() => {
 										setIsCreatingRecipe(false);
@@ -648,6 +681,7 @@ export default function CookingPage() {
 								<RecipeEditor
 									recipe={editingRecipe}
 									availableFoods={availableFoods}
+									availableRecipes={recipes.filter((r) => r.id !== editingRecipe.id)}
 									onSave={handleUpdateRecipe}
 									onCancel={() => {
 										setEditingRecipe(null);
@@ -660,24 +694,12 @@ export default function CookingPage() {
 					{/* Days Tab */}
 					{activeTab === 'days' && (
 						<div>
-							<DayTracker />
+							<DayTracker isGuest={isGuest} availableFoods={availableFoods} availableRecipes={recipes} />
 						</div>
 					)}
 
 					{/* Goals Tab */}
-					{activeTab === 'goals' && (
-						<div className='space-y-4'>
-							<div className='flex items-center justify-between'>
-								<h2 className='text-2xl font-bold'>Nutrition Goals</h2>
-								<button className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'>Set Goals</button>
-							</div>
-							<div className='rounded-lg border p-10 flex flex-col items-center justify-center'>
-								<GoalIcon />
-								<p className='text-lg font-medium mt-4'>No goals set</p>
-								<p className='text-sm text-gray-600 dark:text-gray-400'>Set your daily nutrition targets</p>
-							</div>
-						</div>
-					)}
+					{activeTab === 'goals' && <GoalsManager isGuest={isGuest} />}
 
 					{/* Cooking Mode Tab */}
 					{activeTab === 'cooking' && (
