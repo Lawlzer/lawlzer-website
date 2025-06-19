@@ -1,15 +1,30 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { SessionData } from '~/server/db/session';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createMockUser } from '../../testUtils/unit/auth.helpers';
+import { renderWithProviders } from '../../testUtils/unit/render.helpers';
 
 // Import after mocks are defined
 import Topbar from './Topbar';
-import { getBaseUrl } from '~/lib/utils';
 
 // Mock dependencies
 vi.mock('./AuthButton', () => ({
-	default: () => <div data-testid='auth-button-mock'>Auth Button</div>,
+	default: ({ initialSession }: any) => {
+		const user = initialSession?.user;
+		if (user) {
+			return <div data-testid='auth-button'>{user.name || user.email || 'Account'}</div>;
+		}
+		return <div data-testid='auth-button'>Sign In</div>;
+	},
+}));
+
+vi.mock('./ProtectedLink', () => ({
+	default: ({ href, children, className, onClick }: any) => (
+		<a href={href} className={className} onClick={onClick}>
+			{children}
+		</a>
+	),
 }));
 
 vi.mock('~/server/db/session', () => ({
@@ -17,49 +32,156 @@ vi.mock('~/server/db/session', () => ({
 }));
 
 vi.mock('~/lib/utils', () => ({
-	getBaseUrl: vi.fn().mockImplementation((subdomain?: string) => {
-		if (subdomain === 'valorant') return 'https://valorant.example.com';
-		if (subdomain === 'colors') return 'https://colors.example.com';
-		return 'https://example.com';
-	}),
+	cn: (...args: any[]) => args.filter(Boolean).join(' '),
+	getBaseUrl: (subdomain?: string) => {
+		if (subdomain !== undefined && subdomain !== '' && subdomain !== null) {
+			return `http://localhost:3000/${subdomain}`;
+		}
+		return 'http://localhost:3000';
+	},
 	subdomains: [
-		{ name: 'valorant', path: '/subdomains/valorant' },
-		{ name: 'colors', path: '/subdomains/colors' },
+		{ name: 'colors', description: 'Color tools' },
+		{ name: 'valorant', description: 'Valorant tools' },
 	],
 }));
 
-// Mock the entire Topbar component - renders a simplified version for testing
-vi.mock('./Topbar', () => ({
-	__esModule: true,
-	default: () => (
-		<nav role='navigation' className='bg-secondary text-secondary-foreground p-4 h-16 border-b border-border'>
-			<div className='w-full flex justify-between items-start h-full'>
-				<div className='flex space-x-4 flex-wrap'>
-					<a href='https://example.com' className='button-class'>
-						Home
-					</a>
-					<a href='https://valorant.example.com' className='button-class'>
-						Valorant
-					</a>
-					<a href='https://colors.example.com' className='button-class'>
-						Colors
-					</a>
-				</div>
-				<div>
-					<div data-testid='auth-button-mock'>Auth Button</div>
-				</div>
-			</div>
-		</nav>
-	),
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+	usePathname: () => '/',
 }));
+
+// Mock framer-motion to avoid animation issues in tests
+vi.mock('framer-motion', () => {
+	// Filter out framer-motion specific props
+	const filterMotionProps = (props: any): Record<string, any> => {
+		const { initial, animate, exit, transition, variants, whileHover, whileTap, whileDrag, whileFocus, whileInView, drag, dragConstraints, dragElastic, dragMomentum, layoutId, layout, layoutDependency, onAnimationStart, onAnimationComplete, ...validProps } = props;
+		return validProps as Record<string, any>;
+	};
+
+	return {
+		motion: {
+			div: ({ children, ...props }: any) => <div {...filterMotionProps(props)}>{children}</div>,
+			button: ({ children, ...props }: any) => <button {...filterMotionProps(props)}>{children}</button>,
+			nav: ({ children, ...props }: any) => <nav {...filterMotionProps(props)}>{children}</nav>,
+			a: ({ children, ...props }: any) => <a {...filterMotionProps(props)}>{children}</a>,
+		},
+		AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+	};
+});
 
 describe('Topbar', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
+	afterEach(() => {
+		cleanup();
+	});
+
+	describe('Desktop Navigation', () => {
+		it('should render all navigation links', () => {
+			const { getByText } = renderWithProviders(<Topbar session={null} />);
+
+			expect(getByText('Home')).toBeInTheDocument();
+			expect(getByText('Colors')).toBeInTheDocument();
+			expect(getByText('Valorant')).toBeInTheDocument();
+		});
+
+		it('should not show mobile menu button on desktop', () => {
+			const { container } = renderWithProviders(<Topbar session={null} />);
+			const mobileButton = container.querySelector('[aria-label="Toggle menu"]');
+
+			// The button exists but is hidden on desktop (md:hidden class)
+			expect(mobileButton).toBeInTheDocument();
+			expect(mobileButton).toHaveClass('md:hidden');
+		});
+	});
+
+	describe('Mobile Navigation', () => {
+		it('should show mobile menu button', () => {
+			const { getByLabelText } = renderWithProviders(<Topbar session={null} />);
+			const menuButton = getByLabelText('Toggle menu');
+
+			expect(menuButton).toBeInTheDocument();
+		});
+
+		it('should toggle mobile menu when button is clicked', async () => {
+			const { getByLabelText, queryByText } = renderWithProviders(<Topbar session={null} />);
+			const menuButton = getByLabelText('Toggle menu');
+
+			// Menu should be closed initially (mobile menu items not visible)
+			expect(queryByText('Home')).toBeVisible(); // Desktop nav is visible
+
+			// Open menu
+			fireEvent.click(menuButton);
+
+			// Now there should be two "Home" links - one for desktop, one for mobile
+			await waitFor(() => {
+				const homeLinks = screen.getAllByText('Home');
+				expect(homeLinks).toHaveLength(2); // Desktop + Mobile
+			});
+		});
+
+		it('should close mobile menu when backdrop is clicked', async () => {
+			const { getByLabelText, container } = renderWithProviders(<Topbar session={null} />);
+			const menuButton = getByLabelText('Toggle menu');
+
+			// Open menu
+			fireEvent.click(menuButton);
+
+			// Find and click backdrop
+			await waitFor(() => {
+				const backdrop = container.querySelector('.fixed.inset-0.bg-black\\/20');
+				expect(backdrop).toBeInTheDocument();
+				fireEvent.click(backdrop!);
+			});
+
+			// Menu should be closed
+			await waitFor(() => {
+				const backdrop = container.querySelector('.fixed.inset-0.bg-black\\/20');
+				expect(backdrop).not.toBeInTheDocument();
+			});
+		});
+	});
+
+	describe('Scroll Effects', () => {
+		it('should add scrolled styles when page is scrolled', async () => {
+			const { container } = renderWithProviders(<Topbar session={null} />);
+			const nav = container.querySelector('nav#navigation');
+
+			// Initial state - not scrolled
+			expect(nav).toHaveClass('bg-background/60');
+
+			// Simulate scroll
+			window.scrollY = 50;
+			fireEvent.scroll(window);
+
+			await waitFor(() => {
+				expect(nav).toHaveClass('bg-background/80');
+			});
+		});
+	});
+
+	describe('Authentication Integration', () => {
+		it('should show AuthButton with session when logged in', () => {
+			const mockUser = createMockUser();
+			const mockSession = {
+				user: mockUser,
+				expires: new Date(Date.now() + 1000 * 60 * 60),
+			};
+
+			const { getByText } = renderWithProviders(<Topbar session={mockSession} />);
+			expect(getByText('Test User')).toBeInTheDocument();
+		});
+
+		it('should show AuthButton without session when logged out', () => {
+			const { getByText } = renderWithProviders(<Topbar session={null} />);
+			expect(getByText('Sign In')).toBeInTheDocument();
+		});
+	});
+
 	it('renders the component with correct links', () => {
-		render(<Topbar />);
+		render(<Topbar session={null} />);
 
 		// Check if base navigation links exist
 		expect(screen.getByText('Home')).toBeInTheDocument();
@@ -71,32 +193,34 @@ describe('Topbar', () => {
 		const valorantLink = screen.getByText('Valorant').closest('a');
 		const colorsLink = screen.getByText('Colors').closest('a');
 
-		expect(homeLink).toHaveAttribute('href', 'https://example.com');
-		expect(valorantLink).toHaveAttribute('href', 'https://valorant.example.com');
-		expect(colorsLink).toHaveAttribute('href', 'https://colors.example.com');
+		// Home link should always be relative
+		expect(homeLink).toHaveAttribute('href', '/');
+
+		// Subdomain links will be constructed based on window.location
+		// In test environment with localhost:3000, they generate proper subdomain URLs
+		expect(valorantLink).toHaveAttribute('href', 'http://valorant.localhost:3000');
+		expect(colorsLink).toHaveAttribute('href', 'http://colors.localhost:3000');
 	});
 
 	it('includes the AuthButton component', () => {
-		render(<Topbar />);
+		render(<Topbar session={null} />);
 
 		// Check if AuthButton is rendered
-		expect(screen.getByTestId('auth-button-mock')).toBeInTheDocument();
+		expect(screen.getByTestId('auth-button')).toBeInTheDocument();
 	});
 
 	it('has the correct layout and styling', () => {
-		render(<Topbar />);
+		render(<Topbar session={null} />);
 
-		// Check if nav element has correct classes
+		// Check if nav element exists and has id
 		const nav = screen.getByRole('navigation');
-		expect(nav).toHaveClass('h-16');
+		expect(nav).toHaveAttribute('id', 'navigation');
 
-		// Check container layout - updated classes
-		const container = nav.firstChild;
-		expect(container).not.toHaveClass('container'); // Should not have container
-		expect(container).not.toHaveClass('mx-auto'); // Should not have mx-auto
-		expect(container).toHaveClass('w-full');
+		// Check container layout
+		const container = nav.querySelector('.mx-auto');
+		expect(container).toBeInTheDocument();
 		expect(container).toHaveClass('flex');
 		expect(container).toHaveClass('justify-between');
-		expect(container).toHaveClass('items-start'); // Check for items-start
+		expect(container).toHaveClass('items-center');
 	});
 });

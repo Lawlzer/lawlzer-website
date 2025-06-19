@@ -1,4 +1,43 @@
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
 import { env } from '~/env.mjs';
+
+export function cn(...inputs: ClassValue[]) {
+	return twMerge(clsx(inputs));
+}
+
+/**
+ * Converts camelCase, snake_case, or PascalCase strings to Title Case with spaces
+ * @param str - The string to convert
+ * @returns The converted string in Title Case
+ * @example
+ * formatFieldName('activeChartTab') // 'Active Chart Tab'
+ * formatFieldName('temperature_data') // 'Temperature Data'
+ * formatFieldName('maxValue') // 'Max Value'
+ * formatFieldName('HTTPResponse') // 'HTTP Response'
+ */
+export function formatFieldName(str: string): string {
+	if (!str) return '';
+
+	// First handle snake_case by replacing underscores with spaces
+	let result = str.replace(/_/g, ' ');
+
+	// Then handle camelCase and PascalCase
+	// Insert space before uppercase letters that follow lowercase letters or numbers
+	result = result.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+
+	// Handle consecutive uppercase letters (e.g., HTTPResponse -> HTTP Response)
+	result = result.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+
+	// Capitalize the first letter of each word
+	result = result.replace(/\b\w/g, (char) => char.toUpperCase());
+
+	// Clean up any double spaces
+	result = result.replace(/\s+/g, ' ').trim();
+
+	return result;
+}
 
 function throwError(message: string): never {
 	throw new Error(message);
@@ -50,14 +89,15 @@ export function pathToURLTestsOnly(filePath: string): string {
 	return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}${path}`;
 }
 
-export type Subdomain = {
+export interface Subdomain {
 	name: string;
 	filePath: string;
-};
+}
 
 export const subdomains: Subdomain[] = [
 	{ name: 'valorant', filePath: '/subdomains/valorant' },
 	{ name: 'colors', filePath: '/subdomains/colors' },
+	{ name: 'staging', filePath: '/subdomains/root' },
 ];
 
 export type SubdomainName = (typeof subdomains)[number]['name'];
@@ -71,22 +111,22 @@ export function getBaseUrl(subdomain?: SubdomainName | null): string {
 	if (port === '80' || port === '443') port = '';
 
 	let subdomainText = '';
-	if (subdomain) subdomainText = `${subdomain}.`;
+	if (subdomain !== undefined && subdomain !== null) subdomainText = `${subdomain}.`;
 
 	// Special case for localhost development
 	if (topLevel === 'localhost') {
 		// For localhost, build the URL as subdomain.secondLevel.localhost:port
 		// But if no subdomain and secondLevel is 'localhost', use just localhost:port
-		if (!subdomain && secondLevel === 'localhost') {
-			return `${protocol}://localhost${port ? `:${port}` : ''}`;
+		if ((subdomain === undefined || subdomain === null) && secondLevel === 'localhost') {
+			return `${protocol}://localhost${port !== '' ? `:${port}` : ''}`;
 		}
-		return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}`;
+		return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port !== '' ? `:${port}` : ''}`;
 	}
 
 	// Special case for when secondLevel is localhost (legacy support)
 	if (secondLevel === 'localhost') {
-		return `${protocol}://${subdomainText}${secondLevel}${port ? `:${port}` : ''}`;
+		return `${protocol}://${subdomainText}${secondLevel}${port !== '' ? `:${port}` : ''}`;
 	}
 
-	return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}`;
+	return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port !== '' ? `:${port}` : ''}`;
 }

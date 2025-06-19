@@ -1,10 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+
 import { env } from '~/env.mjs';
 import { getCookieDomain } from '~/lib/auth';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-	const searchParams = request.nextUrl.searchParams;
+	const { searchParams } = request.nextUrl;
 	const code = searchParams.get('code');
 	const state = searchParams.get('state');
 	const error = searchParams.get('error');
@@ -13,11 +14,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	const savedState = request.cookies.get('auth_state')?.value;
 
 	// Check if there was an error or if the state doesn't match
-	if (error) {
+	if (error !== null) {
 		return NextResponse.redirect(new URL(`/error/auth?error=${error}`, request.url));
 	}
 
-	if (!code || !state || !savedState || state !== savedState) {
+	if (code === null || state === null || savedState === undefined || state !== savedState) {
 		return NextResponse.redirect(new URL('/error/auth?error=invalid_state', request.url));
 	}
 

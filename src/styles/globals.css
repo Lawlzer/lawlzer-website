@@ -6,30 +6,32 @@
 
 /* Define theme variables using standard CSS custom properties */
 :root {
-	/* Light Mode Defaults (from PREDEFINED_PALETTES['Light Mode']) */
+	/* Light Mode Defaults */
 	--page-background: #ffffff;
 	--primary-text-color: #111827;
 	--primary-color: #3c33e6;
-	--secondary-colour: #f2f2f2; /* Mapped from SECONDARY_COLOR */
+	--secondary-colour: #f3f4f6;
 	--secondary-text-color: #6b7280;
 	--custom-border-color: #e5e7eb;
 
-	/* Default derived/semantic colors (Light Mode) */
-	--primary-foreground-color: #ffffff; /* White text on primary blue */
-	--secondary-foreground-color: #111827; /* Dark text on secondary light gray */
-	--muted-foreground-color: #6b7280; /* Standard secondary text color */
-	--accent-foreground-color: #ffffff; /* White text on primary blue accent */
-	--destructive-color: #ef4444; /* Tailwind red-500 */
-	--destructive-foreground-color: #ffffff; /* White */
-	--ring-color: #6366f1; /* Tailwind indigo-500 (adjust as needed) */
-	--popover-background: #ffffff; /* Same as page background */
-	--popover-foreground-color: #111827; /* Same as primary text */
+	/* Derived/semantic colors (Light Mode) */
+	--primary-foreground-color: #ffffff;
+	--secondary-foreground-color: #111827;
+	--muted-foreground-color: #6b7280;
+	--accent-foreground-color: #ffffff;
+	--destructive-color: #ef4444;
+	--destructive-foreground-color: #ffffff;
+	--ring-color: #6366f1;
+	--popover-background: #ffffff;
+	--popover-foreground-color: #111827;
+	--card-background: #ffffff;
+	--card-foreground: #111827;
 
-	/* Map semantic colors to Tailwind CSS variables */
+	/* Map semantic colors */
 	--background: var(--page-background);
 	--foreground: var(--primary-text-color);
-	--card: var(--page-background);
-	--card-foreground: var(--primary-text-color);
+	--card: var(--card-background);
+	--card-foreground: var(--card-foreground);
 	--popover: var(--popover-background);
 	--popover-foreground: var(--popover-foreground-color);
 	--primary: var(--primary-color);
@@ -43,38 +45,144 @@
 	--destructive: var(--destructive-color);
 	--destructive-foreground: var(--destructive-foreground-color);
 	--border: var(--custom-border-color);
-	--input: var(--secondary-colour); /* Input background often matches secondary/muted */
+	--input: var(--secondary-colour);
 	--ring: var(--ring-color);
-	--secondary-text: var(--secondary-text-color); /* Explicit variable for secondary text */
+	--secondary-text: var(--secondary-text-color);
 
+	/* Enhanced Spacing scale */
+	--spacing-2xs: 0.125rem; /* 2px */
+	--spacing-xs: 0.25rem; /* 4px */
+	--spacing-sm: 0.5rem; /* 8px */
+	--spacing-md: 1rem; /* 16px */
+	--spacing-lg: 1.5rem; /* 24px */
+	--spacing-xl: 2rem; /* 32px */
+	--spacing-2xl: 3rem; /* 48px */
+	--spacing-3xl: 4rem; /* 64px */
+	--spacing-4xl: 6rem; /* 96px */
+
+	/* Enhanced Border radius */
 	--radius: 0.5rem;
+	--radius-xs: 0.125rem;
+	--radius-sm: 0.25rem;
+	--radius-md: 0.5rem;
+	--radius-lg: 0.75rem;
+	--radius-xl: 1rem;
+	--radius-2xl: 1.5rem;
+	--radius-full: 9999px;
+
+	/* Enhanced Shadows with colored variants */
+	--shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+	--shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+	--shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+	--shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+	--shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+	--shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+	--shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25), 0 0 0 1px rgb(0 0 0 / 0.02);
+	--shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.06);
+	--shadow-primary: 0 4px 14px 0 rgb(60 51 230 / 0.2);
+	--shadow-glow: 0 0 20px rgb(60 51 230 / 0.15);
+
+	/* Enhanced Transitions */
+	--transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+	--transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+	--transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+	--transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+	/* Animations - Spring physics */
+	--ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+	--ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+	--ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+
+	/* Enhanced Typography scale */
+	--font-size-2xs: 0.625rem; /* 10px */
+	--font-size-xs: 0.75rem; /* 12px */
+	--font-size-sm: 0.875rem; /* 14px */
+	--font-size-base: 1rem; /* 16px */
+	--font-size-lg: 1.125rem; /* 18px */
+	--font-size-xl: 1.25rem; /* 20px */
+	--font-size-2xl: 1.5rem; /* 24px */
+	--font-size-3xl: 1.875rem; /* 30px */
+	--font-size-4xl: 2.25rem; /* 36px */
+	--font-size-5xl: 3rem; /* 48px */
+	--font-size-6xl: 3.75rem; /* 60px */
+	--font-size-7xl: 4.5rem; /* 72px */
+
+	/* Line heights */
+	--line-height-tight: 1.1;
+	--line-height-snug: 1.375;
+	--line-height-normal: 1.5;
+	--line-height-relaxed: 1.625;
+	--line-height-loose: 2;
+
+	/* Letter spacing */
+	--letter-spacing-tighter: -0.05em;
+	--letter-spacing-tight: -0.025em;
+	--letter-spacing-normal: 0;
+	--letter-spacing-wide: 0.025em;
+	--letter-spacing-wider: 0.05em;
+	--letter-spacing-widest: 0.1em;
+
+	/* Z-index scale */
+	--z-base: 0;
+	--z-dropdown: 100;
+	--z-sticky: 200;
+	--z-overlay: 300;
+	--z-modal: 400;
+	--z-popover: 500;
+	--z-tooltip: 600;
+
+	/* Backdrop filters */
+	--backdrop-blur: blur(10px);
+	--backdrop-blur-sm: blur(4px);
+	--backdrop-blur-md: blur(12px);
+	--backdrop-blur-lg: blur(16px);
+	--backdrop-blur-xl: blur(24px);
+
+	/* Glass morphism */
+	--glass-bg: rgba(255, 255, 255, 0.7);
+	--glass-border: rgba(255, 255, 255, 0.18);
+	--glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		/* Dark Mode Defaults (from PREDEFINED_PALETTES['Dark Mode']) */
-		--page-background: #1f2937;
-		--primary-text-color: #f9fafb;
-		--primary-color: #818cf8;
-		--secondary-colour: #374151; /* Mapped from SECONDARY_COLOR */
-		--secondary-text-color: #9ca3af;
-		--custom-border-color: #4b5563;
+		/* Dark Mode Defaults */
+		--page-background: #0f172a;
+		--primary-text-color: #f8fafc;
+		--primary-color: #6366f1;
+		--secondary-colour: #1e293b;
+		--secondary-text-color: #94a3b8;
+		--custom-border-color: #334155;
 
-		/* Default derived/semantic colors (Dark Mode) */
-		--primary-foreground-color: #1f2937; /* Dark text on primary light purple */
-		--secondary-foreground-color: #f9fafb; /* Light text on secondary dark gray */
-		--muted-foreground-color: #9ca3af; /* Standard secondary text color */
-		--accent-foreground-color: #1f2937; /* Dark text on primary light purple accent */
-		--destructive-color: #f87171; /* Tailwind red-400 */
-		--destructive-foreground-color: #ffffff; /* White */
-		--ring-color: #a5b4fc; /* Tailwind indigo-300 (adjust as needed) */
-		--popover-background: #374151; /* Darker background for popovers */
-		--popover-foreground-color: #f9fafb; /* Light text */
+		/* Derived/semantic colors (Dark Mode) */
+		--primary-foreground-color: #f8fafc;
+		--secondary-foreground-color: #f8fafc;
+		--muted-foreground-color: #94a3b8;
+		--accent-foreground-color: #f8fafc;
+		--destructive-color: #f87171;
+		--destructive-foreground-color: #0f172a;
+		--ring-color: #8b5cf6;
+		--popover-background: #1e293b;
+		--popover-foreground-color: #f8fafc;
+		--card-background: #1e293b;
+		--card-foreground: #f8fafc;
 
-		/* Tailwind variable mappings will inherit from :root unless overridden here */
-		/* Most mappings are likely okay, but check if any need specific dark mode overrides */
-		/* Example: --input might use a slightly different shade in dark mode */
-		/* --input: #4b5563; */ /* If needed */
+		/* Enhanced Shadows - softer for dark mode */
+		--shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+		--shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+		--shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+		--shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+		--shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+		--shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+		--shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.05);
+		--shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.15);
+		--shadow-primary: 0 4px 14px 0 rgb(99 102 241 / 0.3);
+		--shadow-glow: 0 0 30px rgb(99 102 241 / 0.2);
+
+		/* Glass morphism - dark mode */
+		--glass-bg: rgba(30, 41, 59, 0.7);
+		--glass-border: rgba(255, 255, 255, 0.1);
+		--glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 	}
 }
 
@@ -131,76 +239,461 @@
 @utility text-secondary-text {
 	@apply text-[var(--secondary-text)];
 }
+@utility bg-input {
+	@apply bg-[var(--input)];
+}
+@utility border-primary {
+	@apply border-[var(--primary)];
+}
+@utility bg-card {
+	@apply bg-[var(--card)];
+}
+@utility text-card-foreground {
+	@apply text-[var(--card-foreground)];
+}
 
 /* Apply base styles */
 @layer base {
-	body {
-		/* Use @apply with the defined utilities */
-		@apply bg-background text-foreground;
-		/* Add smooth scrolling */
+	* {
+		/* Better box-sizing */
+		box-sizing: border-box;
+	}
+
+	html {
+		/* Smooth scrolling */
 		scroll-behavior: smooth;
-		/* Improve font rendering */
+		/* Better text rendering */
+		text-rendering: optimizeLegibility;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 	}
 
+	body {
+		@apply bg-background text-foreground;
+		/* Default font family */
+		font-family:
+			system-ui,
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			Roboto,
+			'Helvetica Neue',
+			Arial,
+			sans-serif;
+		/* Base line height */
+		line-height: var(--line-height-normal);
+		/* Prevent layout shift from scrollbar */
+		overflow-y: scroll;
+		/* Smooth transitions for theme changes */
+		transition:
+			background-color var(--transition-slow),
+			color var(--transition-slow);
+	}
+
 	/* Control color transitions */
 	:root {
-		/* Add a smooth transition for colors by default */
 		transition:
-			background-color 0.2s ease,
-			color 0.2s ease,
-			border-color 0.2s ease;
+			background-color var(--transition-base),
+			color var(--transition-base),
+			border-color var(--transition-base);
 	}
 
 	/* Class to pause color transitions during initial load */
-	.color-transition-paused {
-		/* Immediately apply colors without transition */
+	.color-transition-paused,
+	.color-transition-paused * {
 		transition: none !important;
 	}
 
-	/* Basic heading styles */
+	/* Enhanced Typography */
 	h1,
 	h2,
 	h3,
 	h4,
 	h5,
 	h6 {
-		@apply font-semibold tracking-tight;
+		@apply font-bold;
+		line-height: var(--line-height-tight);
+		letter-spacing: var(--letter-spacing-tight);
+		margin-top: 0;
+		margin-bottom: var(--spacing-md);
+		transition: color var(--transition-fast);
 	}
 
 	h1 {
-		font-size: theme('fontSize.4xl');
+		font-size: clamp(var(--font-size-4xl), 5vw, var(--font-size-6xl));
+		margin-bottom: var(--spacing-lg);
 	}
 	h2 {
-		font-size: theme('fontSize.3xl');
+		font-size: clamp(var(--font-size-3xl), 4vw, var(--font-size-5xl));
+		margin-top: var(--spacing-xl);
 	}
 	h3 {
-		font-size: theme('fontSize.2xl');
+		font-size: clamp(var(--font-size-2xl), 3vw, var(--font-size-4xl));
+		margin-top: var(--spacing-lg);
 	}
 	h4 {
-		font-size: theme('fontSize.xl');
+		font-size: var(--font-size-xl);
 	}
 	h5 {
-		font-size: theme('fontSize.lg');
+		font-size: var(--font-size-lg);
 	}
 	h6 {
-		font-size: theme('fontSize.base');
+		font-size: var(--font-size-base);
 	}
 
-	/* Basic link styles */
+	/* Paragraph spacing */
+	p {
+		margin-bottom: var(--spacing-md);
+		line-height: var(--line-height-relaxed);
+	}
+
+	/* Enhanced Link styles */
 	a {
-		/* Use @apply with the defined utility */
-		@apply text-primary underline-offset-4;
-		text-decoration-line: none; /* Start with no underline */
+		@apply text-primary relative;
+		text-decoration: none;
+		transition: all var(--transition-fast);
+		position: relative;
+	}
+
+	a::after {
+		content: '';
+		position: absolute;
+		bottom: -2px;
+		left: 0;
+		width: 0;
+		height: 2px;
+		background-color: var(--primary);
+		transition: width var(--transition-base) var(--ease-spring);
+	}
+
+	a:hover::after {
+		width: 100%;
 	}
 
 	a:hover {
-		@apply underline;
+		filter: brightness(1.2);
+	}
+
+	/* Enhanced Button base styles */
+	button {
+		@apply font-medium;
+		cursor: pointer;
+		border-radius: var(--radius);
+		padding: var(--spacing-sm) var(--spacing-md);
+		transition: all var(--transition-fast);
+		position: relative;
+		overflow: hidden;
+		transform-style: preserve-3d;
+	}
+
+	button::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+		transform: translateX(-100%);
+		transition: transform 0.6s;
+	}
+
+	button:hover::before {
+		transform: translateX(100%);
+	}
+
+	button:hover {
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
+	}
+
+	button:active {
+		transform: translateY(0);
+		box-shadow: var(--shadow-sm);
+	}
+
+	/* Enhanced Input styles */
+	input,
+	textarea,
+	select {
+		@apply border-border bg-input;
+		border-width: 1px;
+		border-radius: var(--radius);
+		padding: var(--spacing-sm) var(--spacing-md);
+		transition: all var(--transition-fast);
+		width: 100%;
+		font-size: var(--font-size-base);
+	}
+
+	input:focus,
+	textarea:focus,
+	select:focus {
+		@apply ring-ring border-primary;
+		outline: none;
+		box-shadow: 0 0 0 3px rgb(99 102 241 / 0.1);
+		transform: translateY(-1px);
+	}
+
+	/* Modern placeholder styles */
+	::placeholder {
+		color: var(--secondary-text-color);
+		opacity: 0.7;
+	}
+
+	/* Code blocks */
+	code {
+		@apply bg-muted text-sm;
+		padding: 0.125rem 0.375rem;
+		border-radius: var(--radius-sm);
+		font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+		font-weight: 500;
+	}
+
+	pre {
+		@apply bg-muted;
+		padding: var(--spacing-lg);
+		border-radius: var(--radius-lg);
+		overflow-x: auto;
+		margin-bottom: var(--spacing-md);
+		box-shadow: var(--shadow-inner);
+		border: 1px solid var(--border);
+	}
+
+	pre code {
+		background: transparent;
+		padding: 0;
+		font-weight: 400;
+	}
+
+	/* Lists */
+	ul,
+	ol {
+		margin-bottom: var(--spacing-md);
+		padding-left: var(--spacing-lg);
+	}
+
+	li {
+		margin-bottom: var(--spacing-xs);
+		line-height: var(--line-height-relaxed);
+	}
+
+	/* Enhanced Selection color */
+	::selection {
+		background-color: var(--primary);
+		color: var(--primary-foreground);
+		text-shadow: none;
+	}
+
+	/* Focus visible styles */
+	:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+		border-radius: var(--radius-sm);
+	}
+
+	/* Scrollbar styles */
+	::-webkit-scrollbar {
+		width: 12px;
+		height: 12px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: var(--secondary);
+		border-radius: var(--radius-full);
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: var(--secondary-text);
+		border-radius: var(--radius-full);
+		border: 3px solid var(--secondary);
+		transition: background var(--transition-fast);
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--primary);
 	}
 }
 
-/* Keep existing utilities or add new ones */
-@layer utilities {
-	/* All custom utility classes removed as they were unused in provided files */
+/* Custom animation classes as regular CSS classes */
+.animate-fade-in {
+	animation: fadeIn var(--transition-slow) var(--ease-out-expo);
+}
+
+.animate-fade-in-up {
+	animation: fadeInUp var(--transition-slow) var(--ease-out-expo);
+}
+
+.animate-fade-in-down {
+	animation: fadeInDown var(--transition-slow) var(--ease-out-expo);
+}
+
+.animate-scale-in {
+	animation: scaleIn var(--transition-base) var(--ease-spring);
+}
+
+.animate-slide-in-right {
+	animation: slideInRight var(--transition-slow) var(--ease-out-expo);
+}
+
+.animate-slide-in-left {
+	animation: slideInLeft var(--transition-slow) var(--ease-out-expo);
+}
+
+.animate-pulse-soft {
+	animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Shimmer loading effect */
+.shimmer {
+	background: linear-gradient(90deg, var(--secondary) 0%, var(--muted) 50%, var(--secondary) 100%);
+	background-size: 200% 100%;
+	animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Glass effect */
+.glass {
+	background: var(--glass-bg);
+	backdrop-filter: var(--backdrop-blur);
+	-webkit-backdrop-filter: var(--backdrop-blur);
+	border: 1px solid var(--glass-border);
+	box-shadow: var(--glass-shadow);
+}
+
+/* Glow effect */
+.glow {
+	box-shadow: var(--shadow-glow);
+	transition: box-shadow var(--transition-base);
+}
+
+.glow:hover {
+	box-shadow: 0 0 40px rgb(99 102 241 / 0.3);
+}
+
+/* Text gradient */
+.text-gradient {
+	background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+/* Hover lift effect */
+.hover-lift {
+	transition: all var(--transition-base) var(--ease-spring);
+}
+
+.hover-lift:hover {
+	transform: translateY(-4px);
+	box-shadow: var(--shadow-lg);
+}
+
+/* Card hover effect */
+.card-hover {
+	transition: all var(--transition-base);
+	cursor: pointer;
+}
+
+.card-hover:hover {
+	transform: translateY(-2px) scale(1.02);
+	box-shadow: var(--shadow-xl);
+	border-color: var(--primary);
+}
+
+/* Animation delay utility classes */
+.animation-delay-2000 {
+	animation-delay: 2000ms;
+}
+
+.animation-delay-4000 {
+	animation-delay: 4000ms;
+}
+
+/* Keyframe animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes fadeInDown {
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes scaleIn {
+	from {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes slideInRight {
+	from {
+		opacity: 0;
+		transform: translateX(30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes slideInLeft {
+	from {
+		opacity: 0;
+		transform: translateX(-30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes pulseSoft {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.7;
+	}
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+/* Add subtle grid pattern background */
+.bg-grid-pattern {
+	background-image: linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+	background-size: 50px 50px;
 }

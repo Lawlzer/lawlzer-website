@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+
+jobs:
+  test-notice:
+    name: Tests Notice
+    runs-on: ubuntu-latest
+    steps:
+      - name: Testing Reminder
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 TESTING REMINDER"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━1━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Tests are not run in CI to save time and resources."
+          echo "Please ensure you have run tests locally before pushing:"
+          echo ""
+          echo "  npm run test        # Run all tests"
+          echo "  npm run test:unit   # Run unit tests only"
+          echo "  npm run test:e2e    # Run E2E tests only"
+          echo ""
+          echo "Pre-commit hooks run linting (ESLint & Prettier) automatically."
+          echo "To install pre-commit hooks: npm run prepare"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Run ESLint
+        run: npm run lint:eslint:commit
+
+      - name: Run Prettier check
+        run: npm run lint:prettier:commit
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build application
+        run: npm run build
+        env:
+          SKIP_ENV_VALIDATION: true
+          NEXT_TELEMETRY_DISABLED: 1
+          # Required Next.js public env vars for build
+          NEXT_PUBLIC_SCHEME: 'http'
+          NEXT_PUBLIC_SECOND_LEVEL_DOMAIN: 'dev'
+          NEXT_PUBLIC_TOP_LEVEL_DOMAIN: 'localhost'
+          NEXT_PUBLIC_FRONTEND_PORT: '3000'
+          # Dummy auth IDs for build
+          NEXT_PUBLIC_AUTH_GOOGLE_ID: 'dummy-google-id'
+          NEXT_PUBLIC_AUTH_DISCORD_ID: 'dummy-discord-id'
+          NEXT_PUBLIC_AUTH_GITHUB_ID: 'dummy-github-id'
+          # Dummy DB URL for build
+          DATABASE_URL: 'mongodb://localhost:27017/dummy'
+
+      - name: Check build output
+        run: |
+          if [ ! -d ".next" ]; then
+            echo "Build failed: .next directory not found"
+            exit 1
+          fi

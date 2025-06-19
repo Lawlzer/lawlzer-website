@@ -11,6 +11,4 @@ const ThemeInitializer = dynamic(async () => import('./ThemeInitializer').then((
 });
 
 // This client component simply renders the dynamically imported ThemeInitializer
-export function ClientThemeInitializer(): React.ReactNode {
-	return <ThemeInitializer />;
-}
+export const ClientThemeInitializer = (): React.ReactNode => <ThemeInitializer />;

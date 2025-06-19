@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // --- Custom Hook for Media Query ---
 export const useMediaQuery = (query: string): boolean => {
@@ -22,7 +22,7 @@ export const useMediaQuery = (query: string): boolean => {
 		// Use addEventListener/removeEventListener for modern compatibility
 		try {
 			media.addEventListener('change', updateMatches);
-		} catch (e) {
+		} catch (_error) {
 			// Fallback for older browsers
 			media.addListener(updateMatches);
 		}
@@ -30,7 +30,7 @@ export const useMediaQuery = (query: string): boolean => {
 		return () => {
 			try {
 				media.removeEventListener('change', updateMatches);
-			} catch (e) {
+			} catch (_error) {
 				// Fallback for older browsers
 				media.removeListener(updateMatches);
 			}

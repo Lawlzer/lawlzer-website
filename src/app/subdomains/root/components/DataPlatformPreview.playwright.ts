@@ -1,5 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
-import type { FiltersApiResponse, ChartDataApiResponse, RawDataPoint } from './DataPlatformPreview';
+import { expect, type Page, test } from '@playwright/test';
+
+import type { ChartDataApiResponse, FiltersApiResponse } from './DataPlatformPreview';
 
 // --- Test Data --- //
 // Use separate mocks for filters and chart data APIs
@@ -26,7 +27,7 @@ const mockSuccessFilters: FiltersApiResponse = {
 	totalDocuments: 100,
 };
 
-const mockFilteredFilters: FiltersApiResponse = {
+const _mockFilteredFilters: FiltersApiResponse = {
 	filters: {
 		continent: [{ value: 'Europe', count: 10 }],
 		status: [{ value: 'Active', count: 15 }],
@@ -58,7 +59,7 @@ const mockSuccessChartData: ChartDataApiResponse = {
 	limitExceeded: false,
 };
 
-const mockFilteredChartData: ChartDataApiResponse = {
+const _mockFilteredChartData: ChartDataApiResponse = {
 	rawData: [{ timestamp: 1678886400000, values: { field1: 50 } }],
 	documentCount: 25,
 	limitExceeded: false,
@@ -128,14 +129,17 @@ const testPageUrl = '/test-route/data-platform-preview';
 
 test.describe('DataPlatformPreview E2E Tests', () => {
 	test('should hide charts when document count exceeds limit', async ({ page }): Promise<void> => {
-		await setupMockRoutes(page, { filtersResponse: mockLimitExceededFilters, chartDataResponse: mockLimitExceededChartData });
+		await setupMockRoutes(page, {
+			filtersResponse: mockLimitExceededFilters,
+			chartDataResponse: mockLimitExceededChartData,
+		});
 		await page.goto(testPageUrl);
 
 		// Wait for data to load
 		await expect(page.getByRole('button', { name: 'Europe (25)' })).toBeVisible();
 
 		// Check for the warning message
-		await expect(page.getByText(/Charts disabled.*exceeds limit/i)).toBeVisible();
+		await expect(page.getByText(/Chart generation disabled.*Dataset size.*exceeds the limit/i)).toBeVisible();
 
 		// Check that charts are not visible
 		await expect(page.getByRole('tab')).toHaveCount(0);
