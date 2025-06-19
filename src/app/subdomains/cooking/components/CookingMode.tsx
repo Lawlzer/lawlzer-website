@@ -1,7 +1,11 @@
 'use client';
 
 import type { Food, Recipe } from '@prisma/client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+import { convertUnit } from '../utils/recipe.utils';
+
+import type { IngredientUnit } from '@/app/subdomains/cooking/types/recipe.types';
 
 interface RecipeWithDetails extends Recipe {
 	currentVersion: {
@@ -97,31 +101,41 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 	const [mode, setMode] = useState<'servings' | 'weight'>('servings');
 	const [targetServings, setTargetServings] = useState<number>(1);
 
-	// Calculate total weight of original recipe
-	const calculateTotalWeight = (recipe: RecipeWithDetails): number => {
-		if (!recipe.currentVersion) return 0;
+	const calculateTotalWeight = useCallback(
+		(recipe?: RecipeWithDetails) => {
+			const recipeToCalculate = recipe || selectedRecipe;
+			if (!recipeToCalculate?.currentVersion) return 0;
 
-		let totalWeight = 0;
-		recipe.currentVersion.ingredients.forEach((ing) => {
-			// Convert all units to grams for calculation
-			let weightInGrams = ing.quantity;
+			let totalWeight = 0;
+			recipeToCalculate.currentVersion.ingredients.forEach((ing) => {
+				// Convert all units to grams for calculation
+				let weightInGrams = ing.quantity;
+				const unit = (ing.unit || 'g') as IngredientUnit;
 
-			if (ing.unit === 'kg') {
-				weightInGrams = ing.quantity * 1000;
-			} else if (ing.unit === 'mg') {
-				weightInGrams = ing.quantity / 1000;
-			} else if (ing.unit === 'lb') {
-				weightInGrams = ing.quantity * 453.592;
-			} else if (ing.unit === 'oz') {
-				weightInGrams = ing.quantity * 28.3495;
-			}
-			// Add more unit conversions as needed
+				try {
+					// Use the convertUnit utility for accurate conversions
+					weightInGrams = convertUnit(ing.quantity, unit, 'g');
+				} catch (error) {
+					console.error(`Failed to convert ${ing.quantity} ${unit} to grams`, error);
+					// Fallback to original quantity if conversion fails
+					weightInGrams = ing.quantity;
+				}
 
-			totalWeight += weightInGrams;
-		});
+				// Handle nested recipes
+				if (ing.isRecipe && 'currentVersion' in ing.ingredient) {
+					const nestedRecipe = ing.ingredient;
+					const nestedWeight = calculateTotalWeight(nestedRecipe);
+					// Scale by the amount used
+					weightInGrams = (nestedWeight * ing.quantity) / 100; // Assuming recipe amounts are percentages
+				}
 
-		return totalWeight;
-	};
+				totalWeight += weightInGrams;
+			});
+
+			return totalWeight;
+		},
+		[selectedRecipe]
+	);
 
 	// Update calculations when recipe or target changes
 	useEffect(() => {
@@ -132,15 +146,10 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 		if (mode === 'servings') {
 			newScaleFactor = targetServings / selectedRecipe.servings;
 		} else if (mode === 'weight' && targetWeight > 0) {
-			const originalTotalWeight = calculateTotalWeight(selectedRecipe);
-			let targetWeightInGrams = targetWeight;
+			const originalTotalWeight = calculateTotalWeight();
 
-			// Convert target to grams if needed
-			if (targetUnit === 'kg') {
-				targetWeightInGrams = targetWeight * 1000;
-			} else if (targetUnit === 'mg') {
-				targetWeightInGrams = targetWeight / 1000;
-			}
+			// Convert target weight to grams using the utility function
+			const targetWeightInGrams = targetUnit === 'g' ? targetWeight : convertUnit(targetWeight, targetUnit, 'g');
 
 			newScaleFactor = targetWeightInGrams / originalTotalWeight;
 		}
@@ -153,13 +162,9 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 			const scaledQuantity = ing.quantity * newScaleFactor;
 
 			// Calculate nutrition for the scaled amount
-			let nutritionMultiplier = scaledQuantity / 100; // Most nutrition is per 100g
-
-			if (ing.unit !== 'g') {
-				// Convert to grams for nutrition calculation
-				if (ing.unit === 'kg') nutritionMultiplier = (scaledQuantity * 1000) / 100;
-				else if (ing.unit === 'mg') nutritionMultiplier = scaledQuantity / 1000 / 100;
-			}
+			// Convert to grams for nutrition calculation (nutrition is per 100g)
+			const scaledQuantityInGrams = ing.unit === 'g' ? scaledQuantity : convertUnit(scaledQuantity, ing.unit, 'g');
+			const nutritionMultiplier = scaledQuantityInGrams / 100;
 
 			const baseNutrition = getNutrition(ingredient);
 
@@ -180,7 +185,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 		});
 
 		setScaledIngredients(scaled);
-	}, [selectedRecipe, targetWeight, targetUnit, targetServings, mode]);
+	}, [selectedRecipe, targetWeight, targetUnit, targetServings, mode, calculateTotalWeight]);
 
 	// Calculate totals for scaled recipe
 	const calculateTotals = (): NutritionData =>
@@ -307,8 +312,15 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 								<option value='g'>grams</option>
 								<option value='kg'>kilograms</option>
 								<option value='mg'>milligrams</option>
+								<option value='oz'>ounces</option>
+								<option value='lb'>pounds</option>
+								<option value='ml'>milliliters</option>
+								<option value='l'>liters</option>
+								<option value='cup'>cups</option>
+								<option value='tbsp'>tablespoons</option>
+								<option value='tsp'>teaspoons</option>
 							</select>
-							<span className='text-sm text-gray-600 dark:text-gray-400'>(Original: {calculateTotalWeight(selectedRecipe).toFixed(0)}g)</span>
+							<span className='text-sm text-gray-600 dark:text-gray-400'>(Original: {calculateTotalWeight().toFixed(0)}g)</span>
 						</div>
 					)}
 

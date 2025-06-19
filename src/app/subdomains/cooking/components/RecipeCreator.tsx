@@ -3,20 +3,25 @@
 import type { Food } from '@prisma/client';
 import { useState } from 'react';
 
+import type { RecipeWithDetails } from '../types/recipe.types';
+
 interface RecipeIngredient {
-	foodId: string;
+	foodId?: string;
+	recipeId?: string;
 	food?: Food;
+	recipe?: RecipeWithDetails;
 	amount: number;
 	unit: string;
 }
 
 interface RecipeCreatorProps {
 	availableFoods: Food[];
+	availableRecipes?: RecipeWithDetails[];
 	onSave: (recipe: any) => Promise<void>;
 	onCancel: () => void;
 }
 
-export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, onSave, onCancel }) => {
+export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, availableRecipes = [], onSave, onCancel }) => {
 	const [recipeName, setRecipeName] = useState('');
 	const [description, setDescription] = useState('');
 	const [notes, setNotes] = useState('');
@@ -24,20 +29,20 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, on
 	const [cookTime, setCookTime] = useState('');
 	const [servings, setServings] = useState('1');
 	const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
+	const [selectedType, setSelectedType] = useState<'food' | 'recipe'>('food');
 	const [selectedFoodId, setSelectedFoodId] = useState('');
+	const [selectedRecipeId, setSelectedRecipeId] = useState('');
 	const [amount, setAmount] = useState('100');
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const addIngredient = () => {
-		if (!selectedFoodId) {
+		if (selectedType === 'food' && !selectedFoodId) {
 			setError('Please select a food item');
 			return;
 		}
-
-		const food = availableFoods.find((f) => f.id === selectedFoodId);
-		if (!food) {
-			setError('Invalid food selected');
+		if (selectedType === 'recipe' && !selectedRecipeId) {
+			setError('Please select a recipe');
 			return;
 		}
 
@@ -47,18 +52,49 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, on
 			return;
 		}
 
-		setIngredients([
-			...ingredients,
-			{
-				foodId: selectedFoodId,
-				food,
-				amount: parsedAmount,
-				unit: 'g',
-			},
-		]);
+		if (selectedType === 'food') {
+			const food = availableFoods.find((f) => f.id === selectedFoodId);
+			if (!food) {
+				setError('Invalid food selected');
+				return;
+			}
+
+			setIngredients([
+				...ingredients,
+				{
+					foodId: selectedFoodId,
+					food,
+					amount: parsedAmount,
+					unit: 'g',
+				},
+			]);
+		} else {
+			const recipe = availableRecipes.find((r) => r.id === selectedRecipeId);
+			if (!recipe) {
+				setError('Invalid recipe selected');
+				return;
+			}
+
+			// Check for circular reference
+			if (recipe.id === recipeName) {
+				setError('Cannot add a recipe to itself');
+				return;
+			}
+
+			setIngredients([
+				...ingredients,
+				{
+					recipeId: selectedRecipeId,
+					recipe,
+					amount: parsedAmount,
+					unit: 'g',
+				},
+			]);
+		}
 
 		// Reset form
 		setSelectedFoodId('');
+		setSelectedRecipeId('');
 		setAmount('100');
 		setError(null);
 	};
@@ -80,6 +116,13 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, on
 				totalProtein += ing.food.protein * factor;
 				totalCarbs += ing.food.carbs * factor;
 				totalFat += ing.food.fat * factor;
+			} else if (ing.recipe?.currentVersion) {
+				// For recipes, use the nutrition from the current version
+				const factor = ing.amount / 100;
+				totalCalories += (ing.recipe.currentVersion.caloriesPerServing * ing.recipe.servings * factor) / ing.recipe.servings;
+				totalProtein += (ing.recipe.currentVersion.proteinPerServing * ing.recipe.servings * factor) / ing.recipe.servings;
+				totalCarbs += (ing.recipe.currentVersion.carbsPerServing * ing.recipe.servings * factor) / ing.recipe.servings;
+				totalFat += (ing.recipe.currentVersion.fatPerServing * ing.recipe.servings * factor) / ing.recipe.servings;
 			}
 		});
 
@@ -119,6 +162,7 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, on
 				servings: servings !== '' ? parseInt(servings) : 1,
 				items: ingredients.map((ing) => ({
 					foodId: ing.foodId,
+					recipeId: ing.recipeId,
 					amount: ing.amount,
 					unit: ing.unit,
 				})),
@@ -214,7 +258,17 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, on
 						{ingredients.map((ing, index) => (
 							<div key={index} className='flex items-center gap-2 p-2 border rounded-lg dark:border-gray-700'>
 								<span className='flex-1'>
-									{ing.food?.name} - {ing.amount}g
+									{ing.food ? (
+										<>
+											<span className='text-xs text-gray-500 dark:text-gray-400'>Food: </span>
+											{ing.food.name} - {ing.amount}g
+										</>
+									) : ing.recipe ? (
+										<>
+											<span className='text-xs text-gray-500 dark:text-gray-400'>Recipe: </span>
+											{ing.recipe.name} - {ing.amount}g
+										</>
+									) : null}
 								</span>
 								<button
 									onClick={() => {
@@ -229,35 +283,76 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, on
 					</div>
 				)}
 
-				<div className='flex gap-2'>
-					<select
-						value={selectedFoodId}
-						onChange={(e) => {
-							setSelectedFoodId(e.target.value);
-						}}
-						className='flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700'
-					>
-						<option value=''>Select a food item...</option>
-						{availableFoods.map((food) => (
-							<option key={food.id} value={food.id}>
-								{food.name} {food.brand !== null && food.brand !== '' && `(${food.brand})`}
-							</option>
-						))}
-					</select>
-					<input
-						type='number'
-						value={amount}
-						onChange={(e) => {
-							setAmount(e.target.value);
-						}}
-						className='w-24 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700'
-						placeholder='100'
-						min='1'
-					/>
-					<span className='px-3 py-2'>g</span>
-					<button onClick={addIngredient} className='px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors'>
-						Add
-					</button>
+				<div className='space-y-2'>
+					{/* Type selector */}
+					<div className='flex gap-2'>
+						<button
+							onClick={() => {
+								setSelectedType('food');
+							}}
+							className={`px-3 py-1 rounded ${selectedType === 'food' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+						>
+							Food
+						</button>
+						<button
+							onClick={() => {
+								setSelectedType('recipe');
+							}}
+							className={`px-3 py-1 rounded ${selectedType === 'recipe' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+							disabled={availableRecipes.length === 0}
+						>
+							Recipe
+						</button>
+					</div>
+
+					{/* Ingredient selector */}
+					<div className='flex gap-2'>
+						{selectedType === 'food' ? (
+							<select
+								value={selectedFoodId}
+								onChange={(e) => {
+									setSelectedFoodId(e.target.value);
+								}}
+								className='flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700'
+							>
+								<option value=''>Select a food item...</option>
+								{availableFoods.map((food) => (
+									<option key={food.id} value={food.id}>
+										{food.name} {food.brand !== null && food.brand !== '' && `(${food.brand})`}
+									</option>
+								))}
+							</select>
+						) : (
+							<select
+								value={selectedRecipeId}
+								onChange={(e) => {
+									setSelectedRecipeId(e.target.value);
+								}}
+								className='flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700'
+							>
+								<option value=''>Select a recipe...</option>
+								{availableRecipes.map((recipe) => (
+									<option key={recipe.id} value={recipe.id}>
+										{recipe.name} {recipe.description != null && recipe.description !== '' && `- ${recipe.description}`}
+									</option>
+								))}
+							</select>
+						)}
+						<input
+							type='number'
+							value={amount}
+							onChange={(e) => {
+								setAmount(e.target.value);
+							}}
+							className='w-24 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700'
+							placeholder='100'
+							min='1'
+						/>
+						<span className='px-3 py-2'>g</span>
+						<button onClick={addIngredient} className='px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors'>
+							Add
+						</button>
+					</div>
 				</div>
 			</div>
 
