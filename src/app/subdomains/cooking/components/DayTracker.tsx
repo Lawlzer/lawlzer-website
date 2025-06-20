@@ -50,6 +50,8 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 	const [selectedRecipeId, setSelectedRecipeId] = useState('');
 	const [amount, setAmount] = useState('100');
 	const [isSaving, setIsSaving] = useState(false);
+	const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+	const [duplicateTargetDate, setDuplicateTargetDate] = useState(new Date());
 
 	// Format date for API and display
 	const formatDateForAPI = (date: Date) => {
@@ -256,6 +258,30 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 		}
 	};
 
+	const handleDuplicateDay = async () => {
+		try {
+			const response = await fetch('/api/cooking/days/duplicate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					sourceDate: formatDateForAPI(selectedDate),
+					targetDate: formatDateForAPI(duplicateTargetDate),
+				}),
+			});
+
+			if (response.ok) {
+				// Optionally, switch to the new date
+				setSelectedDate(duplicateTargetDate);
+				setShowDuplicateModal(false);
+			} else {
+				// TODO: Show error to user
+				console.error('Failed to duplicate day');
+			}
+		} catch (error) {
+			console.error('Error duplicating day:', error);
+		}
+	};
+
 	const totals = calculateDayTotals();
 
 	// Group entries by meal type
@@ -274,6 +300,14 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 			<div className='flex items-center justify-between'>
 				<h2 className='text-2xl font-bold'>Day Tracking</h2>
 				<div className='flex items-center gap-2'>
+					<button
+						onClick={() => {
+							setShowDuplicateModal(true);
+						}}
+						className='px-3 py-2 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+					>
+						Duplicate Day
+					</button>
 					<button
 						onClick={() => {
 							const newDate = new Date(selectedDate);
@@ -308,6 +342,38 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 					</button>
 				</div>
 			</div>
+
+			{showDuplicateModal && (
+				<div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+					<div className='bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4'>
+						<h3 className='text-lg font-semibold mb-4'>Duplicate Day</h3>
+						<p className='text-sm mb-2'>
+							Duplicate all entries from <strong>{selectedDate.toLocaleDateString()}</strong> to:
+						</p>
+						<input
+							type='date'
+							value={formatDateForAPI(duplicateTargetDate)}
+							onChange={(e) => {
+								setDuplicateTargetDate(new Date(e.target.value));
+							}}
+							className='w-full px-3 py-2 border rounded-lg mb-4'
+						/>
+						<div className='flex gap-2'>
+							<button
+								onClick={() => {
+									setShowDuplicateModal(false);
+								}}
+								className='flex-1 px-4 py-2 border rounded-lg'
+							>
+								Cancel
+							</button>
+							<button onClick={() => void handleDuplicateDay()} className='flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg'>
+								Duplicate
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{isLoading ? (
 				<div className='flex justify-center py-8'>

@@ -74,7 +74,7 @@ model User {
     comments      Comment[]
     likes         Like[]
     reports       Report[]
-    suggestedAlternatives IngredientAlternative[]
+    fridgeItems   FridgeItem[]
 }
 
 model VerificationToken {
@@ -86,8 +86,8 @@ model VerificationToken {
     user        User?    @relation(fields: [userId], references: [id])
     recipeItems RecipeItem[]
     dayEntries  DayEntry[]
-    alternativesAsIngredient IngredientAlternative[]
-
+    fridgeItems FridgeItem[]
+    
     @@index([userId])
     @@index([barcode])
     @@index([identifier, token])
@@ -158,7 +158,7 @@ model Food {
     user        User?    @relation(fields: [userId], references: [id])
     recipeItems RecipeItem[]
     dayEntries  DayEntry[]
-    alternativesAsIngredient IngredientAlternative[]
+    fridgeItems FridgeItem[]
     
     @@index([userId])
     @@index([barcode])
@@ -254,8 +254,6 @@ model RecipeItem {
     food            Food?         @relation(fields: [foodId], references: [id])
     recipe          Recipe?       @relation("RecipeAsIngredient", fields: [recipeId], references: [id])
     
-    alternatives    IngredientAlternative[]
-
     @@index([recipeVersionId])
 }
 
@@ -279,8 +277,7 @@ model Day {
     
     user        User     @relation(fields: [userId], references: [id])
     entries     DayEntry[]
-    alternativeFood   Food       @relation(fields: [alternativeFoodId], references: [id])
-
+    
     @@unique([userId, date])
     @@index([userId])
     @@index([date])
@@ -398,26 +395,17 @@ model Report {
     @@index([isResolved])
 }
 
-// Suggestion for an alternative to a recipe item
-model IngredientAlternative {
-    id          String   @id @default(auto()) @map("_id") @db.ObjectId
-    recipeItemId String   @db.ObjectId
+model FridgeItem {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId    String   @db.ObjectId
+    foodId    String   @db.ObjectId
+    quantity  Float    // in grams
+    expiresAt DateTime?
     
-    // The suggested alternative food
-    alternativeFoodId String @db.ObjectId
-    
-    notes       String?  // e.g., "use half the amount"
-    upvotes     Int      @default(0)
-    downvotes   Int      @default(0)
-    
-    createdAt   DateTime @default(now())
-    
-    recipeItem        RecipeItem @relation(fields: [recipeItemId], references: [id], onDelete: Cascade)
-    alternativeFood   Food       @relation(fields: [alternativeFoodId], references: [id])
-    suggestedBy       User       @relation(fields: [suggestedById], references: [id])
-    suggestedById     String     @db.ObjectId
-    
-    @@index([recipeItemId])
-    @@index([alternativeFoodId])
-    @@index([suggestedById])
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, foodId])
+    @@index([userId])
+    @@index([expiresAt])
 }
