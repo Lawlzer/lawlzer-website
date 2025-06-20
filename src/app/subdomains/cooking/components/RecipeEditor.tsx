@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
 import type { RecipeWithDetails } from '../types/recipe.types';
+import { convertUnit } from '../utils/conversion';
 
 import { RecipeSocial } from './RecipeSocial';
 
@@ -76,7 +77,8 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 		items.forEach((item) => {
 			const food = availableFoods.find((f) => f.id === item.foodId);
 			if (food) {
-				const factor = item.amount / 100;
+				const amountInGrams = convertUnit(item.amount, item.unit, 'g');
+				const factor = amountInGrams / 100;
 				totalCalories += food.calories * factor;
 				totalProtein += food.protein * factor;
 				totalCarbs += food.carbs * factor;
@@ -108,6 +110,12 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 		}
 
 		setIsSubmitting(true);
+
+		const convertedItems = items.map((item) => {
+			const amountInGrams = convertUnit(item.amount, item.unit, 'g');
+			return { ...item, amount: amountInGrams, unit: 'g' };
+		});
+
 		await onSave({
 			id: recipe.id,
 			name: name.trim(),
@@ -117,7 +125,7 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 			cookTime: cookTime || null,
 			servings: Number.isNaN(parseInt(servings)) ? 1 : parseInt(servings),
 			visibility,
-			items,
+			items: convertedItems,
 		});
 		setIsSubmitting(false);
 	};

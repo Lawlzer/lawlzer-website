@@ -4,6 +4,7 @@ import type { Food } from '@prisma/client';
 import { useState } from 'react';
 
 import type { RecipeWithDetails } from '../types/recipe.types';
+import { convertUnit } from '../utils/conversion';
 
 interface RecipeIngredient {
 	foodId?: string;
@@ -155,16 +156,21 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 		setError(null);
 
 		try {
+			const convertedIngredients = ingredients.map((ing) => {
+				const amountInGrams = convertUnit(ing.amount, ing.unit, 'g');
+				return { ...ing, amount: amountInGrams, unit: 'g' };
+			});
+
 			await onSave({
 				name: recipeName,
 				description,
 				notes: notes.trim(),
 				prepTime: prepTime || null,
 				cookTime: cookTime || null,
-				servings: Number.isNaN(parseInt(servings)) ? 1 : parseInt(servings),
+				servings: servings !== '' ? parseInt(servings) : 1,
 				visibility,
 				isComponent,
-				items: ingredients.map((ing) => ({
+				items: convertedIngredients.map((ing) => ({
 					foodId: ing.foodId,
 					recipeId: ing.recipeId,
 					amount: ing.amount,
