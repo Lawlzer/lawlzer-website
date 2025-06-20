@@ -6,7 +6,7 @@ import { getSession } from '~/server/db/session';
 export async function POST(request: Request, { params }: { params: { recipeId: string } }) {
 	try {
 		const session = await getSession();
-		if (!session?.user?.id) {
+		if (session?.user?.id == null || session.user.id === '') {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 

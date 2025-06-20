@@ -344,7 +344,7 @@ export default function CookingPage() {
 		}
 	};
 
-	const handleUpdateRecipe = async (recipeData: any) => {
+	const handleUpdateRecipe = async (recipeData: any): Promise<void> => {
 		const response = await fetch('/api/cooking/recipes', {
 			method: 'PUT',
 			headers: {
@@ -663,9 +663,8 @@ export default function CookingPage() {
 																setActiveTab('cooking');
 																// You could add state to select this recipe in cooking mode
 															}}
-															onDelete={() => {
-																// Add delete functionality
-																void (async () => {
+															onDelete={async () => {
+																try {
 																	const response = await fetch(`/api/cooking/recipes?id=${recipe.id}`, {
 																		method: 'DELETE',
 																	});
@@ -673,7 +672,9 @@ export default function CookingPage() {
 																		setRecipes(recipes.filter((r) => r.id !== recipe.id));
 																		setFilteredRecipes(filteredRecipes.filter((r) => r.id !== recipe.id));
 																	}
-																})();
+																} catch (error) {
+																	console.error('Failed to delete recipe:', error);
+																}
 															}}
 															onViewHistory={() => {
 																setViewingHistoryRecipe(recipe);

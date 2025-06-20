@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 			where: {
 				AND: [
 					{
-						OR: [...(session?.user?.id ? [{ userId: session.user.id }] : []), { visibility: 'public' }],
+						OR: [...(session?.user?.id != null && session.user.id !== '' ? [{ userId: session.user.id }] : []), { visibility: 'public' }],
 					},
 					{
 						isComponent: false,
