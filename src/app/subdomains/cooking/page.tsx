@@ -472,7 +472,7 @@ export default function CookingPage() {
 			{/* Main Navigation Tabs */}
 			<div className='space-y-4'>
 				{/* Tab List */}
-				<div className='grid grid-cols-3 sm:grid-cols-6 gap-2 border-b'>
+				<div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 border-b'>
 					{tabs.map((tab) => (
 						<button
 							key={tab.id}
@@ -482,7 +482,7 @@ export default function CookingPage() {
 							className={`flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}`}
 						>
 							{tab.icon}
-							<span className='hidden sm:inline'>{tab.label}</span>
+							<span className='hidden md:inline'>{tab.label}</span>
 						</button>
 					))}
 				</div>
