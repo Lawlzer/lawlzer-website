@@ -1,7 +1,7 @@
 'use client';
 
 import type { Food, Recipe } from '@prisma/client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { convertUnit } from '../utils/recipe.utils';
 
@@ -93,13 +93,29 @@ function getNutrition(ingredient: Food | RecipeWithDetails): NutritionData {
 }
 
 export function CookingMode({ recipes, isGuest }: CookingModeProps) {
-	const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithDetails | null>(null);
+	const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+	const [currentStep, setCurrentStep] = useState(0);
+	const [servings, setServings] = useState(1);
+	const [isHandsFree, setIsHandsFree] = useState(false);
+	const handsFreeContainerRef = useRef<HTMLDivElement>(null);
+
+	const selectedRecipe = recipes.find((r) => r.id === selectedRecipeId);
+	const steps = selectedRecipe?.notes?.split('\n').filter((s) => s.trim() !== '') ?? [];
+
 	const [targetWeight, setTargetWeight] = useState<number>(0);
 	const [targetUnit, setTargetUnit] = useState<string>('g');
 	const [scaleFactor, setScaleFactor] = useState<number>(1);
 	const [scaledIngredients, setScaledIngredients] = useState<ScaledIngredient[]>([]);
 	const [mode, setMode] = useState<'servings' | 'weight'>('servings');
 	const [targetServings, setTargetServings] = useState<number>(1);
+
+	const prevStep = () => {
+		setCurrentStep((prev) => (prev > 0 ? prev - 1 : 0));
+	};
+
+	const nextStep = () => {
+		setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+	};
 
 	const calculateTotalWeight = useCallback(
 		(recipe?: RecipeWithDetails) => {
@@ -199,6 +215,42 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 			{ calories: 0, protein: 0, carbs: 0, fat: 0 }
 		);
 
+	const toggleHandsFree = async () => {
+		if (!isHandsFree) {
+			try {
+				if (handsFreeContainerRef.current) {
+					await handsFreeContainerRef.current.requestFullscreen();
+				}
+				await navigator.wakeLock.request('screen');
+				setIsHandsFree(true);
+			} catch (err) {
+				console.error('Failed to enter hands-free mode:', err);
+			}
+		} else {
+			try {
+				if (document.fullscreenElement) {
+					await document.exitFullscreen();
+				}
+				// The wake lock is released automatically when the document becomes inactive.
+			} catch (err) {
+				console.error('Failed to exit hands-free mode:', err);
+			}
+			setIsHandsFree(false);
+		}
+	};
+
+	useEffect(() => {
+		const handleFullscreenChange = () => {
+			if (!document.fullscreenElement) {
+				setIsHandsFree(false);
+			}
+		};
+		document.addEventListener('fullscreenchange', handleFullscreenChange);
+		return () => {
+			document.removeEventListener('fullscreenchange', handleFullscreenChange);
+		};
+	}, []);
+
 	if (isGuest) {
 		return (
 			<div className='rounded-lg border border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 p-6'>
@@ -222,7 +274,14 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 	}
 
 	return (
-		<div className='space-y-6'>
+		<div ref={handsFreeContainerRef} className={`space-y-4 ${isHandsFree ? 'bg-white dark:bg-black p-8' : ''}`}>
+			<div className='flex items-center justify-between'>
+				<h2 className='text-2xl font-bold'>Cooking Mode</h2>
+				<button onClick={() => void toggleHandsFree()} className='px-3 py-2 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-700'>
+					{isHandsFree ? 'Exit Hands-Free' : 'Hands-Free Mode'}
+				</button>
+			</div>
+
 			{/* Recipe Selection */}
 			<div className='rounded-lg border p-6'>
 				<h3 className='text-lg font-semibold mb-4'>Select Recipe</h3>
@@ -231,10 +290,10 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 						<button
 							key={recipe.id}
 							onClick={() => {
-								setSelectedRecipe(recipe);
+								setSelectedRecipeId(recipe.id);
 								setTargetServings(recipe.servings);
 							}}
-							className={`p-4 rounded-lg border transition-all text-left ${selectedRecipe?.id === recipe.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' : 'hover:border-gray-400'}`}
+							className={`p-4 rounded-lg border transition-all text-left ${selectedRecipeId === recipe.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' : 'hover:border-gray-400'}`}
 						>
 							<h4 className='font-medium'>{recipe.name}</h4>
 							{recipe.description != null && recipe.description !== '' && <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>{recipe.description}</p>}
@@ -386,6 +445,17 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 						</div>
 						{mode === 'servings' && targetServings > 0 && <p className='text-sm text-gray-600 dark:text-gray-400 mt-3'>Per serving: {(calculateTotals().calories / targetServings).toFixed(0)} kcal</p>}
 					</div>
+				</div>
+			)}
+
+			{isHandsFree && (
+				<div className='flex justify-between mt-8'>
+					<button onClick={prevStep} className='px-8 py-4 bg-gray-200 dark:bg-gray-800 rounded-lg text-lg'>
+						Previous
+					</button>
+					<button onClick={nextStep} className='px-8 py-4 bg-blue-500 text-white rounded-lg text-lg'>
+						Next
+					</button>
 				</div>
 			)}
 		</div>
