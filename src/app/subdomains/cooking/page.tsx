@@ -395,6 +395,41 @@ export default function CookingPage() {
 		}
 	};
 
+	const handleImportRecipe = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		const reader = new FileReader();
+		reader.onload = async (event) => {
+			try {
+				const content = event.target?.result;
+				if (typeof content !== 'string') return;
+				const data = JSON.parse(content);
+
+				const response = await fetch('/api/cooking/import', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(data),
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					console.error('Import failed:', error);
+					// TODO: Show error to user
+					return;
+				}
+
+				const newRecipe = await response.json();
+				setRecipes((prev) => [...prev, newRecipe]);
+				setFilteredRecipes((prev) => [...prev, newRecipe]);
+			} catch (error) {
+				console.error('Error importing recipe:', error);
+				// TODO: Show error to user
+			}
+		};
+		reader.readAsText(file);
+	};
+
 	return (
 		<div className='space-y-6'>
 			{/* Header */}
