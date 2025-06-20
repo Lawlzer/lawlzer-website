@@ -5,6 +5,7 @@ export interface GuestFood extends Omit<Food, 'createdAt' | 'id' | 'updatedAt' |
 	guestId: string;
 	createdAt: string;
 	updatedAt: string;
+	visibility: 'private' | 'public';
 }
 
 export interface GuestRecipeItem {
@@ -25,6 +26,7 @@ export interface GuestRecipe {
 	items: GuestRecipeItem[];
 	createdAt: string;
 	updatedAt: string;
+	visibility: 'private' | 'public' | 'unlisted';
 }
 
 export interface GuestData {
@@ -109,6 +111,7 @@ export const addGuestFood = (food: Omit<GuestFood, 'createdAt' | 'guestId' | 'up
 		guestId: crypto.randomUUID(),
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString(),
+		visibility: 'private',
 	};
 
 	// Check if food with same barcode already exists
@@ -180,7 +183,7 @@ export const prepareGuestDataForMigration = () => {
 };
 
 // Add a recipe for guest
-export const addGuestRecipe = (recipe: Omit<GuestRecipe, 'createdAt' | 'guestId' | 'updatedAt'>): GuestRecipe => {
+export const addGuestRecipe = (recipe: Omit<GuestRecipe, 'createdAt' | 'guestId' | 'updatedAt' | 'visibility'>): GuestRecipe => {
 	const guestData = getGuestData();
 
 	const newRecipe: GuestRecipe = {
@@ -188,6 +191,7 @@ export const addGuestRecipe = (recipe: Omit<GuestRecipe, 'createdAt' | 'guestId'
 		guestId: crypto.randomUUID(),
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString(),
+		visibility: 'private',
 	};
 
 	guestData.recipes.push(newRecipe);

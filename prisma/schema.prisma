@@ -136,7 +136,7 @@ model Food {
     defaultServingSize Float   @default(100) // in grams
     defaultServingUnit String  @default("g")
     
-    isPublic    Boolean  @default(false) // System foods available to all
+    visibility  String   @default("private") // "private", "public"
     imageUrl    String?
     
     createdAt   DateTime @default(now())
@@ -149,7 +149,7 @@ model Food {
     @@index([userId])
     @@index([barcode])
     @@index([name])
-    @@index([isPublic])
+    @@index([visibility])
 }
 
 // Recipe that can contain foods or other recipes
@@ -163,7 +163,7 @@ model Recipe {
     cookTime    Int?     // in minutes
     servings    Int      @default(1)
     
-    isPublic    Boolean  @default(false)
+    visibility  String   @default("private") // "private", "unlisted", "public"
     imageUrl    String?
     
     createdAt   DateTime @default(now())
@@ -179,6 +179,7 @@ model Recipe {
     
     @@index([userId])
     @@index([name])
+    @@index([visibility])
 }
 
 // Version tracking for recipes

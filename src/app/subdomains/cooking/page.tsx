@@ -138,7 +138,7 @@ export default function CookingPage() {
 						prepTime: recipe.prepTime ?? null,
 						cookTime: recipe.cookTime ?? null,
 						servings: recipe.servings,
-						isPublic: false,
+						visibility: 'private',
 						imageUrl: null,
 						createdAt: new Date(recipe.createdAt),
 						updatedAt: new Date(recipe.updatedAt),
@@ -203,6 +203,9 @@ export default function CookingPage() {
 			if (isGuest) {
 				// Save to cookies for guest users
 				addGuestFood({
+					guestId: crypto.randomUUID(),
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
 					barcode: scannedProduct.barcode,
 					name: scannedProduct.name,
 					brand: scannedProduct.brand ?? null,
@@ -224,7 +227,7 @@ export default function CookingPage() {
 					imageUrl: scannedProduct.imageUrl ?? null,
 					defaultServingSize: 100,
 					defaultServingUnit: 'g',
-					isPublic: false,
+					visibility: 'private',
 				});
 
 				setSaveStatus({
@@ -299,7 +302,7 @@ export default function CookingPage() {
 				prepTime: guestRecipe.prepTime ?? null,
 				cookTime: guestRecipe.cookTime ?? null,
 				servings: guestRecipe.servings,
-				isPublic: false,
+				visibility: 'private',
 				imageUrl: null,
 				createdAt: new Date(guestRecipe.createdAt),
 				updatedAt: new Date(guestRecipe.updatedAt),

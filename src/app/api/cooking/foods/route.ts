@@ -9,11 +9,27 @@ export async function GET(request: NextRequest) {
 		const session = await getSession();
 		const { searchParams } = request.nextUrl;
 		const barcode = searchParams.get('barcode');
+		const search = searchParams.get('search');
 
-		// Get foods based on user or barcode
+		// Get foods based on user or public
 		const foods = await db.food.findMany({
 			where: {
-				OR: [{ userId: session?.user?.id ?? null }, { isPublic: true }, ...(barcode != null ? [{ barcode }] : [])],
+				AND: [
+					{
+						OR: [{ userId: session?.user?.id ?? null }, { visibility: 'public' }],
+					},
+					...(barcode ? [{ barcode }] : []),
+					...(search != null && search !== ''
+						? [
+								{
+									name: {
+										contains: search,
+										mode: 'insensitive' as const,
+									},
+								},
+							]
+						: []),
+				],
 			},
 			orderBy: { createdAt: 'desc' },
 		});
@@ -66,8 +82,10 @@ export async function POST(request: NextRequest) {
 				saturatedFat: data.nutrition.saturatedFat,
 				transFat: data.nutrition.transFat,
 				cholesterol: data.nutrition.cholesterol,
+				defaultServingSize: data.defaultServingSize ?? 100,
+				defaultServingUnit: data.defaultServingUnit ?? 'g',
+				visibility: 'private',
 				imageUrl: data.imageUrl,
-				defaultServingSize: data.servingSize ? parseFloat(data.servingSize) : 100,
 			},
 		});
 
