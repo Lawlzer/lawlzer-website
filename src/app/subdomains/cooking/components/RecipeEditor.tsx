@@ -1,9 +1,12 @@
 'use client';
 
 import type { Food } from '@prisma/client';
+import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
 import type { RecipeWithDetails } from '../types/recipe.types';
+
+import { RecipeSocial } from './RecipeSocial';
 
 interface RecipeEditorProps {
 	recipe: RecipeWithDetails;
@@ -32,6 +35,7 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 	const [searchTerm, setSearchTerm] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showVersionWarning, setShowVersionWarning] = useState(true);
+	const { data: session } = useSession();
 
 	// Initialize items from current version
 	useEffect(() => {
@@ -391,6 +395,9 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 					</button>
 				</div>
 			</form>
+			<div className='lg:col-span-1'>
+				<RecipeSocial recipeId={recipe.id} currentUser={session?.user ?? null} />
+			</div>
 		</div>
 	);
 }

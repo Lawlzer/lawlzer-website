@@ -432,7 +432,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 										setSelectedType('recipe');
 									}}
 									className={`px-3 py-1 rounded ${selectedType === 'recipe' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
-									disabled={availableRecipes.length === 0}
+									disabled={!availableRecipes || availableRecipes.length === 0}
 								>
 									Recipe
 								</button>
@@ -451,7 +451,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 										<option value=''>Select a food...</option>
 										{availableFoods.map((food) => (
 											<option key={food.id} value={food.id}>
-												{food.name} {food.brand ? `(${food.brand})` : ''}
+												{food.name} {food.brand && `(${food.brand})`}
 											</option>
 										))}
 									</select>

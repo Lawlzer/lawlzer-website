@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 						OR: [{ userId: session?.user?.id ?? null }, { visibility: 'public' }],
 					},
 					...(barcode ? [{ barcode }] : []),
-					...(search != null && search !== ''
+					...(search && search.trim() !== ''
 						? [
 								{
 									name: {
