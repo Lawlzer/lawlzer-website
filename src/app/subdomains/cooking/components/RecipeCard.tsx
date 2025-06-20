@@ -5,6 +5,8 @@ import { useState } from 'react';
 import type { RecipeWithDetails } from '../types/recipe.types';
 import { formatDuration, formatNutritionValue } from '../utils/recipe.utils';
 
+import { NutritionPieChart } from './NutritionPieChart';
+
 interface RecipeCardProps {
 	recipe: RecipeWithDetails;
 	onEdit?: () => void;
@@ -104,6 +106,9 @@ export function RecipeCard({ recipe, onEdit, onCook, onDelete, onViewHistory, is
 									<span className='text-gray-600 dark:text-gray-400'>Sodium</span>
 									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.sodiumPerServing, 'mg')}</span>
 								</div>
+							</div>
+							<div className='mt-4'>
+								<NutritionPieChart protein={recipe.currentVersion.proteinPerServing} carbs={recipe.currentVersion.carbsPerServing} fat={recipe.currentVersion.fatPerServing} width={120} height={120} />
 							</div>
 						</div>
 					)}
