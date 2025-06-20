@@ -451,13 +451,13 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 										<option value=''>Select a food...</option>
 										{availableFoods.map((food) => (
 											<option key={food.id} value={food.id}>
-												{food.name} {food.brand != null && food.brand !== '' ? `(${food.brand})` : ''}
+												{food.name} {food.brand ? `(${food.brand})` : ''}
 											</option>
 										))}
 									</select>
 								) : (
 									<select
-										value={selectedRecipeId != null && selectedRecipeId !== '' ? selectedRecipeId : ''}
+										value={selectedRecipeId ?? ''}
 										onChange={(e) => {
 											setSelectedRecipeId(e.target.value);
 										}}

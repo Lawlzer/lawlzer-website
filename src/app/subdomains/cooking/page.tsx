@@ -2,7 +2,9 @@
 
 import type { Food } from '@prisma/client';
 import dynamic from 'next/dynamic';
+import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 import { CookingMode } from './components/CookingMode';
 import { DayTracker } from './components/DayTracker';
@@ -12,6 +14,7 @@ import { CalendarIcon, CameraIcon, ChefHatIcon, GoalIcon, HomeIcon, UtensilsIcon
 import { RecipeCard } from './components/RecipeCard';
 import { RecipeCreator } from './components/RecipeCreator';
 import { RecipeEditor } from './components/RecipeEditor';
+import { RecipeHistory } from './components/RecipeHistory';
 import { useGuestDataMigration } from './hooks/useGuestDataMigration';
 import type { FoodProduct } from './services/foodDatabase';
 import { fetchFoodByBarcode } from './services/foodDatabase';
@@ -34,6 +37,7 @@ export default function CookingPage() {
 	const [isGuest, setIsGuest] = useState(false);
 	const [isCreatingRecipe, setIsCreatingRecipe] = useState(false);
 	const [editingRecipe, setEditingRecipe] = useState<RecipeWithDetails | null>(null);
+	const [viewingHistoryRecipe, setViewingHistoryRecipe] = useState<RecipeWithDetails | null>(null);
 	const [availableFoods, setAvailableFoods] = useState<Food[]>([]);
 	const [recipes, setRecipes] = useState<RecipeWithDetails[]>([]);
 	const [filteredRecipes, setFilteredRecipes] = useState<RecipeWithDetails[]>([]);
@@ -359,6 +363,35 @@ export default function CookingPage() {
 		setEditingRecipe(null);
 	};
 
+	const handleRevertRecipeVersion = async (versionId: string) => {
+		if (!viewingHistoryRecipe) return;
+
+		try {
+			// Call API to revert to this version (creates a new version with old data)
+			const response = await fetch(`/api/cooking/recipes/${viewingHistoryRecipe.id}/revert`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ versionId }),
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to revert recipe version');
+			}
+
+			const updatedRecipe = await response.json();
+
+			// Update the recipe in the list
+			setRecipes(recipes.map((r) => (r.id === updatedRecipe.id ? updatedRecipe : r)));
+			setFilteredRecipes(filteredRecipes.map((r) => (r.id === updatedRecipe.id ? updatedRecipe : r)));
+			setViewingHistoryRecipe(null);
+		} catch (error) {
+			console.error('Error reverting recipe version:', error);
+			// TODO: Show error message to user
+		}
+	};
+
 	return (
 		<div className='space-y-6'>
 			{/* Header */}
@@ -639,6 +672,9 @@ export default function CookingPage() {
 																	}
 																})();
 															}}
+															onViewHistory={() => {
+																setViewingHistoryRecipe(recipe);
+															}}
 														/>
 													))}
 												</div>
@@ -708,8 +744,21 @@ export default function CookingPage() {
 							isGuest={isGuest}
 						/>
 					)}
+
+					{/* Recipe History Tab */}
+					{activeTab === 'history' && <RecipeHistory />}
 				</div>
 			</div>
+			{viewingHistoryRecipe && (
+				<RecipeHistory
+					recipeId={viewingHistoryRecipe.id}
+					currentVersionId={viewingHistoryRecipe.currentVersionId}
+					onClose={() => {
+						setViewingHistoryRecipe(null);
+					}}
+					onRevert={handleRevertRecipeVersion}
+				/>
+			)}
 		</div>
 	);
 }
