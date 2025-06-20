@@ -617,18 +617,23 @@ export default function CookingPage() {
 											{/* Recipe search/filter */}
 											{recipes.length > 0 && (
 												<div className='mb-4'>
-													<input
-														type='text'
-														placeholder='Search recipes...'
-														className='w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
-														value={recipeSearchTerm}
-														onChange={(e) => {
-															const search = e.target.value.toLowerCase();
-															setRecipeSearchTerm(e.target.value);
-															const filtered = recipes.filter((r) => r.name.toLowerCase().includes(search) || r.description?.toLowerCase().includes(search));
-															setFilteredRecipes(filtered);
-														}}
-													/>
+													<div className='flex gap-2'>
+														<input
+															type='text'
+															placeholder='Search recipes...'
+															className='w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+															value={recipeSearchTerm}
+															onChange={(e) => {
+																const search = e.target.value.toLowerCase();
+																setRecipeSearchTerm(e.target.value);
+																const filtered = recipes.filter((r) => r.name.toLowerCase().includes(search) || r.description?.toLowerCase().includes(search));
+																setFilteredRecipes(filtered);
+															}}
+														/>
+														<a href='/subdomains/cooking/search' className='px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800'>
+															Advanced
+														</a>
+													</div>
 												</div>
 											)}
 
