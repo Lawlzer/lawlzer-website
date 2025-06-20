@@ -164,6 +164,7 @@ model Recipe {
     servings    Int      @default(1)
     
     visibility  String   @default("private") // "private", "unlisted", "public"
+    isComponent Boolean  @default(false)     // True if this is an ingredient for other recipes
     imageUrl    String?
     
     createdAt   DateTime @default(now())

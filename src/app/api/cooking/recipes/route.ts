@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
 					{
 						OR: [...(session?.user?.id ? [{ userId: session.user.id }] : []), { visibility: 'public' }],
 					},
+					{
+						isComponent: false,
+					},
 					...(search != null && search !== ''
 						? [
 								{
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest) {
 					cookTime: data.cookTime ? parseInt(data.cookTime) : null,
 					servings: data.servings ? parseInt(data.servings) : 1,
 					visibility: data.visibility ?? 'private',
+					isComponent: data.isComponent ?? false,
 					imageUrl: data.imageUrl,
 				},
 			});
@@ -247,6 +251,7 @@ export async function PUT(request: NextRequest) {
 					cookTime: data.cookTime ? parseInt(data.cookTime) : null,
 					servings: data.servings ? parseInt(data.servings) : 1,
 					visibility: data.visibility,
+					isComponent: data.isComponent,
 					imageUrl: data.imageUrl,
 					updatedAt: new Date(),
 				},
