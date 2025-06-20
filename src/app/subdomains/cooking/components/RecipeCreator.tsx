@@ -6,6 +6,8 @@ import { useState } from 'react';
 import type { RecipeWithDetails } from '../types/recipe.types';
 import { convertUnit } from '../utils/conversion';
 
+import { useToast } from '~/components/Toast';
+
 interface RecipeIngredient {
 	foodId?: string;
 	recipeId?: string;
@@ -38,6 +40,7 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 	const [amount, setAmount] = useState('100');
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const { addToast } = useToast();
 
 	const addIngredient = () => {
 		if (selectedType === 'food' && !selectedFoodId) {
@@ -71,6 +74,7 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 					unit: 'g',
 				},
 			]);
+			addToast(`${food.name} added`, 'success');
 		} else {
 			const recipe = availableRecipes.find((r) => r.id === selectedRecipeId);
 			if (!recipe) {
@@ -93,6 +97,7 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 					unit: 'g',
 				},
 			]);
+			addToast(`${recipe.name} added`, 'success');
 		}
 
 		// Reset form
