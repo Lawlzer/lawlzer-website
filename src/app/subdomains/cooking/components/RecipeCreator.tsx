@@ -28,6 +28,7 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 	const [prepTime, setPrepTime] = useState('');
 	const [cookTime, setCookTime] = useState('');
 	const [servings, setServings] = useState('1');
+	const [visibility, setVisibility] = useState<'private' | 'public' | 'unlisted'>('private');
 	const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
 	const [selectedType, setSelectedType] = useState<'food' | 'recipe'>('food');
 	const [selectedFoodId, setSelectedFoodId] = useState('');
@@ -156,10 +157,11 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 			await onSave({
 				name: recipeName,
 				description,
-				notes,
-				prepTime: prepTime !== '' ? parseInt(prepTime) : null,
-				cookTime: cookTime !== '' ? parseInt(cookTime) : null,
-				servings: servings !== '' ? parseInt(servings) : 1,
+				notes: notes.trim(),
+				prepTime: prepTime || null,
+				cookTime: cookTime || null,
+				servings: Number.isNaN(parseInt(servings)) ? 1 : parseInt(servings),
+				visibility,
 				items: ingredients.map((ing) => ({
 					foodId: ing.foodId,
 					recipeId: ing.recipeId,
@@ -246,6 +248,22 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 							min='1'
 						/>
 					</div>
+				</div>
+
+				<div>
+					<label className='block text-sm font-medium mb-1'>Visibility</label>
+					<select
+						value={visibility}
+						onChange={(e) => {
+							setVisibility(e.target.value as 'private' | 'public' | 'unlisted');
+						}}
+						className='w-full px-3 py-2 border rounded-lg'
+					>
+						<option value='private'>Private</option>
+						<option value='unlisted'>Unlisted</option>
+						<option value='public'>Public</option>
+					</select>
+					<p className='text-xs text-gray-500 mt-1'>{visibility === 'private' ? 'Only you can see this recipe.' : visibility === 'unlisted' ? 'Anyone with the link can see this recipe.' : 'This recipe will appear in public search results.'}</p>
 				</div>
 			</div>
 

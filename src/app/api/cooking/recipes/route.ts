@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 			where: {
 				AND: [
 					{
-						OR: [...(session?.user?.id != null && session.user.id !== '' ? [{ userId: session.user.id }] : []), { isPublic: true }],
+						OR: [...(session?.user?.id ? [{ userId: session.user.id }] : []), { visibility: 'public' }],
 					},
 					...(search != null && search !== ''
 						? [
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 					prepTime: data.prepTime ? parseInt(data.prepTime) : null,
 					cookTime: data.cookTime ? parseInt(data.cookTime) : null,
 					servings: data.servings ? parseInt(data.servings) : 1,
-					isPublic: false,
+					visibility: data.visibility ?? 'private',
 					imageUrl: data.imageUrl,
 				},
 			});
@@ -246,6 +246,7 @@ export async function PUT(request: NextRequest) {
 					prepTime: data.prepTime ? parseInt(data.prepTime) : null,
 					cookTime: data.cookTime ? parseInt(data.cookTime) : null,
 					servings: data.servings ? parseInt(data.servings) : 1,
+					visibility: data.visibility,
 					imageUrl: data.imageUrl,
 					updatedAt: new Date(),
 				},

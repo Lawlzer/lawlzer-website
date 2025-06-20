@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 					}
 
 					// Create the food entry
-					await db.food.create({
+					const migratedFood = await db.food.create({
 						data: {
 							userId: session.user.id,
 							barcode: food.barcode,
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 							imageUrl: food.imageUrl,
 							defaultServingSize: food.defaultServingSize || 100,
 							defaultServingUnit: food.defaultServingUnit || 'g',
-							isPublic: false,
+							visibility: 'private',
 						},
 					});
 

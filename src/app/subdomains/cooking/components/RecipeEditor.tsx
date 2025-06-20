@@ -27,6 +27,7 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 	const [prepTime, setPrepTime] = useState(recipe.prepTime?.toString() ?? '');
 	const [cookTime, setCookTime] = useState(recipe.cookTime?.toString() ?? '');
 	const [servings, setServings] = useState(recipe.servings.toString());
+	const [visibility, setVisibility] = useState(recipe.visibility);
 	const [items, setItems] = useState<IngredientItem[]>([]);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,6 +112,7 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 			prepTime: prepTime || null,
 			cookTime: cookTime || null,
 			servings: Number.isNaN(parseInt(servings)) ? 1 : parseInt(servings),
+			visibility,
 			items,
 		});
 		setIsSubmitting(false);
@@ -176,6 +178,22 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 							required
 						/>
 					</div>
+				</div>
+
+				<div>
+					<label className='block text-sm font-medium mb-1'>Visibility</label>
+					<select
+						value={visibility}
+						onChange={(e) => {
+							setVisibility(e.target.value as 'private' | 'public' | 'unlisted');
+						}}
+						className='w-full px-3 py-2 border rounded-lg'
+					>
+						<option value='private'>Private</option>
+						<option value='unlisted'>Unlisted</option>
+						<option value='public'>Public</option>
+					</select>
+					<p className='text-xs text-gray-500 mt-1'>{visibility === 'private' ? 'Only you can see this recipe.' : visibility === 'unlisted' ? 'Anyone with the link can see this recipe.' : 'This recipe will appear in public search results.'}</p>
 				</div>
 
 				<div>
