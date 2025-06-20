@@ -9,6 +9,8 @@ import { convertUnit } from '../utils/conversion';
 
 import { RecipeSocial } from './RecipeSocial';
 
+import { useToast } from '~/components/Toast';
+
 interface RecipeEditorProps {
 	recipe: RecipeWithDetails;
 	availableFoods: Food[];
@@ -37,6 +39,7 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showVersionWarning, setShowVersionWarning] = useState(true);
 	const { data: session } = useSession();
+	const { addToast } = useToast();
 
 	// Initialize items from current version
 	useEffect(() => {
@@ -56,6 +59,7 @@ export function RecipeEditor({ recipe, availableFoods, onSave, onCancel }: Recip
 	const addIngredient = (food: Food) => {
 		setItems([...items, { foodId: food.id, amount: 100, unit: 'g' }]);
 		setSearchTerm('');
+		addToast(`${food.name} added`, 'success');
 	};
 
 	const updateIngredient = (index: number, updates: Partial<IngredientItem>) => {
