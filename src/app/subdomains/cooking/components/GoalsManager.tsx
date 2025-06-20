@@ -219,47 +219,47 @@ export function GoalsManager({ isGuest }: GoalsManagerProps) {
 					<div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
 						<div className='rounded-lg border p-4'>
 							<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Daily Calories</h3>
-							<p className='text-2xl font-bold'>{goal?.calories || 2000}</p>
+							<p className='text-2xl font-bold'>{goal?.calories ?? 2000}</p>
 						</div>
-						{goal != null && goal.protein !== null && goal.protein > 0 && (
+						{goal?.protein ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Protein</h3>
 								<p className='text-2xl font-bold'>{goal.protein}g</p>
-								{goal.proteinPercentage != null && goal.proteinPercentage > 0 && <p className='text-sm text-gray-500'>{goal.proteinPercentage}% of calories</p>}
+								{goal.proteinPercentage && <p className='text-sm text-gray-500'>{goal.proteinPercentage}% of calories</p>}
 							</div>
-						)}
-						{goal != null && goal.carbs !== null && goal.carbs > 0 && (
+						) : null}
+						{goal?.carbs ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Carbs</h3>
 								<p className='text-2xl font-bold'>{goal.carbs}g</p>
-								{goal.carbsPercentage != null && goal.carbsPercentage > 0 && <p className='text-sm text-gray-500'>{goal.carbsPercentage}% of calories</p>}
+								{goal.carbsPercentage && <p className='text-sm text-gray-500'>{goal.carbsPercentage}% of calories</p>}
 							</div>
-						)}
-						{goal != null && goal.fat !== null && goal.fat > 0 && (
+						) : null}
+						{goal?.fat ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Fat</h3>
 								<p className='text-2xl font-bold'>{goal.fat}g</p>
-								{goal.fatPercentage != null && goal.fatPercentage > 0 && <p className='text-sm text-gray-500'>{goal.fatPercentage}% of calories</p>}
+								{goal.fatPercentage && <p className='text-sm text-gray-500'>{goal.fatPercentage}% of calories</p>}
 							</div>
-						)}
-						{goal?.fiber != null && goal.fiber > 0 && (
+						) : null}
+						{goal?.fiber ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Fiber</h3>
 								<p className='text-2xl font-bold'>{goal.fiber}g</p>
 							</div>
-						)}
-						{goal?.sugar != null && goal.sugar > 0 && (
+						) : null}
+						{goal?.sugar ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Sugar</h3>
 								<p className='text-2xl font-bold'>{goal.sugar}g</p>
 							</div>
-						)}
-						{goal?.sodium != null && goal.sodium > 0 && (
+						) : null}
+						{goal?.sodium ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Sodium</h3>
 								<p className='text-2xl font-bold'>{goal.sodium}mg</p>
 							</div>
-						)}
+						) : null}
 					</div>
 
 					{goal?.isDefault && (

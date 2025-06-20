@@ -10,10 +10,11 @@ interface RecipeCardProps {
 	onEdit?: () => void;
 	onCook?: () => void;
 	onDelete?: () => void;
+	onViewHistory?: () => void;
 	isOwner?: boolean;
 }
 
-export function RecipeCard({ recipe, onEdit, onCook, onDelete, isOwner = false }: RecipeCardProps) {
+export function RecipeCard({ recipe, onEdit, onCook, onDelete, onViewHistory, isOwner = false }: RecipeCardProps) {
 	const [showDetails, setShowDetails] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -137,9 +138,14 @@ export function RecipeCard({ recipe, onEdit, onCook, onDelete, isOwner = false }
 
 			{/* Version Badge */}
 			{recipe.versions.length > 1 && (
-				<div className='absolute top-3 right-3'>
-					<span className='px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full'>v{recipe.currentVersion?.version ?? 1}</span>
-				</div>
+				<button onClick={onViewHistory} className='absolute top-3 right-3 group/version' title='View version history'>
+					<span className='px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full group-hover/version:bg-gray-200 dark:group-hover/version:bg-gray-700 transition-colors flex items-center gap-1'>
+						<svg className='w-3 h-3' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' />
+						</svg>
+						v{recipe.currentVersion?.version ?? 1}
+					</span>
+				</button>
 			)}
 
 			{/* Delete Confirmation Modal */}
