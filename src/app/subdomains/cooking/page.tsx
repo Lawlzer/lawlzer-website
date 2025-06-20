@@ -2,6 +2,7 @@
 
 import type { Food } from '@prisma/client';
 import dynamic from 'next/dynamic';
+import Head from 'next/head';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useCallback } from 'react';
@@ -395,6 +396,9 @@ export default function CookingPage() {
 		}
 	};
 
+	const pageTitle = editingRecipe ? `${editingRecipe.name} | Lawlzer's Cooking` : "Cooking & Nutrition | Lawlzer's Website";
+	const pageDescription = editingRecipe ? (editingRecipe.description ?? 'Edit recipe details') : 'Track your nutrition, create recipes, and manage your diet';
+
 	const handleImportRecipe = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
@@ -432,6 +436,10 @@ export default function CookingPage() {
 
 	return (
 		<div className='space-y-6'>
+			<Head>
+				<title>{pageTitle}</title>
+				<meta name='description' content={pageDescription} />
+			</Head>
 			{/* Header */}
 			<div className='flex items-center justify-between'>
 				<div>
