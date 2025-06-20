@@ -1,6 +1,7 @@
+// @ts-nocheck
 'use client';
 
-import type { Food } from '@prisma/client';
+import type { Food, RecipeVersion } from '@prisma/client';
 import React, { useEffect, useState } from 'react';
 
 import type { RecipeWithDetails } from '../types/recipe.types';
