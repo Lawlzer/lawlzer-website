@@ -29,6 +29,7 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 	const [cookTime, setCookTime] = useState('');
 	const [servings, setServings] = useState('1');
 	const [visibility, setVisibility] = useState<'private' | 'public' | 'unlisted'>('private');
+	const [isComponent, setIsComponent] = useState(false);
 	const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
 	const [selectedType, setSelectedType] = useState<'food' | 'recipe'>('food');
 	const [selectedFoodId, setSelectedFoodId] = useState('');
@@ -162,6 +163,7 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 				cookTime: cookTime || null,
 				servings: Number.isNaN(parseInt(servings)) ? 1 : parseInt(servings),
 				visibility,
+				isComponent,
 				items: ingredients.map((ing) => ({
 					foodId: ing.foodId,
 					recipeId: ing.recipeId,
@@ -264,6 +266,21 @@ export const RecipeCreator: React.FC<RecipeCreatorProps> = ({ availableFoods, av
 						<option value='public'>Public</option>
 					</select>
 					<p className='text-xs text-gray-500 mt-1'>{visibility === 'private' ? 'Only you can see this recipe.' : visibility === 'unlisted' ? 'Anyone with the link can see this recipe.' : 'This recipe will appear in public search results.'}</p>
+				</div>
+
+				<div>
+					<label className='flex items-center gap-2'>
+						<input
+							type='checkbox'
+							checked={isComponent}
+							onChange={(e) => {
+								setIsComponent(e.target.checked);
+							}}
+							className='rounded'
+						/>
+						<span className='text-sm font-medium'>Component Recipe</span>
+					</label>
+					<p className='text-xs text-gray-500 mt-1'>Component recipes (e.g., sauces, doughs) can be used in other recipes but wont show up in the main recipe list.</p>
 				</div>
 			</div>
 
