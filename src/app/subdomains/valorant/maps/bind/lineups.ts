@@ -98,6 +98,10 @@ const tempAreasTo = [
 ] as const; // We have to declare as const to type-check the titles.
 export const areasTo: MapArea<string>[] = tempAreasTo as Writeable<typeof tempAreasTo>;
 
+export type FromAreaTitles = (typeof tempAreasFrom)[number]['title'];
+export type ToAreaTitles = (typeof tempAreasTo)[number]['title'];
+export type AllAreaTitles = FromAreaTitles;
+
 export const lineups: Lineup<FromAreaTitles, ToAreaTitles>[] = [
 	{
 		agent: 'Gekko',
@@ -259,10 +263,6 @@ export const lineups: Lineup<FromAreaTitles, ToAreaTitles>[] = [
 		],
 	},
 ];
-
-export type FromAreaTitles = (typeof areasFrom)[number]['title'];
-export type ToAreaTitles = (typeof areasTo)[number]['title'];
-export type AllAreaTitles = FromAreaTitles;
 
 for (let i = 0; i < lineups.length; i++) {
 	for (let j = i + 1; j < lineups.length; j++) {

@@ -3,73 +3,120 @@ import { NextResponse } from 'next/server';
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
+interface ExportedFood {
+	name: string;
+	brand: string | null;
+	calories: number;
+	protein: number;
+	carbs: number;
+	fat: number;
+	fiber: number;
+	sugar: number;
+	sodium: number;
+}
+
+interface ExportedItem {
+	amount: number;
+	unit: string;
+	food?: ExportedFood;
+	recipe?: ExportedRecipe | null;
+}
+
+interface ExportedRecipe {
+	name: string;
+	description: string | null;
+	notes: string | null;
+	prepTime: number | null;
+	cookTime: number | null;
+	servings: number;
+	visibility: string;
+	isComponent: boolean;
+	items: (ExportedItem | null)[];
+}
+
+// Helper function to recursively build recipe data
+const buildRecipeExport = async (recipeId: string, userId: string | undefined): Promise<ExportedRecipe | null> => {
+	const recipe = await db.recipe.findFirst({
+		where: {
+			id: recipeId,
+			OR: [{ userId: userId }, { visibility: 'public' }],
+		},
+		include: {
+			currentVersion: {
+				include: {
+					items: {
+						include: {
+							food: true,
+							recipe: true, // Fetching the nested recipe shell
+						},
+					},
+				},
+			},
+		},
+	});
+
+	if (!recipe || !recipe.currentVersion) {
+		return null;
+	}
+
+	const items: (ExportedItem | null)[] = await Promise.all(
+		recipe.currentVersion.items.map(async (item): Promise<ExportedItem | null> => {
+			if (item.recipeId) {
+				const nestedRecipeData = await buildRecipeExport(item.recipeId, userId);
+				return {
+					amount: item.amount,
+					unit: item.unit,
+					recipe: nestedRecipeData, // Embed the full nested recipe
+				};
+			} else if (item.food) {
+				return {
+					amount: item.amount,
+					unit: item.unit,
+					food: {
+						name: item.food.name,
+						brand: item.food.brand,
+						calories: item.food.calories,
+						protein: item.food.protein,
+						carbs: item.food.carbs,
+						fat: item.food.fat,
+						fiber: item.food.fiber,
+						sugar: item.food.sugar,
+						sodium: item.food.sodium,
+					},
+				};
+			}
+			return null;
+		})
+	);
+
+	return {
+		name: recipe.name,
+		description: recipe.description,
+		notes: recipe.notes,
+		prepTime: recipe.prepTime,
+		cookTime: recipe.cookTime,
+		servings: recipe.servings,
+		visibility: recipe.visibility,
+		isComponent: recipe.isComponent,
+		items: items.filter(Boolean), // Filter out any null items
+	};
+};
+
 export async function GET(request: Request, { params }: { params: { recipeId: string } }) {
 	try {
 		const session = await getSession();
 		const { recipeId } = params;
 
-		const recipe = await db.recipe.findFirst({
-			where: {
-				id: recipeId,
-				// Ensure user has access (is owner or recipe is public)
-				OR: [{ userId: session?.user?.id }, { visibility: 'public' }],
-			},
-			include: {
-				currentVersion: {
-					include: {
-						items: {
-							include: {
-								food: true,
-								recipe: {
-									include: {
-										currentVersion: true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		});
+		const exportData = await buildRecipeExport(recipeId, session?.user?.id);
 
-		if (!recipe) {
-			return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
+		if (!exportData) {
+			return NextResponse.json({ error: 'Recipe not found or you do not have permission' }, { status: 404 });
 		}
-
-		// Sanitize data for export (remove sensitive info)
-		const exportData = {
-			name: recipe.name,
-			description: recipe.description,
-			notes: recipe.notes,
-			prepTime: recipe.prepTime,
-			cookTime: recipe.cookTime,
-			servings: recipe.servings,
-			visibility: recipe.visibility,
-			isComponent: recipe.isComponent,
-			items: recipe.currentVersion?.items.map((item) => ({
-				amount: item.amount,
-				unit: item.unit,
-				// Embed food data directly
-				food: item.food
-					? {
-							name: item.food.name,
-							brand: item.food.brand,
-							calories: item.food.calories,
-							protein: item.food.protein,
-							carbs: item.food.carbs,
-							fat: item.food.fat,
-							// ... add other food fields as needed
-						}
-					: null,
-				// Note: For now, we don't handle nested recipe exports deeply
-				recipeName: item.recipe?.name,
-			})),
-		};
 
 		return new NextResponse(JSON.stringify(exportData, null, 2), {
 			headers: {
 				'Content-Type': 'application/json',
-				'Content-Disposition': `attachment; filename="${recipe.name}.json"`,
+				'Content-Disposition': `attachment; filename="${exportData.name}.json"`,
 			},
 		});
 	} catch (error) {

@@ -29,11 +29,50 @@ export interface GuestRecipe {
 	visibility: 'private' | 'public' | 'unlisted';
 }
 
+export interface GuestDayEntry {
+	id: string;
+	foodId?: string;
+	recipeId?: string;
+	amount: number;
+	mealType: 'breakfast' | 'dinner' | 'lunch' | 'snack';
+	calories: number;
+	protein: number;
+	carbs: number;
+	fat: number;
+	fiber: number;
+	sugar: number;
+	sodium: number;
+}
+
+export interface GuestDay {
+	id: string; // Should be the date string 'YYYY-MM-DD'
+	date: string;
+	targetCalories?: number;
+	targetProtein?: number;
+	targetCarbs?: number;
+	targetFat?: number;
+	targetFiber?: number;
+	entries: GuestDayEntry[];
+}
+
+export interface GuestGoal {
+	calories: number;
+	protein: number | null;
+	carbs: number | null;
+	fat: number | null;
+	fiber: number | null;
+	sugar: number | null;
+	sodium: number | null;
+	proteinPercentage: number | null;
+	carbsPercentage: number | null;
+	fatPercentage: number | null;
+}
+
 export interface GuestData {
 	foods: GuestFood[];
 	recipes: GuestRecipe[];
-	days: any[]; // Will be implemented later
-	goals: any[]; // Will be implemented later
+	days: GuestDay[];
+	goals: GuestGoal | null; // A user typically has only one active goal set
 }
 
 const GUEST_COOKIE_NAME = 'cooking_guest_data';
@@ -71,7 +110,7 @@ export const getGuestData = (): GuestData => {
 			foods: [],
 			recipes: [],
 			days: [],
-			goals: [],
+			goals: null,
 		};
 	}
 
@@ -83,7 +122,7 @@ export const getGuestData = (): GuestData => {
 			foods: [],
 			recipes: [],
 			days: [],
-			goals: [],
+			goals: null,
 		};
 	}
 };
@@ -160,7 +199,7 @@ export const clearGuestData = () => {
 // Check if guest has data worth saving
 export const hasGuestData = (): boolean => {
 	const guestData = getGuestData();
-	return guestData.foods.length > 0 || guestData.recipes.length > 0 || guestData.days.length > 0 || guestData.goals.length > 0;
+	return guestData.foods.length > 0 || guestData.recipes.length > 0 || guestData.days.length > 0 || guestData.goals !== null;
 };
 
 // Migrate guest data to user account (to be called after login)

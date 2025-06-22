@@ -1,9 +1,11 @@
-// @ts-nocheck
 'use client';
 
 import { useEffect, useState } from 'react';
 
-interface NutritionGoal {
+import { getGuestData, saveGuestData } from '../services/guestStorage';
+import type { GuestGoal } from '../services/guestStorage';
+
+interface NutritionGoal extends GuestGoal {
 	id?: string;
 	calories: number;
 	protein: number | null;
@@ -64,12 +66,11 @@ export function GoalsManager({ isGuest }: GoalsManagerProps) {
 	useEffect(() => {
 		const loadGoals = async () => {
 			if (isGuest) {
-				// Load from localStorage for guests
-				const storedGoals = localStorage.getItem('nutrition_goals');
-				if (storedGoals !== null && storedGoals !== '') {
-					const parsedGoals = JSON.parse(storedGoals);
-					setGoal(parsedGoals);
-					populateForm(parsedGoals);
+				const guestData = getGuestData();
+				if (guestData.goals) {
+					const guestGoal: NutritionGoal = { ...guestData.goals, isDefault: false };
+					setGoal(guestGoal);
+					populateForm(guestGoal);
 				} else {
 					// Set default goals
 					const defaultGoals: NutritionGoal = {
@@ -149,7 +150,7 @@ export function GoalsManager({ isGuest }: GoalsManagerProps) {
 	const handleSave = async () => {
 		setIsSaving(true);
 
-		const goalData: NutritionGoal = {
+		const goalData: GuestGoal = {
 			calories: calories !== '' ? parseFloat(calories) : 2000,
 			protein: protein !== '' ? parseFloat(protein) : null,
 			carbs: carbs !== '' ? parseFloat(carbs) : null,
@@ -163,9 +164,10 @@ export function GoalsManager({ isGuest }: GoalsManagerProps) {
 		};
 
 		if (isGuest) {
-			// Save to localStorage
-			localStorage.setItem('nutrition_goals', JSON.stringify(goalData));
-			setGoal(goalData);
+			const guestData = getGuestData();
+			guestData.goals = goalData;
+			saveGuestData(guestData);
+			setGoal({ ...goalData, isDefault: false });
 			setIsEditing(false);
 		} else {
 			// Save to API
@@ -209,7 +211,7 @@ export function GoalsManager({ isGuest }: GoalsManagerProps) {
 						}}
 						className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
 					>
-						{goal?.isDefault ? 'Set Goals' : 'Edit Goals'}
+						{goal?.isDefault === true ? 'Set Goals' : 'Edit Goals'}
 					</button>
 				)}
 			</div>
@@ -222,40 +224,40 @@ export function GoalsManager({ isGuest }: GoalsManagerProps) {
 							<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Daily Calories</h3>
 							<p className='text-2xl font-bold'>{goal?.calories ?? 2000}</p>
 						</div>
-						{goal?.protein ? (
+						{goal?.protein != null ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Protein</h3>
 								<p className='text-2xl font-bold'>{goal.protein}g</p>
-								{goal.proteinPercentage && <p className='text-sm text-gray-500'>{goal.proteinPercentage}% of calories</p>}
+								{goal.proteinPercentage != null && <p className='text-sm text-gray-500'>{goal.proteinPercentage}% of calories</p>}
 							</div>
 						) : null}
-						{goal?.carbs ? (
+						{goal?.carbs != null ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Carbs</h3>
 								<p className='text-2xl font-bold'>{goal.carbs}g</p>
-								{goal.carbsPercentage && <p className='text-sm text-gray-500'>{goal.carbsPercentage}% of calories</p>}
+								{goal.carbsPercentage != null && <p className='text-sm text-gray-500'>{goal.carbsPercentage}% of calories</p>}
 							</div>
 						) : null}
-						{goal?.fat ? (
+						{goal?.fat != null ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Fat</h3>
 								<p className='text-2xl font-bold'>{goal.fat}g</p>
-								{goal.fatPercentage && <p className='text-sm text-gray-500'>{goal.fatPercentage}% of calories</p>}
+								{goal.fatPercentage != null && <p className='text-sm text-gray-500'>{goal.fatPercentage}% of calories</p>}
 							</div>
 						) : null}
-						{goal?.fiber ? (
+						{goal?.fiber != null ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Fiber</h3>
 								<p className='text-2xl font-bold'>{goal.fiber}g</p>
 							</div>
 						) : null}
-						{goal?.sugar ? (
+						{goal?.sugar != null ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Sugar</h3>
 								<p className='text-2xl font-bold'>{goal.sugar}g</p>
 							</div>
 						) : null}
-						{goal?.sodium ? (
+						{goal?.sodium != null ? (
 							<div className='rounded-lg border p-4'>
 								<h3 className='text-sm font-medium text-gray-600 dark:text-gray-400'>Sodium</h3>
 								<p className='text-2xl font-bold'>{goal.sodium}mg</p>
@@ -475,7 +477,7 @@ export function GoalsManager({ isGuest }: GoalsManagerProps) {
 								onClick={() => {
 									setIsEditing(false);
 									// Reset form to current values
-									if (goal) {
+									if (goal !== null) {
 										populateForm(goal);
 									}
 								}}

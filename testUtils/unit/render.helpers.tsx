@@ -3,6 +3,7 @@ import { render as rtlRender, type RenderOptions, type RenderResult } from '@tes
 import { ThemeProvider } from 'next-themes';
 import React, { type ReactElement } from 'react';
 import { vi } from 'vitest';
+import { ToastProvider } from '~/components/Toast';
 
 // Mock Next.js router
 const mockRouter = {
@@ -57,7 +58,7 @@ function TestProviders({ children, theme = 'light', queryClient }: TestProviders
 	return (
 		<QueryClientProvider client={client}>
 			<ThemeProvider attribute='class' defaultTheme={theme} enableSystem={false} disableTransitionOnChange>
-				{children}
+				<ToastProvider>{children}</ToastProvider>
 			</ThemeProvider>
 		</QueryClientProvider>
 	);

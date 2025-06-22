@@ -33,7 +33,7 @@ services:
     # Add command to start mongod with replica set enabled
     command: mongod --replSet rs0 --bind_ip localhost,mongo
     ports:
-      - '27018:27017'
+      - '27017:27017'
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}

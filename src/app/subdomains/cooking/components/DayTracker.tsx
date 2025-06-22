@@ -1,9 +1,10 @@
-// @ts-nocheck
 'use client';
 
-import type { Food, RecipeVersion } from '@prisma/client';
+import type { Food } from '@prisma/client';
 import React, { useEffect, useState } from 'react';
 
+import { getGuestData, saveGuestData } from '../services/guestStorage';
+import type { GuestDay } from '../services/guestStorage';
 import type { RecipeWithDetails } from '../types/recipe.types';
 
 interface DayEntry {
@@ -23,16 +24,7 @@ interface DayEntry {
 	sodium: number;
 }
 
-interface DayData {
-	id: string;
-	date: string;
-	targetCalories?: number;
-	targetProtein?: number;
-	targetCarbs?: number;
-	targetFat?: number;
-	targetFiber?: number;
-	entries: DayEntry[];
-}
+interface DayData extends GuestDay {}
 
 interface DayTrackerProps {
 	isGuest?: boolean;
@@ -65,13 +57,15 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 	// Fetch day data when date changes
 	useEffect(() => {
 		const fetchDayData = async () => {
+			const dateStr = formatDateForAPI(selectedDate);
 			if (isGuest) {
-				// For guest users, use local storage
-				const dateStr = formatDateForAPI(selectedDate);
-				const storedData = localStorage.getItem(`day_${dateStr}`);
-				if (storedData !== null && storedData !== '') {
-					setDayData(JSON.parse(storedData) as DayData);
+				const guestData = getGuestData();
+				const day = guestData.days.find((d) => d.date === dateStr);
+
+				if (day) {
+					setDayData(day);
 				} else {
+					// Create a default day structure if not found
 					setDayData({
 						id: dateStr,
 						date: dateStr,
@@ -117,7 +111,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 
 	// Calculate total nutrition for the day
 	const calculateDayTotals = () => {
-		if (!dayData) return { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 };
+		if (dayData === null) return { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 };
 
 		return dayData.entries.reduce(
 			(totals, entry) => ({
@@ -135,7 +129,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 
 	// Add entry to the day
 	const handleAddEntry = async () => {
-		if (!dayData) return;
+		if (dayData === null) return;
 
 		const parsedAmount = parseFloat(amount);
 		if (isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -148,7 +142,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 		let entry: DayEntry;
 		if (selectedType === 'food') {
 			const food = availableFoods.find((f) => f.id === selectedFoodId);
-			if (!food) {
+			if (food === undefined) {
 				alert('Please select a food');
 				setIsSaving(false);
 				return;
@@ -171,7 +165,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 			};
 		} else {
 			const recipe = availableRecipes.find((r) => r.id === selectedRecipeId);
-			if (!recipe?.currentVersion) {
+			if (recipe?.currentVersion === null || recipe?.currentVersion === undefined) {
 				alert('Please select a recipe');
 				setIsSaving(false);
 				return;
@@ -200,8 +194,15 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 		};
 
 		if (isGuest) {
-			// Save to local storage
-			localStorage.setItem(`day_${dayData.date}`, JSON.stringify(updatedDayData));
+			const guestData = getGuestData();
+			const dayIndex = guestData.days.findIndex((d) => d.date === updatedDayData.date);
+
+			if (dayIndex > -1) {
+				guestData.days[dayIndex] = updatedDayData;
+			} else {
+				guestData.days.push(updatedDayData);
+			}
+			saveGuestData(guestData);
 			setDayData(updatedDayData);
 		} else {
 			// Save to API
@@ -233,7 +234,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 
 	// Remove entry
 	const handleRemoveEntry = async (entryId: string) => {
-		if (!dayData) return;
+		if (dayData === null) return;
 
 		const updatedDayData = {
 			...dayData,
@@ -241,8 +242,13 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 		};
 
 		if (isGuest) {
-			localStorage.setItem(`day_${dayData.date}`, JSON.stringify(updatedDayData));
-			setDayData(updatedDayData);
+			const guestData = getGuestData();
+			const dayIndex = guestData.days.findIndex((d) => d.date === updatedDayData.date);
+			if (dayIndex > -1) {
+				guestData.days[dayIndex] = updatedDayData;
+				saveGuestData(guestData);
+				setDayData(updatedDayData);
+			}
 		} else {
 			// Delete from API
 			try {
@@ -289,7 +295,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 	const entriesByMeal =
 		dayData?.entries.reduce(
 			(acc, entry) => {
-				if (acc[entry.mealType] == null) acc[entry.mealType] = [];
+				if (acc[entry.mealType] === undefined) acc[entry.mealType] = [];
 				acc[entry.mealType].push(entry);
 				return acc;
 			},
@@ -427,12 +433,12 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 						{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((mealType) => (
 							<div key={mealType} className='rounded-lg border p-4'>
 								<h3 className='font-semibold mb-3 capitalize'>{mealType}</h3>
-								{entriesByMeal[mealType] != null && entriesByMeal[mealType].length > 0 ? (
+								{entriesByMeal[mealType] !== undefined && entriesByMeal[mealType].length > 0 ? (
 									<div className='space-y-2'>
 										{entriesByMeal[mealType].map((entry) => (
 											<div key={entry.id} className='flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900 rounded'>
 												<div className='flex-1'>
-													<span className='font-medium'>{entry.food?.name || entry.recipe?.name}</span>
+													<span className='font-medium'>{entry.food?.name ?? entry.recipe?.name ?? ''}</span>
 													<span className='text-sm text-gray-600 dark:text-gray-400 ml-2'>{entry.amount}g</span>
 												</div>
 												<div className='flex items-center gap-4'>
@@ -517,7 +523,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 									>
 										<option value=''>Select a food...</option>
 										{availableFoods.map((food) => {
-											const brandText = food.brand != null && food.brand !== '' ? ` (${food.brand})` : '';
+											const brandText = food.brand !== null && food.brand !== '' ? ` (${food.brand})` : '';
 											return (
 												<option key={food.id} value={food.id}>
 													{food.name}
@@ -528,7 +534,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 									</select>
 								) : (
 									<select
-										value={selectedRecipeId ?? ''}
+										value={selectedRecipeId}
 										onChange={(e) => {
 											setSelectedRecipeId(e.target.value);
 										}}

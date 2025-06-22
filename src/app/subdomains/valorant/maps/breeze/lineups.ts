@@ -49,6 +49,20 @@ const tempAreasFrom = [
 		width: 16,
 		height: 16,
 	},
+	{
+		title: 'A Shop',
+		x: 600,
+		y: 400,
+		width: 16,
+		height: 16,
+	},
+	{
+		title: 'B Mid Boxes',
+		x: 200,
+		y: 400,
+		width: 16,
+		height: 16,
+	},
 ] as const; // We have to declare as const to type-check the titles.
 
 export const areasFrom: MapArea<string>[] = tempAreasFrom as Writeable<typeof tempAreasFrom>;
@@ -103,8 +117,19 @@ const tempAreasTo = [
 		width: 16,
 		height: 16,
 	},
+	{
+		title: 'B Safe Plant',
+		x: 100,
+		y: 200,
+		width: 16,
+		height: 16,
+	},
 ] as const;
 export const areasTo: MapArea<string>[] = tempAreasTo as Writeable<typeof tempAreasTo>;
+
+export type FromAreaTitles = (typeof tempAreasFrom)[number]['title'];
+export type ToAreaTitles = (typeof tempAreasTo)[number]['title'];
+export type AllAreaTitles = FromAreaTitles;
 
 export const lineups: Lineup<FromAreaTitles, ToAreaTitles>[] = [
 	{
@@ -234,7 +259,3 @@ export const lineups: Lineup<FromAreaTitles, ToAreaTitles>[] = [
 		],
 	},
 ];
-
-export type FromAreaTitles = (typeof areasFrom)[number]['title'];
-export type ToAreaTitles = (typeof areasTo)[number]['title'];
-export type AllAreaTitles = FromAreaTitles;

@@ -38,11 +38,25 @@ export async function GET(request: NextRequest) {
 						items: {
 							include: {
 								food: true,
-								recipe: true,
+								recipe: {
+									include: {
+										currentVersion: {
+											include: {
+												items: {
+													include: {
+														food: true,
+														// We can stop nesting here to prevent overly complex queries
+													},
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
 				},
+				versions: true, // Also include other versions for history purposes
 			},
 			orderBy: { createdAt: 'desc' },
 		});
@@ -119,8 +133,28 @@ export async function POST(request: NextRequest) {
 						totalSugar += food.sugar * factor;
 						totalSodium += food.sodium * factor;
 					}
+				} else if (item.recipeId) {
+					// Handle nested recipes
+					const nestedRecipe = await tx.recipe.findUnique({
+						where: { id: item.recipeId },
+						include: {
+							currentVersion: true,
+						},
+					});
+
+					if (nestedRecipe?.currentVersion) {
+						const factor = (item.amount || 100) / 100;
+						const servingFactor = factor / nestedRecipe.servings;
+
+						totalCalories += nestedRecipe.currentVersion.caloriesPerServing * nestedRecipe.servings * servingFactor;
+						totalProtein += nestedRecipe.currentVersion.proteinPerServing * nestedRecipe.servings * servingFactor;
+						totalCarbs += nestedRecipe.currentVersion.carbsPerServing * nestedRecipe.servings * servingFactor;
+						totalFat += nestedRecipe.currentVersion.fatPerServing * nestedRecipe.servings * servingFactor;
+						totalFiber += nestedRecipe.currentVersion.fiberPerServing * nestedRecipe.servings * servingFactor;
+						totalSugar += nestedRecipe.currentVersion.sugarPerServing * nestedRecipe.servings * servingFactor;
+						totalSodium += nestedRecipe.currentVersion.sodiumPerServing * nestedRecipe.servings * servingFactor;
+					}
 				}
-				// TODO: Handle nested recipes when we implement that feature
 			}
 
 			// Calculate per-serving nutrition

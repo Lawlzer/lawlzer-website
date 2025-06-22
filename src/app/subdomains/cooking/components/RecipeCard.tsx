@@ -3,412 +3,205 @@
 import { useState } from 'react';
 
 import type { RecipeWithDetails } from '../types/recipe.types';
-import { formatDuration, formatNutritionValue } from '../utils/recipe.utils';
+import {
+  formatDuration,
+  formatNutritionValue,
+  getTotalTime,
+} from '../utils/recipe.utils';
 
+import {
+  CaloriesIcon,
+  ChevronDownIcon,
+  ExportIcon,
+  TimeIcon,
+  TrashIcon,
+  UserIcon,
+} from './Icons';
+import { useToast } from '~/components/Toast';
+import { Button } from '~/components/ui/Button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '~/components/ui/Card';
 import { NutritionPieChart } from './NutritionPieChart';
+import { PieChartIcon } from './Icons';
 
 interface RecipeCardProps {
-	recipe: RecipeWithDetails;
-	onEdit?: () => void;
-	onCook?: () => void;
-	onDelete?: () => void;
-	onViewHistory?: () => void;
-	isOwner?: boolean;
+  recipe: RecipeWithDetails;
+  onEdit?: () => void;
+  onCook?: () => void;
+  onDelete?: () => void;
+  onViewHistory?: () => void;
+  onViewFullDay: () => void;
+  isOwner?: boolean;
 }
 
-export function RecipeCard({ recipe, onEdit, onCook, onDelete, onViewHistory, isOwner = false }: RecipeCardProps) {
-	const [showDetails, setShowDetails] = useState(false);
-	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+export function RecipeCard({
+  recipe,
+  onEdit,
+  onCook,
+  onDelete,
+  onViewHistory,
+  onViewFullDay,
+  isOwner = false,
+}: RecipeCardProps) {
+  const [showDetails, setShowDetails] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-	const handleExport = () => {
-		window.location.href = `/api/cooking/recipes/${recipe.id}/export`;
-	};
+  const handleExport = () => {
+    window.location.href = `/api/cooking/recipes/${recipe.id}/export`;
+  };
 
-	const hasNutrition = recipe.currentVersion !== null;
-	const totalTime = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
+  const hasNutrition = recipe.currentVersion !== null;
+  const totalTime = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
 
-	return (
-		<div className='group relative rounded-xl border bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-all duration-200'>
-			{/* Header */}
-			<div className='p-5'>
-				<div className='flex items-start justify-between mb-3'>
-					<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-2'>{recipe.name}</h3>
-					{recipe.visibility === 'public' && <span className='ml-2 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full'>Public</span>}
-					{recipe.visibility === 'unlisted' && <span className='ml-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full'>Unlisted</span>}
-				</div>
+  const timeSummary = [
+    {
+      label: 'Prep',
+      value: recipe.prepTime ? formatDuration(recipe.prepTime) : null,
+    },
+    {
+      label: 'Cook',
+      value: recipe.cookTime ? formatDuration(recipe.cookTime) : null,
+    },
+    {
+      label: 'Total',
+      value: getTotalTime(recipe.prepTime, recipe.cookTime)
+        ? formatDuration(getTotalTime(recipe.prepTime, recipe.cookTime))
+        : null,
+    },
+  ].filter((t) => t.value);
 
-				{recipe.description != null && recipe.description !== '' && <p className='text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2'>{recipe.description}</p>}
+  const perServingNutrition = recipe.currentVersion
+    ? {
+        calories: recipe.currentVersion.caloriesPerServing,
+        protein: recipe.currentVersion.proteinPerServing,
+        carbs: recipe.currentVersion.carbsPerServing,
+        fat: recipe.currentVersion.fatPerServing,
+      }
+    : null;
 
-				{/* Quick Info */}
-				<div className='flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400'>
-					{totalTime > 0 && (
-						<div className='flex items-center gap-1'>
-							<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' />
-							</svg>
-							<span>{formatDuration(totalTime)}</span>
-						</div>
-					)}
-					<div className='flex items-center gap-1'>
-						<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' />
-						</svg>
-						<span>
-							{recipe.servings} {recipe.servings === 1 ? 'serving' : 'servings'}
-						</span>
-					</div>
-					{hasNutrition && recipe.currentVersion && (
-						<div className='flex items-center gap-1'>
-							<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 10V3L4 14h7v7l9-11h-7z' />
-							</svg>
-							<span>{Math.round(recipe.currentVersion.caloriesPerServing)} cal</span>
-						</div>
-					)}
-				</div>
-			</div>
+  return (
+    <Card className="relative overflow-hidden hover-lift card-hover transition-all-300">
+      <CardHeader>
+        <CardTitle className="flex justify-between items-start">
+          {recipe.name}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowDetails(!showDetails)}
+          >
+            <ChevronDownIcon
+              className={`transition-transform ${showDetails ? 'rotate-180' : ''}`}
+            />
+          </Button>
+        </CardTitle>
+        <CardDescription>{recipe.description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-1">
+            <TimeIcon className="w-4 h-4" />
+            <span>
+              {timeSummary.find((t) => t.label === 'Total')?.value || 'N/A'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <UserIcon className="w-4 h-4" />
+            <span>{recipe.servings} servings</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <CaloriesIcon className="w-4 h-4" />
+            <span>
+              {perServingNutrition?.calories.toFixed(0) ?? 'N/A'} cal/serving
+            </span>
+          </div>
+        </div>
+        {showDetails && (
+          <div className="mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold mb-2">Ingredients</h4>
+                <ul className="list-disc list-inside text-sm">
+                  {recipe.currentVersion?.items
+                    .slice(0, 5)
+                    .map((item) => (
+                      <li key={item.id}>
+                        {item.food?.name ?? item.recipe?.name}
+                      </li>
+                    ))}
+                  {recipe.currentVersion &&
+                    recipe.currentVersion.items.length > 5 && (
+                      <li>
+                        ...and {recipe.currentVersion.items.length - 5} more
+                      </li>
+                    )}
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Nutrition per Serving</h4>
+                {perServingNutrition && (
+                  <NutritionPieChart nutrition={perServingNutrition} />
+                )}
+              </div>
+            </div>
+            {isOwner && (
+              <div className="flex gap-2 mt-4">
+                <Button onClick={onEdit}>Edit</Button>
+                <Button onClick={onCook}>Cook</Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+      {isOwner && (
+        <CardFooter className="flex justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={onViewHistory}>
+              <TimeIcon className="mr-2" /> History
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onViewFullDay}>
+              <PieChartIcon /> <span className="ml-2">Full Day</span>
+            </Button>
+          </div>
+        </CardFooter>
+      )}
 
-			{/* Nutrition Details (Expandable) */}
-			{hasNutrition && recipe.currentVersion && (
-				<div className='border-t dark:border-gray-800'>
-					<button
-						onClick={() => {
-							setShowDetails(!showDetails);
-						}}
-						className='w-full px-5 py-3 text-left text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-between'
-					>
-						<span>Nutrition per serving</span>
-						<svg className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
-						</svg>
-					</button>
-
-					{showDetails && (
-						<div className='px-5 pb-4'>
-							<div className='grid grid-cols-2 gap-3 text-sm'>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Calories</span>
-									<span className='font-medium'>{Math.round(recipe.currentVersion.caloriesPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Protein</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.proteinPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Carbs</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.carbsPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Fat</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.fatPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Fiber</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.fiberPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Sodium</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.sodiumPerServing, 'mg')}</span>
-								</div>
-							</div>
-							<div className='mt-4'>
-								<NutritionPieChart
-									protein={recipe.currentVersion.proteinPerServing}
-									carbs={recipe.currentVersion.carbsPerServing}
-									fat={recipe.currentVersion.fatPerServing}
-									width={120}
-									height={120}
-								/>
-							</div>
-						</div>
-					)}
-				</div>
-			)}
-
-			{/* Actions */}
-			<div className='flex items-center gap-2 p-5 pt-0'>
-				{onCook && (
-					<button onClick={onCook} className='flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium'>
-						Cook
-					</button>
-				)}
-				{isOwner && onEdit && (
-					<button onClick={onEdit} className='flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium'>
-						Edit
-					</button>
-				)}
-				{isOwner && onDelete && (
-					<button
-						onClick={() => {
-							setShowDeleteConfirm(true);
-						}}
-						className='p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors'
-						title='Delete recipe'
-					>
-						<svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' />
-						</svg>
-					</button>
-				)}
-				<button onClick={handleExport} className='p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg transition-colors' title='Export recipe'>
-					<svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-						<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' />
-					</svg>
-				</button>
-			</div>
-
-			{/* Version Badge */}
-			{recipe.versions.length > 1 && (
-				<button onClick={onViewHistory} className='absolute top-3 right-3 group/version' title='View version history'>
-					<span className='px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full group-hover/version:bg-gray-200 dark:group-hover/version:bg-gray-700 transition-colors flex items-center gap-1'>
-						<svg className='w-3 h-3' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' />
-						</svg>
-						v{recipe.currentVersion?.version ?? 1}
-					</span>
-				</button>
-			)}
-
-			{/* Delete Confirmation Modal */}
-			{showDeleteConfirm && (
-				<div
-					className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'
-					onClick={() => {
-						setShowDeleteConfirm(false);
-					}}
-				>
-					<div
-						className='bg-white dark:bg-gray-900 rounded-lg p-6 max-w-sm mx-4 shadow-xl'
-						onClick={(e) => {
-							e.stopPropagation();
-						}}
-					>
-						<h3 className='text-lg font-semibold mb-3'>Delete Recipe?</h3>
-						<p className='text-gray-600 dark:text-gray-400 mb-6'>Are you sure you want to delete &quot;{recipe.name}&quot;? This action cannot be undone.</p>
-						<div className='flex gap-3'>
-							<button
-								onClick={() => {
-									setShowDeleteConfirm(false);
-								}}
-								className='flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
-							>
-								Cancel
-							</button>
-							<button
-								onClick={() => {
-									onDelete?.();
-									setShowDeleteConfirm(false);
-								}}
-								className='flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-'use client';
-
-import { useState } from 'react';
-
-import type { RecipeWithDetails } from '../types/recipe.types';
-import { formatDuration, formatNutritionValue } from '../utils/recipe.utils';
-
-import { NutritionPieChart } from './NutritionPieChart';
-
-interface RecipeCardProps {
-	recipe: RecipeWithDetails;
-	onEdit?: () => void;
-	onCook?: () => void;
-	onDelete?: () => void;
-	onViewHistory?: () => void;
-	isOwner?: boolean;
-}
-
-export function RecipeCard({ recipe, onEdit, onCook, onDelete, onViewHistory, isOwner = false }: RecipeCardProps) {
-	const [showDetails, setShowDetails] = useState(false);
-	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-	const handleExport = () => {
-		window.location.href = `/api/cooking/recipes/${recipe.id}/export`;
-	};
-
-	const hasNutrition = recipe.currentVersion !== null;
-	const totalTime = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
-
-	return (
-		<div className='group relative rounded-xl border bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-all duration-200'>
-			{/* Header */}
-			<div className='p-5'>
-				<div className='flex items-start justify-between mb-3'>
-					<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-2'>{recipe.name}</h3>
-					{recipe.visibility === 'public' && <span className='ml-2 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full'>Public</span>}
-					{recipe.visibility === 'unlisted' && <span className='ml-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full'>Unlisted</span>}
-				</div>
-
-				{recipe.description != null && recipe.description !== '' && <p className='text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2'>{recipe.description}</p>}
-
-				{/* Quick Info */}
-				<div className='flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400'>
-					{totalTime > 0 && (
-						<div className='flex items-center gap-1'>
-							<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' />
-							</svg>
-							<span>{formatDuration(totalTime)}</span>
-						</div>
-					)}
-					<div className='flex items-center gap-1'>
-						<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' />
-						</svg>
-						<span>
-							{recipe.servings} {recipe.servings === 1 ? 'serving' : 'servings'}
-						</span>
-					</div>
-					{hasNutrition && recipe.currentVersion && (
-						<div className='flex items-center gap-1'>
-							<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 10V3L4 14h7v7l9-11h-7z' />
-							</svg>
-							<span>{Math.round(recipe.currentVersion.caloriesPerServing)} cal</span>
-						</div>
-					)}
-				</div>
-			</div>
-
-			{/* Nutrition Details (Expandable) */}
-			{hasNutrition && recipe.currentVersion && (
-				<div className='border-t dark:border-gray-800'>
-					<button
-						onClick={() => {
-							setShowDetails(!showDetails);
-						}}
-						className='w-full px-5 py-3 text-left text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-between'
-					>
-						<span>Nutrition per serving</span>
-						<svg className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
-						</svg>
-					</button>
-
-					{showDetails && (
-						<div className='px-5 pb-4'>
-							<div className='grid grid-cols-2 gap-3 text-sm'>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Calories</span>
-									<span className='font-medium'>{Math.round(recipe.currentVersion.caloriesPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Protein</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.proteinPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Carbs</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.carbsPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Fat</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.fatPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Fiber</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.fiberPerServing)}</span>
-								</div>
-								<div className='flex justify-between'>
-									<span className='text-gray-600 dark:text-gray-400'>Sodium</span>
-									<span className='font-medium'>{formatNutritionValue(recipe.currentVersion.sodiumPerServing, 'mg')}</span>
-								</div>
-							</div>
-							<div className='mt-4'>
-								<NutritionPieChart protein={recipe.currentVersion.proteinPerServing} carbs={recipe.currentVersion.carbsPerServing} fat={recipe.currentVersion.fatPerServing} width={120} height={120} />
-							</div>
-						</div>
-					)}
-				</div>
-			)}
-
-			{/* Actions */}
-			<div className='flex items-center gap-2 p-5 pt-0'>
-				{onCook && (
-					<button onClick={onCook} className='flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium'>
-						Cook
-					</button>
-				)}
-				{isOwner && onEdit && (
-					<button onClick={onEdit} className='flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium'>
-						Edit
-					</button>
-				)}
-				{isOwner && onDelete && (
-					<button
-						onClick={() => {
-							setShowDeleteConfirm(true);
-						}}
-						className='p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors'
-						title='Delete recipe'
-					>
-						<svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' />
-						</svg>
-					</button>
-				)}
-				<button onClick={handleExport} className='p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg transition-colors' title='Export recipe'>
-					<svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-						<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' />
-					</svg>
-				</button>
-			</div>
-
-			{/* Version Badge */}
-			{recipe.versions.length > 1 && (
-				<button onClick={onViewHistory} className='absolute top-3 right-3 group/version' title='View version history'>
-					<span className='px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full group-hover/version:bg-gray-200 dark:group-hover/version:bg-gray-700 transition-colors flex items-center gap-1'>
-						<svg className='w-3 h-3' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' />
-						</svg>
-						v{recipe.currentVersion?.version ?? 1}
-					</span>
-				</button>
-			)}
-
-			{/* Delete Confirmation Modal */}
-			{showDeleteConfirm && (
-				<div
-					className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'
-					onClick={() => {
-						setShowDeleteConfirm(false);
-					}}
-				>
-					<div
-						className='bg-white dark:bg-gray-900 rounded-lg p-6 max-w-sm mx-4 shadow-xl'
-						onClick={(e) => {
-							e.stopPropagation();
-						}}
-					>
-						<h3 className='text-lg font-semibold mb-3'>Delete Recipe?</h3>
-						<p className='text-gray-600 dark:text-gray-400 mb-6'>Are you sure you want to delete &quot;{recipe.name}&quot;? This action cannot be undone.</p>
-						<div className='flex gap-3'>
-							<button
-								onClick={() => {
-									setShowDeleteConfirm(false);
-								}}
-								className='flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
-							>
-								Cancel
-							</button>
-							<button
-								onClick={() => {
-									onDelete?.();
-									setShowDeleteConfirm(false);
-								}}
-								className='flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'
-							>
-								Delete
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-		</div>
-	);
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-white/80 dark:bg-black/80 flex flex-col items-center justify-center p-4">
+          <p className="font-semibold">Are you sure?</p>
+          <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-4">
+            This action cannot be undone.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                onDelete?.();
+                setShowDeleteConfirm(false);
+              }}
+            >
+              Yes, delete
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
 }

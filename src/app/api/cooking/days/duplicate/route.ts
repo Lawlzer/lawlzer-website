@@ -6,6 +6,7 @@ import { getSession } from '~/server/db/session';
 export async function POST(request: Request) {
 	try {
 		const session = await getSession();
+		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 		if (!session?.user?.id) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}

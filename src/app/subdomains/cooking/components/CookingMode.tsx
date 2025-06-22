@@ -1,24 +1,13 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 'use client';
 
-import type { Food, Recipe } from '@prisma/client';
+import type { Food } from '@prisma/client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSpeechSynthesis, useSpeechRecognition } from 'react-speech-kit';
 
 import { convertUnit } from '../utils/recipe.utils';
 
-import type { IngredientUnit } from '@/app/subdomains/cooking/types/recipe.types';
-
-interface RecipeWithDetails extends Recipe {
-	currentVersion: {
-		id: string;
-		ingredients: {
-			id: string;
-			quantity: number;
-			unit: string;
-			ingredient: Food | RecipeWithDetails;
-			isRecipe: boolean;
-		}[];
-	} | null;
-}
+import type { IngredientUnit, RecipeWithDetails } from '@/app/subdomains/cooking/types/recipe.types';
 
 interface CookingModeProps {
 	recipes: RecipeWithDetails[];
@@ -68,10 +57,11 @@ function getNutrition(ingredient: Food | RecipeWithDetails): NutritionData {
 		return { calories: 0, protein: 0, carbs: 0, fat: 0 };
 	}
 
-	const totals: NutritionData = ingredient.currentVersion.ingredients.reduce<NutritionData>(
+	const totals: NutritionData = ingredient.currentVersion.items.reduce<NutritionData>(
 		(acc, ing) => {
-			const ingNutrition: NutritionData = getNutrition(ing.ingredient);
-			const multiplier = ing.quantity / 100; // Assuming per 100g
+			if (!ing.food && !ing.recipe) return acc;
+			const ingNutrition: NutritionData = getNutrition(ing.food ?? ing.recipe!);
+			const multiplier = ing.amount / 100; // Assuming per 100g
 
 			return {
 				calories: acc.calories + ingNutrition.calories * multiplier,
@@ -94,10 +84,11 @@ function getNutrition(ingredient: Food | RecipeWithDetails): NutritionData {
 
 export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 	const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
-	const [currentStep, setCurrentStep] = useState(0);
-	const [servings, setServings] = useState(1);
+	const [_currentStep, setCurrentStep] = useState(0);
+	const [_servings, _setServings] = useState(1);
 	const [isHandsFree, setIsHandsFree] = useState(false);
 	const handsFreeContainerRef = useRef<HTMLDivElement>(null);
+	const [isVoiceActive, setIsVoiceActive] = useState(false);
 
 	const selectedRecipe = recipes.find((r) => r.id === selectedRecipeId);
 	const steps = selectedRecipe?.notes?.split('\n').filter((s) => s.trim() !== '') ?? [];
@@ -123,28 +114,16 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 			if (!recipeToCalculate?.currentVersion) return 0;
 
 			let totalWeight = 0;
-			recipeToCalculate.currentVersion.ingredients.forEach((ing) => {
-				// Convert all units to grams for calculation
-				let weightInGrams = ing.quantity;
-				const unit = (ing.unit || 'g') as IngredientUnit;
-
+			recipeToCalculate.currentVersion.items.forEach((ing) => {
+				// Convert all units to grams for a consistent total weight calculation
+				let weightInGrams = 0;
 				try {
-					// Use the convertUnit utility for accurate conversions
-					weightInGrams = convertUnit(ing.quantity, unit, 'g');
+					weightInGrams = convertUnit(ing.amount, (ing.unit || 'g') as IngredientUnit, 'g');
 				} catch (error) {
-					console.error(`Failed to convert ${ing.quantity} ${unit} to grams`, error);
-					// Fallback to original quantity if conversion fails
-					weightInGrams = ing.quantity;
+					console.error(`Failed to convert ${ing.amount} ${ing.unit} to grams for total weight calculation.`, error);
+					// Fallback to the original amount if conversion fails, assuming it might be in grams.
+					weightInGrams = ing.amount;
 				}
-
-				// Handle nested recipes
-				if (ing.isRecipe && 'currentVersion' in ing.ingredient) {
-					const nestedRecipe = ing.ingredient;
-					const nestedWeight = calculateTotalWeight(nestedRecipe);
-					// Scale by the amount used
-					weightInGrams = (nestedWeight * ing.quantity) / 100; // Assuming recipe amounts are percentages
-				}
-
 				totalWeight += weightInGrams;
 			});
 
@@ -173,24 +152,24 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 		setScaleFactor(newScaleFactor);
 
 		// Calculate scaled ingredients
-		const scaled: ScaledIngredient[] = selectedRecipe.currentVersion.ingredients.map((ing) => {
-			const { ingredient } = ing;
-			const scaledQuantity = ing.quantity * newScaleFactor;
+		const scaled: ScaledIngredient[] = selectedRecipe.currentVersion.items.map((ing) => {
+			const ingredient = ing.food ?? ing.recipe!;
+			const scaledQuantity = ing.amount * newScaleFactor;
 
 			// Calculate nutrition for the scaled amount
 			// Convert to grams for nutrition calculation (nutrition is per 100g)
-			const scaledQuantityInGrams = ing.unit === 'g' ? scaledQuantity : convertUnit(scaledQuantity, ing.unit, 'g');
+			const scaledQuantityInGrams = ing.unit === 'g' ? scaledQuantity : convertUnit(scaledQuantity, ing.unit as IngredientUnit, 'g');
 			const nutritionMultiplier = scaledQuantityInGrams / 100;
 
 			const baseNutrition = getNutrition(ingredient);
 
 			return {
 				name: ingredient.name,
-				originalQuantity: ing.quantity,
+				originalQuantity: ing.amount,
 				originalUnit: ing.unit,
 				scaledQuantity: scaledQuantity,
 				scaledUnit: ing.unit,
-				isRecipe: ing.isRecipe,
+				isRecipe: !!ing.recipeId,
 				nutrition: {
 					calories: baseNutrition.calories * nutritionMultiplier,
 					protein: baseNutrition.protein * nutritionMultiplier,
@@ -239,6 +218,40 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 		}
 	};
 
+	const onEnd = () => {
+		// Re-enable listening after speech synthesis ends
+		if (isVoiceActive) {
+			listen();
+		}
+	};
+
+	const { speak, speaking } = useSpeechSynthesis({ onEnd });
+	const { listen, listening, stop } = useSpeechRecognition({
+		onResult: (result: string) => {
+			const command = result.toLowerCase();
+			if (command.includes('next')) {
+				nextStep();
+				speak({ text: `Next step: ${steps[_currentStep + 1]}` });
+			} else if (command.includes('previous')) {
+				prevStep();
+				speak({ text: `Previous step: ${steps[_currentStep - 1]}` });
+			} else if (command.includes('repeat')) {
+				speak({ text: steps[_currentStep] });
+			}
+		},
+	});
+
+	const toggleVoice = () => {
+		if (isVoiceActive) {
+			stop();
+			setIsVoiceActive(false);
+		} else {
+			listen();
+			setIsVoiceActive(true);
+			speak({ text: 'Voice commands enabled.' });
+		}
+	};
+
 	useEffect(() => {
 		const handleFullscreenChange = () => {
 			if (!document.fullscreenElement) {
@@ -277,9 +290,16 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 		<div ref={handsFreeContainerRef} className={`space-y-4 ${isHandsFree ? 'bg-white dark:bg-black p-8' : ''}`}>
 			<div className='flex items-center justify-between'>
 				<h2 className='text-2xl font-bold'>Cooking Mode</h2>
-				<button onClick={() => void toggleHandsFree()} className='px-3 py-2 text-sm border rounded hover:bg-gray-100 dark:hover:bg-gray-700'>
-					{isHandsFree ? 'Exit Hands-Free' : 'Hands-Free Mode'}
-				</button>
+				<div>
+					{isHandsFree && (
+						<button onClick={toggleVoice} className='px-3 py-2 text-sm border rounded mr-2'>
+							{listening ? 'Listening...' : 'Voice CMD'}
+						</button>
+					)}
+					<button onClick={() => void toggleHandsFree()} className='px-3 py-2 text-sm border rounded'>
+						{isHandsFree ? 'Exit Hands-Free' : 'Hands-Free Mode'}
+					</button>
+				</div>
 			</div>
 
 			{/* Recipe Selection */}
@@ -408,7 +428,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 										{ing.scaledQuantity.toFixed(1)} {ing.scaledUnit}
 									</p>
 									<p className='text-xs text-gray-600 dark:text-gray-400'>
-										was {ing.originalQuantity} {ing.originalUnit}
+										was {ing.originalQuantity.toFixed(1)} {ing.originalUnit}
 									</p>
 								</div>
 							</div>
