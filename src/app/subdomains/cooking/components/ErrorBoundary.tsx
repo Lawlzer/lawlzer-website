@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
 		}
 	}
 
-	public async render() {
+	public render() {
 		if (this.state.hasError) {
 			// Use custom fallback if provided
 			if (this.props.fallback !== undefined) {
@@ -120,7 +120,7 @@ export class ApiErrorBoundary extends Component<Props, State> {
 		});
 	}
 
-	public async render() {
+	public render() {
 		if (this.state.hasError) {
 			const isNetworkError = this.state.error?.message.toLowerCase().includes('network') === true || this.state.error?.message.toLowerCase().includes('fetch') === true;
 
