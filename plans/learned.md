@@ -13,6 +13,9 @@ Update this file when you discover patterns that will be useful for future work 
 - API routes: `src/app/api/[feature]/[endpoint]/route.ts` for Next.js 13+ App Router
 - Components organized by feature within each subdomain
 - Shared utilities in `src/utils/` and subdomain-specific utils in subdomain folders
+- Configuration files organized in `.config/` directory with root proxy files for compatibility
+- Docker files organized in `.docker/` directory
+- Test utilities and helpers in `testUtils/` directory
 
 ### Module Patterns
 
@@ -151,6 +154,9 @@ Update this file when you discover patterns that will be useful for future work 
 - Environment-specific configs via Next.js env system
 - Feature flags through environment variables
 - API endpoints configured via service layers
+- Configuration files live in `.config/` but have proxy files in root that re-export them
+- Proxy pattern example: `export { default } from './.config/vitest.config';`
+- When moving configs, update relative import paths (e.g., `../src/env.mjs` instead of `./src/env.mjs`)
 
 ### Deployment Gotchas
 

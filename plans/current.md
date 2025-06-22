@@ -1,6 +1,6 @@
 # Cooking Subdomain Implementation
 
-## 📊 Workflow Counter: 10
+## 📊 Workflow Counter: 11
 
 ## 🎯 Overview
 
@@ -47,21 +47,22 @@
 
 ## 📊 Status
 
-| Phase                                                           | Status         | Priority | Notes                                                            |
-| --------------------------------------------------------------- | -------------- | -------- | ---------------------------------------------------------------- |
-| Phase 0: Project Analysis & Planning                            | 🟢 Complete    | P0       | Audit complete. Many features have a solid foundation.           |
-| Phase 1: Core Recipe & Data Model                               | 🟢 Complete    | P0       | Schema is mostly complete. Focus on APIs and UI.                 |
-| Phase 2: User & Guest Data Management                           | 🟢 Complete    | P1       | Guest storage is strong. Needs full data migration testing.      |
-| Phase 3: Daily Tracking & Goals                                 | 🟢 Complete    | P1       | Components are well-implemented. Need to verify API connections. |
-| Phase 4: Advanced Recipe Features                               | 🟢 Complete    | P2       | Scaling, alternatives, import/export.                            |
-| Phase 5: Social, Search & SEO                                   | 🟢 Complete    | P2       | Community and discovery features.                                |
-| Phase 6: Advanced Tools (Inventory, Planning)                   | 🟢 Complete    | P2       | All features implemented including meal planning.                |
-| Phase 7: Polish & Quality Assurance                             | 🟢 Complete    | P3       | Test fixes complete. Moving to Phase 8 for UI/UX fixes.          |
-| Phase 8: UI/UX Fixes from Verification                          | 🟢 Complete    | P0       | Fixed critical UI/UX issues found during MCP verification.       |
-| Phase 9: Comprehensive Cooking Subdomain Cleanup & Improvements | 🟢 Complete    | P0       | Major refactoring and improvements completed.                    |
-| Phase 10: Additional Comprehensive Improvements & Testing       | 🟢 Complete    | P0       | Major architecture and UI/UX improvements implemented.           |
-| Phase 11: ESLint Error Fixing & Next.js 15 Route Updates        | 🟢 Complete    | P0       | ESLint errors fixed and Next.js 15 route updates completed.      |
-| Phase 12: Performance Optimization & Testing                    | 🟡 In Progress | P1       | Implementing performance optimizations and comprehensive tests.  |
+| Phase                                                           | Status      | Priority | Notes                                                            |
+| --------------------------------------------------------------- | ----------- | -------- | ---------------------------------------------------------------- |
+| Phase 0: Project Analysis & Planning                            | 🟢 Complete | P0       | Audit complete. Many features have a solid foundation.           |
+| Phase 1: Core Recipe & Data Model                               | 🟢 Complete | P0       | Schema is mostly complete. Focus on APIs and UI.                 |
+| Phase 2: User & Guest Data Management                           | 🟢 Complete | P1       | Guest storage is strong. Needs full data migration testing.      |
+| Phase 3: Daily Tracking & Goals                                 | 🟢 Complete | P1       | Components are well-implemented. Need to verify API connections. |
+| Phase 4: Advanced Recipe Features                               | 🟢 Complete | P2       | Scaling, alternatives, import/export.                            |
+| Phase 5: Social, Search & SEO                                   | 🟢 Complete | P2       | Community and discovery features.                                |
+| Phase 6: Advanced Tools (Inventory, Planning)                   | 🟢 Complete | P2       | All features implemented including meal planning.                |
+| Phase 7: Polish & Quality Assurance                             | 🟢 Complete | P3       | Test fixes complete. Moving to Phase 8 for UI/UX fixes.          |
+| Phase 8: UI/UX Fixes from Verification                          | 🟢 Complete | P0       | Fixed critical UI/UX issues found during MCP verification.       |
+| Phase 9: Comprehensive Cooking Subdomain Cleanup & Improvements | 🟢 Complete | P0       | Major refactoring and improvements completed.                    |
+| Phase 10: Additional Comprehensive Improvements & Testing       | 🟢 Complete | P0       | Major architecture and UI/UX improvements implemented.           |
+| Phase 11: ESLint Error Fixing & Next.js 15 Route Updates        | 🟢 Complete | P0       | ESLint errors fixed and Next.js 15 route updates completed.      |
+| Phase 12: Performance Optimization & Testing                    | 🟢 Complete | P1       | Implemented performance optimizations and comprehensive tests.   |
+| Phase 13: Configuration File Reorganization                     | 🟢 Complete | P2       | Moved configs to .config/ and Docker files to .docker/           |
 
 ## 🏗️ Architecture
 
@@ -466,6 +467,13 @@ _This section will be updated with diagrams as complex components are designed._
 **Learning**: Always check element visibility before interacting, handle both empty and populated states
 **Applied**: Used if (await element.isVisible()) pattern throughout E2E tests for robustness
 
+### Entry #25 - Configuration File Organization
+
+**Tried**: Moving configuration files to subdirectories to clean up root
+**Result**: Successfully organized configs in .config/ and Docker files in .docker/
+**Learning**: Create proxy files in root that re-export configs for tool compatibility; update relative paths in moved configs
+**Applied**: All major configs now in .config/ with root proxy files, making the project structure cleaner
+
 ## 📊 Progress
 
 **Phase**: Phase 12 - Performance Optimization & Testing  
@@ -638,7 +646,7 @@ _This section will be updated with diagrams as complex components are designed._
 - ✅ `npm run dev` runs without errors
 - ✅ App is accessible at http://localhost:3000/subdomains/cooking
 
-### Phase 12: Performance Optimization & Testing 🟡 In Progress
+### Phase 12: Performance Optimization & Testing 🟢 Complete
 
 **Goal**: Implement performance optimizations and comprehensive testing
 
@@ -808,3 +816,33 @@ Remember: The workflow captures not just WHAT you did, but WHY you did it and WH
 - [ ] Task 10.7.3: Create a style guide
 - [ ] Task 10.7.4: Add proper TypeScript types everywhere
 - [ ] Task 10.7.5: Create developer onboarding guide
+
+### Phase 13: Configuration File Reorganization 🟢 Complete
+
+**Goal**: Clean up the root directory by organizing configuration files into appropriate subdirectories
+
+- [x] **Task 13.1**: Create organizational directories
+  - Created `.config/` for configuration files
+  - Created `.docker/` for Docker-related files
+- [x] **Task 13.2**: Move configuration files to `.config/`
+  - Moved `vitest.config.ts`, `postcss.config.mjs`, `next.config.mjs`, `playwright.config.ts`
+  - Created proxy files in root that re-export from `.config/` for tool compatibility
+- [x] **Task 13.3**: Move Docker files to `.docker/`
+  - Moved `docker-compose.yml`, `Dockerfile`, `.dockerignore`
+- [x] **Task 13.4**: Move test utilities
+  - Moved `todo-tests` to `testUtils/` directory
+- [x] **Task 13.5**: Fix configuration paths
+  - Updated import paths in `next.config.mjs` (e.g., `../src/env.mjs`)
+  - Fixed path resolution for webpack aliases
+- [x] **Task 13.6**: Fix build issues
+  - Fixed async render method in `ErrorBoundary.tsx`
+  - Updated test to check PostCSS config in new location
+- [x] **Task 13.7**: Verify functionality
+  - Site runs successfully with new configuration structure
+  - Build process works with reorganized files
+
+### Final Review
+
+- [x] **Final Polish:** Phase 13 complete. All configuration files moved and verified.
+- [x] **Final Testing:** All tests passing with new configuration structure.
+- [x] **Project Completion:** Configuration file reorganization is now complete!
