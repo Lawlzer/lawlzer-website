@@ -121,7 +121,7 @@ describe('Auth Library Functions', () => {
 
 			// 3. Setup the *static* NextResponse.redirect mock
 			//    Need to cast because TS doesn't know NextResponse is the mocked class here
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			const redirectMock = NextResponse.redirect as ReturnType<typeof vi.fn>;
 			redirectMock.mockReturnValue(mockResponse);
 			// --- End Correction ---
@@ -148,7 +148,6 @@ describe('Auth Library Functions', () => {
 			// Construct the expected URL string based on the mocked env
 			const expectedUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}:${process.env.NEXT_PUBLIC_FRONTEND_PORT}`;
 
-			// eslint-disable-next-line @typescript-eslint/unbound-method
 			const mockedRedirect = vi.mocked(NextResponse.redirect); // Use vi.mocked for proper typing
 			expect(mockedRedirect).toHaveBeenCalledWith(expectedUrl); // Expect the string URL
 
@@ -169,7 +168,6 @@ describe('Auth Library Functions', () => {
 
 			await handleAndGenerateSessionToken(mockUserId, mockRequest);
 
-			// eslint-disable-next-line @typescript-eslint/unbound-method
 			const mockedRedirect = vi.mocked(NextResponse.redirect); // Use vi.mocked for proper typing
 			expect(mockedRedirect).toHaveBeenCalledWith(mockRedirectUrl);
 		});

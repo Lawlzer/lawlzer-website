@@ -1,21 +1,25 @@
-import { db } from '~/server/db';
 import { notFound } from 'next/navigation';
+
 import { RecipeSocial } from '~/app/subdomains/cooking/components/RecipeSocial';
+import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
 async function getRecipe(id: string) {
 	const recipe = await db.recipe.findFirst({
 		where: { id, visibility: 'public' },
 		include: {
-			currentVersion: { include: { items: { include: { food: true, recipe: true } } } },
+			currentVersion: {
+				include: { items: { include: { food: true, recipe: true } } },
+			},
 			user: { select: { name: true } },
 		},
 	});
 	return recipe;
 }
 
-export default async function RecipePage({ params }: { params: { id: string } }) {
-	const recipe = await getRecipe(params.id);
+export default async function RecipePage({ params }: { params: Promise<{ recipeId: string }> }) {
+	const { recipeId } = await params;
+	const recipe = await getRecipe(recipeId);
 	if (!recipe) {
 		notFound();
 	}
@@ -27,20 +31,20 @@ export default async function RecipePage({ params }: { params: { id: string } })
 		name: recipe.name,
 		author: {
 			'@type': 'Person',
-			name: recipe.user?.name || 'Anonymous',
+			name: recipe.user?.name !== null && recipe.user?.name !== undefined ? recipe.user.name : 'Anonymous',
 		},
 		datePublished: recipe.createdAt.toISOString(),
 		description: recipe.description,
 		prepTime: `PT${recipe.prepTime}M`,
 		cookTime: `PT${recipe.cookTime}M`,
-		recipeIngredient: recipe.currentVersion?.items.map((item) => `${item.amount}${item.unit} ${item.food?.name || item.recipe?.name}`) || [],
+		recipeIngredient: recipe.currentVersion?.items.map((item) => `${item.amount}${item.unit} ${item.food?.name ?? item.recipe?.name ?? 'Unknown item'}`) ?? [],
 	};
 
 	return (
 		<div className='container mx-auto p-4'>
 			<script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 			<h1>{recipe.name}</h1>
-			<p>By {recipe.user?.name || 'Anonymous'}</p>
+			<p>By {recipe.user?.name !== null && recipe.user?.name !== undefined ? recipe.user.name : 'Anonymous'}</p>
 			<p>{recipe.description}</p>
 
 			<h2>Ingredients</h2>
@@ -48,7 +52,7 @@ export default async function RecipePage({ params }: { params: { id: string } })
 				{recipe.currentVersion?.items.map((item) => (
 					<li key={item.id}>
 						{item.amount}
-						{item.unit} {item.food?.name || item.recipe?.name}
+						{item.unit} {item.food?.name ?? item.recipe?.name ?? 'Unknown item'}
 					</li>
 				))}
 			</ul>

@@ -3,6 +3,7 @@ import { render as rtlRender, type RenderOptions, type RenderResult } from '@tes
 import { ThemeProvider } from 'next-themes';
 import React, { type ReactElement } from 'react';
 import { vi } from 'vitest';
+
 import { ToastProvider } from '~/components/Toast';
 
 // Mock Next.js router

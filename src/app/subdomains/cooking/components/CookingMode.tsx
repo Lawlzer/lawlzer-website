@@ -3,7 +3,7 @@
 
 import type { Food } from '@prisma/client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSpeechSynthesis, useSpeechRecognition } from 'react-speech-kit';
+import { useSpeechRecognition, useSpeechSynthesis } from 'react-speech-kit';
 
 import { convertUnit } from '../utils/recipe.utils';
 
@@ -218,14 +218,10 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 		}
 	};
 
-	const onEnd = () => {
-		// Re-enable listening after speech synthesis ends
-		if (isVoiceActive) {
-			listen();
-		}
-	};
+	// Initialize speech synthesis without onEnd first
+	const { speak } = useSpeechSynthesis({});
 
-	const { speak, speaking } = useSpeechSynthesis({ onEnd });
+	// Then use it in useSpeechRecognition
 	const { listen, listening, stop } = useSpeechRecognition({
 		onResult: (result: string) => {
 			const command = result.toLowerCase();

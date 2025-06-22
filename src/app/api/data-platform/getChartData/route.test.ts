@@ -1,14 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { testRoute } from '../../../../../testUtils/unit/api-route-test-helper';
 
 // Mock the db module before any imports that use it
 vi.mock('~/server/db', () => ({
-  db: {
-    commodityData: {
-      count: vi.fn(),
-      findMany: vi.fn(),
-    },
-  },
+	db: {
+		commodityData: {
+			count: vi.fn(),
+			findMany: vi.fn(),
+		},
+	},
 }));
 
 // Set DATABASE_URL before importing route
@@ -19,357 +20,341 @@ import * as route from './route';
 import { db } from '~/server/db';
 
 describe('/api/data-platform/getChartData', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+	beforeEach(() => {
+		vi.clearAllMocks();
 
-    // Use vi.stubEnv to set environment variables
-    vi.stubEnv('DATABASE_URL', 'mongodb://localhost:27017/test');
-    vi.stubEnv('NODE_ENV', 'development');
-  });
+		// Use vi.stubEnv to set environment variables
+		vi.stubEnv('DATABASE_URL', 'mongodb://localhost:27017/test');
+		vi.stubEnv('NODE_ENV', 'development');
+	});
 
-  afterEach(() => {
-    // Restore environment
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
+	afterEach(() => {
+		// Restore environment
+		vi.unstubAllEnvs();
+		vi.resetModules();
+	});
 
-  it('should return raw data points when no filters applied', async () => {
-    // Mock document count
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(3);
+	it('should return raw data points when no filters applied', async () => {
+		// Mock document count
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(3);
 
-    // Mock findMany result
-    const mockDocuments = [
-      {
-        _id: '1',
-        unixDate: 1700000000000,
-        price: 100.5,
-        exports: 1000,
-        head: 50,
-        totalVolume: 5000,
-      },
-      {
-        _id: '2',
-        unixDate: 1700100000000,
-        price: 102.0,
-        exports: 1100,
-        head: 55,
-        totalVolume: 5500,
-      },
-      {
-        _id: '3',
-        unixDate: 1700200000000,
-        price: 101.5,
-        exports: 1050,
-        // Missing head and totalVolume - should still process
-      },
-    ];
+		// Mock findMany result
+		const mockDocuments = [
+			{
+				_id: '1',
+				unixDate: 1700000000000,
+				price: 100.5,
+				exports: 1000,
+				head: 50,
+				totalVolume: 5000,
+			},
+			{
+				_id: '2',
+				unixDate: 1700100000000,
+				price: 102.0,
+				exports: 1100,
+				head: 55,
+				totalVolume: 5500,
+			},
+			{
+				_id: '3',
+				unixDate: 1700200000000,
+				price: 101.5,
+				exports: 1050,
+				// Missing head and totalVolume - should still process
+			},
+		];
 
-    (db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockDocuments
-    );
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-    });
-    const json = await response.json();
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+		});
+		const json = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(json.documentCount).toBe(3);
-    expect(json.limitExceeded).toBe(false);
+		expect(response.status).toBe(200);
+		expect(json.documentCount).toBe(3);
+		expect(json.limitExceeded).toBe(false);
 
-    // Check raw data structure
-    expect(json.rawData).toHaveLength(3);
-    expect(json.rawData[0]).toEqual({
-      timestamp: 1700000000000,
-      values: {
-        price: 100.5,
-        exports: 1000,
-        head: 50,
-        totalVolume: 5000,
-      },
-    });
+		// Check raw data structure
+		expect(json.rawData).toHaveLength(3);
+		expect(json.rawData[0]).toEqual({
+			timestamp: 1700000000000,
+			values: {
+				price: 100.5,
+				exports: 1000,
+				head: 50,
+				totalVolume: 5000,
+			},
+		});
 
-    // Third document should have only available fields
-    expect(json.rawData[2]).toEqual({
-      timestamp: 1700200000000,
-      values: {
-        price: 101.5,
-        exports: 1050,
-      },
-    });
+		// Third document should have only available fields
+		expect(json.rawData[2]).toEqual({
+			timestamp: 1700200000000,
+			values: {
+				price: 101.5,
+				exports: 1050,
+			},
+		});
 
-    // Verify Prisma calls
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(db.commodityData.count).toHaveBeenCalledWith({ where: {} });
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(db.commodityData.findMany).toHaveBeenCalledWith({
-      where: {},
-      select: {
-        unixDate: true,
-        price: true,
-        exports: true,
-        head: true,
-        totalVolume: true,
-      },
-    });
-  });
+		// Verify Prisma calls
 
-  it('should return aggregate data when groupBy parameter is set', async () => {
-    const groupBy = 'type';
+		expect(db.commodityData.count).toHaveBeenCalledWith({ where: {} });
 
-    // Mock count
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(50);
+		expect(db.commodityData.findMany).toHaveBeenCalledWith({
+			where: {},
+			select: {
+				unixDate: true,
+				price: true,
+				exports: true,
+				head: true,
+				totalVolume: true,
+			},
+		});
+	});
 
-    // Mock findMany with grouped data
-    const mockDocuments = [
-      // Beef documents
-      { unixDate: 1700000000000, price: 100, type: 'Beef' },
-      { unixDate: 1700100000000, price: 110, type: 'Beef' },
-      { unixDate: 1700200000000, price: 105, type: 'Beef' },
-      // Pork documents
-      { unixDate: 1700000000000, price: 80, type: 'Pork' },
-      { unixDate: 1700100000000, price: 85, type: 'Pork' },
-      { unixDate: 1700200000000, price: 82, type: 'Pork' },
-    ];
+	it('should return aggregate data when groupBy parameter is set', async () => {
+		const groupBy = 'type';
 
-    (db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockDocuments
-    );
+		// Mock count
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(50);
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-      searchParams: { groupBy },
-    });
-    const json = await response.json();
+		// Mock findMany with grouped data
+		const mockDocuments = [
+			// Beef documents
+			{ unixDate: 1700000000000, price: 100, type: 'Beef' },
+			{ unixDate: 1700100000000, price: 110, type: 'Beef' },
+			{ unixDate: 1700200000000, price: 105, type: 'Beef' },
+			// Pork documents
+			{ unixDate: 1700000000000, price: 80, type: 'Pork' },
+			{ unixDate: 1700100000000, price: 85, type: 'Pork' },
+			{ unixDate: 1700200000000, price: 82, type: 'Pork' },
+		];
 
-    expect(response.status).toBe(200);
-    expect(json.documentCount).toBe(50); // Total count, not grouped
-    expect(json.limitExceeded).toBe(false);
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
-    // Check raw data structure - API now returns rawData not aggregatedData
-    expect(json.rawData).toBeDefined();
-    expect(json.rawData).toHaveLength(6); // All 6 documents
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+			searchParams: { groupBy },
+		});
+		const json = await response.json();
 
-    // Check first data point
-    expect(json.rawData[0]).toEqual({
-      timestamp: 1700000000000,
-      values: {
-        price: 100,
-      },
-    });
-  });
+		expect(response.status).toBe(200);
+		expect(json.documentCount).toBe(50); // Total count, not grouped
+		expect(json.limitExceeded).toBe(false);
 
-  it('should apply filters correctly', async () => {
-    const inputFilters = {
-      type: ['Beef'],
-      category: ['Fresh'],
-    };
+		// Check raw data structure - API now returns rawData not aggregatedData
+		expect(json.rawData).toBeDefined();
+		expect(json.rawData).toHaveLength(6); // All 6 documents
 
-    // Mock filtered count
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
+		// Check first data point
+		expect(json.rawData[0]).toEqual({
+			timestamp: 1700000000000,
+			values: {
+				price: 100,
+			},
+		});
+	});
 
-    // Mock filtered documents
-    const mockDocuments = [
-      {
-        unixDate: 1700000000000,
-        price: 100.5,
-        type: 'Beef',
-        category: 'Fresh',
-      },
-      {
-        unixDate: 1700100000000,
-        price: 102.0,
-        type: 'Beef',
-        category: 'Fresh',
-      },
-    ];
+	it('should apply filters correctly', async () => {
+		const inputFilters = {
+			type: ['Beef'],
+			category: ['Fresh'],
+		};
 
-    (db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockDocuments
-    );
+		// Mock filtered count
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-      searchParams: { filters: JSON.stringify(inputFilters) },
-    });
-    const json = await response.json();
+		// Mock filtered documents
+		const mockDocuments = [
+			{
+				unixDate: 1700000000000,
+				price: 100.5,
+				type: 'Beef',
+				category: 'Fresh',
+			},
+			{
+				unixDate: 1700100000000,
+				price: 102.0,
+				type: 'Beef',
+				category: 'Fresh',
+			},
+		];
 
-    expect(response.status).toBe(200);
-    expect(json.documentCount).toBe(2);
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
-    // Verify filters were applied
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(db.commodityData.count).toHaveBeenCalledWith({
-      where: {
-        type: { in: ['Beef'] },
-        category: { in: ['Fresh'] },
-      },
-    });
-  });
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+			searchParams: { filters: JSON.stringify(inputFilters) },
+		});
+		const json = await response.json();
 
-  it('should handle document count exceeding limit', async () => {
-    // Mock count exceeding limit
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(
-      6000
-    );
+		expect(response.status).toBe(200);
+		expect(json.documentCount).toBe(2);
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-    });
-    const json = await response.json();
+		// Verify filters were applied
 
-    expect(response.status).toBe(200);
-    expect(json.documentCount).toBe(6000);
-    expect(json.limitExceeded).toBe(true);
-    expect(json.rawData).toBeNull();
+		expect(db.commodityData.count).toHaveBeenCalledWith({
+			where: {
+				type: { in: ['Beef'] },
+				category: { in: ['Fresh'] },
+			},
+		});
+	});
 
-    // Should not call findMany when limit exceeded
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(db.commodityData.findMany).not.toHaveBeenCalled();
-  });
+	it('should handle document count exceeding limit', async () => {
+		// Mock count exceeding limit
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(6000);
 
-  it('should skip documents with invalid unixDate', async () => {
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(3);
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+		});
+		const json = await response.json();
 
-    const mockDocuments = [
-      {
-        unixDate: 1700000000000,
-        price: 100,
-      },
-      {
-        unixDate: null, // Invalid
-        price: 200,
-      },
-      {
-        unixDate: 'invalid', // Invalid
-        price: 300,
-      },
-    ];
+		expect(response.status).toBe(200);
+		expect(json.documentCount).toBe(6000);
+		expect(json.limitExceeded).toBe(true);
+		expect(json.rawData).toBeNull();
 
-    (db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockDocuments
-    );
+		// Should not call findMany when limit exceeded
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-    });
-    const json = await response.json();
+		expect(db.commodityData.findMany).not.toHaveBeenCalled();
+	});
 
-    expect(response.status).toBe(200);
-    // Only one valid document
-    expect(json.rawData).toHaveLength(1);
-    expect(json.rawData[0].timestamp).toBe(1700000000000);
-  });
+	it('should skip documents with invalid unixDate', async () => {
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(3);
 
-  it('should skip documents with no numeric values', async () => {
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
+		const mockDocuments = [
+			{
+				unixDate: 1700000000000,
+				price: 100,
+			},
+			{
+				unixDate: null, // Invalid
+				price: 200,
+			},
+			{
+				unixDate: 'invalid', // Invalid
+				price: 300,
+			},
+		];
 
-    const mockDocuments = [
-      {
-        unixDate: 1700000000000,
-        price: 100,
-      },
-      {
-        unixDate: 1700100000000,
-        // No numeric values
-      },
-    ];
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
-    (db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockDocuments
-    );
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+		});
+		const json = await response.json();
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-    });
-    const json = await response.json();
+		expect(response.status).toBe(200);
+		// Only one valid document
+		expect(json.rawData).toHaveLength(1);
+		expect(json.rawData[0].timestamp).toBe(1700000000000);
+	});
 
-    expect(response.status).toBe(200);
-    // Only one document with numeric values
-    expect(json.rawData).toHaveLength(1);
-    expect(json.rawData[0].values).toHaveProperty('price');
-  });
+	it('should skip documents with no numeric values', async () => {
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
 
-  it('should handle no matching documents', async () => {
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
+		const mockDocuments = [
+			{
+				unixDate: 1700000000000,
+				price: 100,
+			},
+			{
+				unixDate: 1700100000000,
+				// No numeric values
+			},
+		];
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-    });
-    const json = await response.json();
+		(db.commodityData.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(mockDocuments);
 
-    expect(response.status).toBe(200);
-    expect(json.documentCount).toBe(0);
-    expect(json.rawData).toEqual([]);
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+		});
+		const json = await response.json();
 
-    // Should not try to fetch when count is 0
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(db.commodityData.findMany).not.toHaveBeenCalled();
-  });
+		expect(response.status).toBe(200);
+		// Only one document with numeric values
+		expect(json.rawData).toHaveLength(1);
+		expect(json.rawData[0].values).toHaveProperty('price');
+	});
 
-  it('should handle invalid filter format', async () => {
-    // Mock console.error to suppress expected error output
-    const { mockConsoleError } = await import('testUtils/unit/console.helpers');
-    const consoleMock = mockConsoleError();
+	it('should handle no matching documents', async () => {
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-      searchParams: { filters: 'invalid-json' },
-    });
-    const json = await response.json();
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+		});
+		const json = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(json.error).toBe('Invalid filters format');
+		expect(response.status).toBe(200);
+		expect(json.documentCount).toBe(0);
+		expect(json.rawData).toEqual([]);
 
-    // Restore console.error
-    consoleMock.restore();
-  });
+		// Should not try to fetch when count is 0
 
-  it('should handle MongoDB connection errors', async () => {
-    // Mock console.error to suppress expected error output
-    const { mockConsoleError } = await import('testUtils/unit/console.helpers');
-    const consoleMock = mockConsoleError();
+		expect(db.commodityData.findMany).not.toHaveBeenCalled();
+	});
 
-    // Mock Prisma to throw error
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('Connection failed')
-    );
+	it('should handle invalid filter format', async () => {
+		// Mock console.error to suppress expected error output
+		const { mockConsoleError } = await import('testUtils/unit/console.helpers');
+		const consoleMock = mockConsoleError();
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-    });
-    const json = await response.json();
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+			searchParams: { filters: 'invalid-json' },
+		});
+		const json = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(json.error).toBe('Connection failed');
-    expect(json.rawData).toEqual([]);
-    expect(json.documentCount).toBe(0);
+		expect(response.status).toBe(400);
+		expect(json.error).toBe('Invalid filters format');
 
-    // Restore console.error
-    consoleMock.restore();
-  });
+		// Restore console.error
+		consoleMock.restore();
+	});
 
-  it('should handle missing DATABASE_URL', async () => {
-    // Mock console.error to suppress expected error output
-    const { mockConsoleError } = await import('testUtils/unit/console.helpers');
-    const consoleMock = mockConsoleError();
+	it('should handle MongoDB connection errors', async () => {
+		// Mock console.error to suppress expected error output
+		const { mockConsoleError } = await import('testUtils/unit/console.helpers');
+		const consoleMock = mockConsoleError();
 
-    delete process.env.DATABASE_URL;
+		// Mock Prisma to throw error
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Connection failed'));
 
-    // Mock Prisma to throw error about missing DATABASE_URL
-    (db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('DATABASE_URL is not defined')
-    );
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+		});
+		const json = await response.json();
 
-    const response = await testRoute(route, '/api/data-platform/getChartData', {
-      method: 'GET',
-    });
-    const json = await response.json();
+		expect(response.status).toBe(500);
+		expect(json.error).toBe('Connection failed');
+		expect(json.rawData).toEqual([]);
+		expect(json.documentCount).toBe(0);
 
-    expect(response.status).toBe(500);
-    expect(json.error).toContain('DATABASE_URL');
+		// Restore console.error
+		consoleMock.restore();
+	});
 
-    // Restore console.error
-    consoleMock.restore();
-  });
+	it('should handle missing DATABASE_URL', async () => {
+		// Mock console.error to suppress expected error output
+		const { mockConsoleError } = await import('testUtils/unit/console.helpers');
+		const consoleMock = mockConsoleError();
+
+		delete process.env.DATABASE_URL;
+
+		// Mock Prisma to throw error about missing DATABASE_URL
+		(db.commodityData.count as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DATABASE_URL is not defined'));
+
+		const response = await testRoute(route, '/api/data-platform/getChartData', {
+			method: 'GET',
+		});
+		const json = await response.json();
+
+		expect(response.status).toBe(500);
+		expect(json.error).toContain('DATABASE_URL');
+
+		// Restore console.error
+		consoleMock.restore();
+	});
 });

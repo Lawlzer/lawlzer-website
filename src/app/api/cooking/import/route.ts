@@ -1,6 +1,6 @@
+import type { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
 
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
@@ -17,7 +17,7 @@ const exportedFoodSchema = z.object({
 	sodium: z.number(),
 });
 
-const exportedRecipeSchema: z.ZodType<any> = z.lazy(() =>
+const exportedRecipeSchema: z.ZodType = z.lazy(() =>
 	z.object({
 		name: z.string(),
 		description: z.string().nullable(),
@@ -41,7 +41,7 @@ const exportedRecipeSchema: z.ZodType<any> = z.lazy(() =>
 type ExportedRecipe = z.infer<typeof exportedRecipeSchema>;
 type ExportedItem = ExportedRecipe['items'][number];
 
-const importRecipe = async (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>, recipeData: ExportedRecipe, userId: string): Promise<string> => {
+const importRecipe = async (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$extends' | '$on' | '$transaction' | '$use'>, recipeData: ExportedRecipe, userId: string): Promise<string> => {
 	const itemCreates = await Promise.all(
 		recipeData.items.map(async (item: ExportedItem) => {
 			let foodId: string | undefined;
@@ -134,11 +134,9 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: 'Invalid recipe format', details: validation.error.errors }, { status: 400 });
 		}
 
-		const recipeData = validation.data as ExportedRecipe;
+		const recipeData = validation.data;
 
-		const recipeId = await db.$transaction(async (tx) => {
-			return importRecipe(tx, recipeData, session.user.id);
-		});
+		const recipeId = await db.$transaction(async (tx) => importRecipe(tx, recipeData, session.user.id));
 
 		const recipe = await db.recipe.findUnique({
 			where: { id: recipeId },

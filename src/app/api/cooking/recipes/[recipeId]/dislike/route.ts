@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 // import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
-export async function GET(request: Request, { params }: { params: { recipeId: string } }) {
+export async function GET(_request: Request, { params: _params }: { params: Promise<{ recipeId: string }> }) {
 	// TODO: Implement actual dislike fetching when schema is unblocked
 	const dislikeCount = Math.floor(Math.random() * 10);
 	let isDislikedByUser = Math.random() > 0.5;
@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: { params: { recipeId: st
 	});
 }
 
-export async function POST(request: Request, { params }: { params: { recipeId: string } }) {
+export async function POST(_request: Request, { params: _params }: { params: Promise<{ recipeId: string }> }) {
 	const session = await getSession();
 	if (session?.user?.id == null) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

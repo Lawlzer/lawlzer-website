@@ -3,14 +3,14 @@ import { NextResponse } from 'next/server';
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
-export async function POST(request: Request, { params }: { params: { recipeId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ recipeId: string }> }) {
 	try {
 		const session = await getSession();
 		if (session?.user?.id == null || session.user.id === '') {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const { recipeId } = params;
+		const { recipeId } = await params;
 		const { versionId } = await request.json();
 
 		if (!versionId) {

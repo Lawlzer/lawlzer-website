@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 		const { searchParams } = new URL(request.url);
 		const itemId = searchParams.get('itemId');
 
-		if (!itemId) {
+		if (itemId === null || itemId === '') {
 			return NextResponse.json({ error: 'originalItemId is required' }, { status: 400 });
 		}
 
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
 	try {
 		const session = await getSession();
-		if (!session?.user?.id) {
+		if (session?.user?.id === undefined || session.user.id === '') {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
 		const { originalItemId, foodId, recipeId, amount, unit, notes } = validation.data;
 
-		if (!foodId && !recipeId) {
+		if (foodId === undefined && recipeId === undefined) {
 			return NextResponse.json({ error: 'Either foodId or recipeId must be provided' }, { status: 400 });
 		}
 
@@ -87,7 +87,7 @@ const voteSchema = z.object({
 export async function PUT(request: Request) {
 	try {
 		const session = await getSession();
-		if (!session?.user?.id) {
+		if (session?.user?.id === undefined || session.user.id === '') {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 

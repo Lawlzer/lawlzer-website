@@ -3,11 +3,11 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface NutritionData {
+	[key: string]: number;
 	calories: number;
 	protein: number;
 	carbs: number;
 	fat: number;
-	[key: string]: number;
 }
 
 interface NutritionPieChartProps {

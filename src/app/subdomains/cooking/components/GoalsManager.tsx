@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-import { getGuestData, saveGuestData } from '../services/guestStorage';
 import type { GuestGoal } from '../services/guestStorage';
+import { getGuestData, saveGuestData } from '../services/guestStorage';
 
 interface NutritionGoal extends GuestGoal {
 	id?: string;

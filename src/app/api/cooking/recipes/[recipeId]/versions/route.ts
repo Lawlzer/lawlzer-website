@@ -3,14 +3,14 @@ import { NextResponse } from 'next/server';
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
-export async function GET(request: Request, { params }: { params: { recipeId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ recipeId: string }> }) {
 	try {
 		const session = await getSession();
 		if (!session?.user) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const { recipeId } = params;
+		const { recipeId } = await params;
 
 		// Fetch the recipe to ensure user owns it
 		const recipe = await db.recipe.findFirst({

@@ -3,8 +3,8 @@
 import type { Food } from '@prisma/client';
 import React, { useEffect, useState } from 'react';
 
-import { getGuestData, saveGuestData } from '../services/guestStorage';
 import type { GuestDay } from '../services/guestStorage';
+import { getGuestData, saveGuestData } from '../services/guestStorage';
 import type { RecipeWithDetails } from '../types/recipe.types';
 
 interface DayEntry {
