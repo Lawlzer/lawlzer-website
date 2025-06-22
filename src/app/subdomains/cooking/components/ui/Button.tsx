@@ -76,7 +76,7 @@ interface ButtonGroupProps {
 export function ButtonGroup({ children, className = '' }: ButtonGroupProps) {
 	return (
 		<div className={clsx('inline-flex -space-x-px', className)}>
-			{React.Children.map(children, async (child, index) => {
+			{React.Children.map(children, (child, index) => {
 				if (React.isValidElement<ButtonProps>(child)) {
 					const existingClassName = child.props.className !== undefined && child.props.className !== null ? child.props.className : '';
 					const newClassName = clsx(existingClassName, index === 0 && 'rounded-r-none', index === React.Children.count(children) - 1 && 'rounded-l-none', index !== 0 && index !== React.Children.count(children) - 1 && 'rounded-none');
