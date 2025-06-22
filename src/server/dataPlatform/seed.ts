@@ -10,6 +10,11 @@ const getRandomNumber = (min: number, max: number, decimals = 2): number => {
 	return parseFloat(str);
 };
 
+const delay = async (ms: number): Promise<void> =>
+	new Promise((resolve) => {
+		setTimeout(resolve, ms);
+	});
+
 const getMsPerFrequency = (_frequency: 'daily'): number => {
 	const msInDay = 24 * 60 * 60 * 1000;
 	return msInDay;
@@ -268,11 +273,7 @@ export async function resetDataPlatform(): Promise<void> {
 
 				// Small delay to reduce database pressure
 				if (batch.length === BATCH_SIZE) {
-					await new Promise<void>((resolve) => {
-						setTimeout(() => {
-							resolve();
-						}, 100);
-					});
+					await delay(100);
 				}
 			}
 
@@ -286,11 +287,7 @@ export async function resetDataPlatform(): Promise<void> {
 				// Wait before retrying (exponential backoff)
 				const waitTime = attempt * 2000; // 2s, 4s, 6s
 				console.info(`[DataPlatform] Waiting ${waitTime}ms before retry...`);
-				await new Promise<void>((resolve) => {
-					setTimeout(() => {
-						resolve();
-					}, waitTime);
-				});
+				await delay(waitTime);
 			}
 		}
 	}

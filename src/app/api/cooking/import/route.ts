@@ -1,133 +1,148 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
-const recipeItemSchema = z.object({
-	amount: z.number(),
-	unit: z.string(),
-	food: z
-		.object({
-			name: z.string(),
-			brand: z.string().nullable(),
-			calories: z.number(),
-			protein: z.number(),
-			carbs: z.number(),
-			fat: z.number(),
-		})
-		.nullable(),
-	recipeName: z.string().nullable(),
-});
-
-const recipeImportSchema = z.object({
+const exportedFoodSchema = z.object({
 	name: z.string(),
-	description: z.string().nullable(),
-	notes: z.string().nullable(),
-	prepTime: z.number().nullable(),
-	cookTime: z.number().nullable(),
-	servings: z.number(),
-	visibility: z.enum(['private', 'unlisted', 'public']),
-	isComponent: z.boolean(),
-	items: z.array(recipeItemSchema),
+	brand: z.string().nullable(),
+	calories: z.number(),
+	protein: z.number(),
+	carbs: z.number(),
+	fat: z.number(),
+	fiber: z.number(),
+	sugar: z.number(),
+	sodium: z.number(),
 });
 
-export async function POST(request: Request) {
-	try {
-		const session = await getSession();
-		if (!session?.user?.id) {
-			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-		}
+const exportedRecipeSchema: z.ZodType<any> = z.lazy(() =>
+	z.object({
+		name: z.string(),
+		description: z.string().nullable(),
+		notes: z.string().nullable(),
+		prepTime: z.number().nullable(),
+		cookTime: z.number().nullable(),
+		servings: z.number(),
+		visibility: z.enum(['private', 'unlisted', 'public']),
+		isComponent: z.boolean(),
+		items: z.array(
+			z.object({
+				amount: z.number(),
+				unit: z.string(),
+				food: exportedFoodSchema.optional(),
+				recipe: exportedRecipeSchema.optional(),
+			})
+		),
+	})
+);
 
-		const data = await request.json();
-		const validation = recipeImportSchema.safeParse(data);
+type ExportedRecipe = z.infer<typeof exportedRecipeSchema>;
+type ExportedItem = ExportedRecipe['items'][number];
 
-		if (!validation.success) {
-			return NextResponse.json({ error: 'Invalid recipe format', details: validation.error.errors }, { status: 400 });
-		}
+const importRecipe = async (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>, recipeData: ExportedRecipe, userId: string): Promise<string> => {
+	const itemCreates = await Promise.all(
+		recipeData.items.map(async (item: ExportedItem) => {
+			let foodId: string | undefined;
+			let nestedRecipeId: string | undefined;
 
-		const recipeData = validation.data;
+			if (item.food) {
+				const existingFood = await tx.food.findFirst({
+					where: { name: item.food.name, brand: item.food.brand, userId },
+				});
+				if (existingFood) {
+					foodId = existingFood.id;
+				} else {
+					const newFood = await tx.food.create({ data: { ...item.food, userId } });
+					foodId = newFood.id;
+				}
+			} else if (item.recipe) {
+				nestedRecipeId = await importRecipe(tx, item.recipe, userId);
+			}
 
-		// This is a simplified import. It finds foods by name/brand or creates them.
-		// It does not handle nested recipe imports yet.
-		const recipe = await db.$transaction(async (tx) => {
-			const itemCreates = await Promise.all(
-				recipeData.items.map(async (item) => {
-					let foodId: string | undefined = undefined;
-					if (item.food) {
-						const existingFood = await tx.food.findFirst({
-							where: {
-								name: item.food.name,
-								brand: item.food.brand,
-								userId: session.user.id, // Only check user's own foods
-							},
-						});
+			return {
+				amount: item.amount,
+				unit: item.unit,
+				foodId,
+				recipeId: nestedRecipeId,
+			};
+		})
+	);
 
-						if (existingFood) {
-							foodId = existingFood.id;
-						} else {
-							// Create new food if it doesn't exist
-							const newFood = await tx.food.create({
-								data: {
-									...item.food,
-									userId: session.user.id,
-									visibility: 'private',
-								},
-							});
-							foodId = newFood.id;
-						}
-					}
-					return {
-						amount: item.amount,
-						unit: item.unit,
-						foodId: foodId,
-					};
-				})
-			);
-
-			const newRecipe = await tx.recipe.create({
-				data: {
-					userId: session.user.id,
+	const newRecipe = await tx.recipe.create({
+		data: {
+			userId,
+			name: recipeData.name,
+			description: recipeData.description,
+			notes: recipeData.notes,
+			prepTime: recipeData.prepTime,
+			cookTime: recipeData.cookTime,
+			servings: recipeData.servings,
+			visibility: recipeData.visibility,
+			isComponent: recipeData.isComponent,
+			versions: {
+				create: {
+					version: 1,
 					name: recipeData.name,
 					description: recipeData.description,
 					notes: recipeData.notes,
 					prepTime: recipeData.prepTime,
 					cookTime: recipeData.cookTime,
 					servings: recipeData.servings,
-					visibility: recipeData.visibility,
-					isComponent: recipeData.isComponent,
-					// Create version and items in a single step
-					versions: {
-						create: {
-							version: 1,
-							name: recipeData.name,
-							description: recipeData.description,
-							notes: recipeData.notes,
-							prepTime: recipeData.prepTime,
-							cookTime: recipeData.cookTime,
-							servings: recipeData.servings,
-							// Simplified nutrition calculation - would be more complex in reality
-							caloriesPerServing: 0,
-							proteinPerServing: 0,
-							carbsPerServing: 0,
-							fatPerServing: 0,
-							fiberPerServing: 0,
-							sugarPerServing: 0,
-							sodiumPerServing: 0,
-							items: {
-								create: itemCreates,
-							},
-						},
+					caloriesPerServing: 0, // Simplified, would need calculation
+					proteinPerServing: 0,
+					carbsPerServing: 0,
+					fatPerServing: 0,
+					fiberPerServing: 0,
+					sugarPerServing: 0,
+					sodiumPerServing: 0,
+					items: {
+						create: itemCreates.map(({ foodId, recipeId, amount, unit }) => ({
+							foodId,
+							recipeId,
+							amount,
+							unit,
+						})),
 					},
 				},
-				include: { versions: true },
-			});
+			},
+		},
+		include: { versions: true },
+	});
 
-			// Update the recipe with the current version ID
-			return tx.recipe.update({
-				where: { id: newRecipe.id },
-				data: { currentVersionId: newRecipe.versions[0].id },
-			});
+	const finalRecipe = await tx.recipe.update({
+		where: { id: newRecipe.id },
+		data: { currentVersionId: newRecipe.versions[0].id },
+	});
+
+	return finalRecipe.id;
+};
+
+export async function POST(request: Request) {
+	try {
+		const session = await getSession();
+		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+		if (!session?.user?.id) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
+		const data = await request.json();
+		const validation = exportedRecipeSchema.safeParse(data);
+
+		if (!validation.success) {
+			return NextResponse.json({ error: 'Invalid recipe format', details: validation.error.errors }, { status: 400 });
+		}
+
+		const recipeData = validation.data as ExportedRecipe;
+
+		const recipeId = await db.$transaction(async (tx) => {
+			return importRecipe(tx, recipeData, session.user.id);
+		});
+
+		const recipe = await db.recipe.findUnique({
+			where: { id: recipeId },
+			include: { currentVersion: { include: { items: true } } },
 		});
 
 		return NextResponse.json(recipe);

@@ -7,24 +7,11 @@ import { env } from './env.mjs';
 
 // Function to determine if the hostname corresponds to the main domain
 function isMainDomain(hostname: string): boolean {
-	// For Vercel deployments, any *.vercel.app domain is considered main domain
-	if (hostname.endsWith('.vercel.app')) {
-		return true;
-	}
-
 	try {
-		// List of hostnames that should be treated as the main domain
-		const mainDomainUrl = getBaseUrl(); // Get the base URL for the main domain
-		const mainDomainHostname = new URL(mainDomainUrl).hostname; // Extract hostname
+		const mainDomainUrl = new URL(getBaseUrl());
+		const devDomainHostname = mainDomainUrl.hostname;
 
-		// Build the list of main domain hostnames dynamically
-		// Include localhost, 127.0.0.1, and the configured main domain
-		const mainDomainHostnames = ['localhost', '127.0.0.1'];
-
-		// Add the main domain hostname if it's not already in the list
-		if (!mainDomainHostnames.includes(mainDomainHostname)) {
-			mainDomainHostnames.push(mainDomainHostname);
-		}
+		const mainDomainHostnames = ['localhost', '127.0.0.1', devDomainHostname];
 
 		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Input hostname: ${hostname}`);
 		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Calculated mainDomainHostnames: ${JSON.stringify(mainDomainHostnames)}`);
@@ -32,7 +19,6 @@ function isMainDomain(hostname: string): boolean {
 		if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[isMainDomain] Result: ${result}`);
 		return result;
 	} catch (error) {
-		// If environment variables are not set, fall back to simple checks
 		console.warn('[isMainDomain] Failed to get base URL, falling back to simple checks:', error);
 		return ['localhost', '127.0.0.1'].includes(hostname);
 	}
@@ -45,17 +31,21 @@ export function middleware(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
 	const { pathname } = url;
 
-	const hostHeader = request.headers.get('host');
-	const forwardedHost = request.headers.get('x-forwarded-host'); // Check for x-forwarded-host
+	// Prevent direct access to API routes in browser
+	if (pathname.startsWith('/api')) {
+		return NextResponse.redirect(new URL('/400', request.url));
+	}
+
+	// Get the hostname (e.g., 'dev.localhost:3000')
+	const host = request.headers.get('host') ?? request.headers.get('x-forwarded-host');
 
 	// Prioritize x-forwarded-host, then host header, then URL hostname as fallback
-	const detectedHostnameWithPort = forwardedHost ?? hostHeader ?? url.hostname;
+	const detectedHostnameWithPort = host ?? url.hostname;
 	// Strip port from hostname for comparison
 	const detectedHostname = detectedHostnameWithPort.split(':')[0];
 
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Request hostname (from URL): ${url.hostname}, pathname: ${pathname}`);
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Host header: ${hostHeader}`);
-	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] X-Forwarded-Host header: ${forwardedHost}`);
+	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Host header: ${host}`);
 	if (env.DEBUG_SUBDOMAIN_VALUE) console.debug(`[Middleware] Detected hostname: ${detectedHostname}`);
 
 	// Handle www to non-www redirect
@@ -72,33 +62,6 @@ export function middleware(request: NextRequest): NextResponse {
 
 		console.debug(`[Middleware] Redirecting www to non-www: ${detectedHostname} -> ${nonWwwHostname}`);
 		return NextResponse.redirect(redirectUrl, 301); // Use 301 for permanent redirect
-	}
-
-	// Development-only redirect from localhost to the configured main domain
-	console.debug('[Middleware] NODE_ENV:', env.NODE_ENV, 'detectedHostname:', detectedHostname);
-	if (env.NODE_ENV === 'development' && detectedHostname === 'localhost') {
-		// Build the redirect URL dynamically using environment configuration
-		const redirectUrl = new URL(request.url);
-
-		// Get the base URL without a subdomain to extract the second-level domain
-		const baseUrl = getBaseUrl();
-		const urlParts = new URL(baseUrl);
-
-		// Extract the hostname parts from the base URL
-		// For example, if NEXT_PUBLIC_SECOND_LEVEL_DOMAIN is "dev", this would be "dev.localhost"
-		const fullHostname = urlParts.hostname;
-		redirectUrl.hostname = fullHostname;
-		redirectUrl.port = urlParts.port;
-
-		console.debug(`[Middleware] Development redirect: localhost -> ${fullHostname}`);
-		console.debug(`[Middleware] Redirecting to: ${redirectUrl.toString()}`);
-
-		if (env.DEBUG_SUBDOMAIN_VALUE) {
-			console.debug(`[Middleware] Development redirect: localhost -> ${fullHostname}`);
-			console.debug(`[Middleware] Redirecting to: ${redirectUrl.toString()}`);
-		}
-
-		return NextResponse.redirect(redirectUrl);
 	}
 
 	// Check for subdomain matches

@@ -63,6 +63,7 @@ model User {
     sessions      Session[]
     posts         Post[]
     discordId     String?   @unique
+    verificationTokens VerificationToken[]
     
     // Cooking relationships
     foods         Food[]
@@ -75,6 +76,7 @@ model User {
     likes         Like[]
     reports       Report[]
     fridgeItems   FridgeItem[]
+    ingredientAlternatives IngredientAlternative[] @relation("SuggestedByUser")
 }
 
 model VerificationToken {
@@ -83,14 +85,10 @@ model VerificationToken {
     token      String   @unique
     expires    DateTime
 
-    user        User?    @relation(fields: [userId], references: [id])
-    recipeItems RecipeItem[]
-    dayEntries  DayEntry[]
-    fridgeItems FridgeItem[]
+    userId     String   @db.ObjectId
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     
-    @@index([userId])
-    @@index([barcode])
-    @@index([identifier, token])
+    @@unique([identifier, token])
 }
 
 model CommodityData {
@@ -159,6 +157,7 @@ model Food {
     recipeItems RecipeItem[]
     dayEntries  DayEntry[]
     fridgeItems FridgeItem[]
+    alternativesFor IngredientAlternative[] @relation("AlternativeForFood")
     
     @@index([userId])
     @@index([barcode])
@@ -197,6 +196,8 @@ model Recipe {
     likes    Like[]
     reports  Report[]
     
+    alternativesFor IngredientAlternative[] @relation("AlternativeForRecipe")
+    
     @@index([userId])
     @@index([name])
     @@index([visibility])
@@ -227,7 +228,7 @@ model RecipeVersion {
     
     createdAt   DateTime @default(now())
     
-    recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
     items       RecipeItem[]
     dayEntries  DayEntry[]
     
@@ -250,9 +251,11 @@ model RecipeItem {
     amount          Float    // Amount in grams
     unit            String   @default("g") // g, ml, tbsp, tsp, cup, etc.
     
-    recipeVersion   RecipeVersion @relation(fields: [recipeVersionId], references: [id])
+    recipeVersion   RecipeVersion @relation(fields: [recipeVersionId], references: [id], onDelete: Cascade)
     food            Food?         @relation(fields: [foodId], references: [id])
     recipe          Recipe?       @relation("RecipeAsIngredient", fields: [recipeId], references: [id])
+    
+    alternatives    IngredientAlternative[] @relation("OriginalItem")
     
     @@index([recipeVersionId])
 }
@@ -306,7 +309,7 @@ model DayEntry {
     
     consumedAt      DateTime @default(now())
     
-    day             Day           @relation(fields: [dayId], references: [id])
+    day             Day           @relation(fields: [dayId], references: [id], onDelete: Cascade)
     food            Food?         @relation(fields: [foodId], references: [id])
     recipeVersion   RecipeVersion? @relation(fields: [recipeVersionId], references: [id])
     
@@ -408,4 +411,30 @@ model FridgeItem {
     @@unique([userId, foodId])
     @@index([userId])
     @@index([expiresAt])
+}
+
+model IngredientAlternative {
+    id              String    @id @default(auto()) @map("_id") @db.ObjectId
+    originalItemId  String    @db.ObjectId
+    
+    foodId          String?   @db.ObjectId
+    recipeId        String?   @db.ObjectId
+    
+    amount          Float
+    unit            String
+    
+    notes           String?
+    
+    originalItem    RecipeItem @relation("OriginalItem", fields: [originalItemId], references: [id], onDelete: Cascade)
+    
+    food            Food?      @relation("AlternativeForFood", fields: [foodId], references: [id], onDelete: Cascade)
+    recipe          Recipe?    @relation("AlternativeForRecipe", fields: [recipeId], references: [id], onDelete: Cascade)
+    
+    suggestedBy   User?    @relation("SuggestedByUser", fields: [suggestedById], references: [id], onDelete: Cascade)
+    suggestedById String?  @db.ObjectId
+    
+    upvotes       Int      @default(0)
+    downvotes     Int      @default(0)
+    
+    @@index([originalItemId])
 }

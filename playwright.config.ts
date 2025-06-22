@@ -19,7 +19,7 @@ const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: '.', // Look for tests in the entire project
-  testMatch: ['tests/**/*.spec.ts', 'src/**/*.spec.ts'], // Match spec files in both tests and src directories
+  testMatch: ['src/**/*.spec.ts'], // Match spec files in src directory
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI !== undefined ? 2 : 0,

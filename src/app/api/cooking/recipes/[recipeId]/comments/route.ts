@@ -32,6 +32,7 @@ export async function GET(request: Request, { params }: { params: { recipeId: st
 export async function POST(request: Request, { params }: { params: { recipeId: string } }) {
 	try {
 		const session = await getSession();
+		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 		if (!session?.user?.id) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}

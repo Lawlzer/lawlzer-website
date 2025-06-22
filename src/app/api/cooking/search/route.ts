@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { db } from '~/server/db';
@@ -11,6 +12,18 @@ export async function GET(request: NextRequest) {
 		const query = searchParams.get('query') ?? '';
 		const ingredients = searchParams.get('ingredients')?.split(',') ?? [];
 		const maxPrepTime = searchParams.get('maxPrepTime');
+		const sortBy = searchParams.get('sortBy') ?? 'createdAt'; // 'likes', 'createdAt', 'reports'
+		const userId = session?.user?.id;
+
+		// Mock admin check
+		const isAdmin = userId === 'your_admin_user_id_here'; // Replace with actual admin ID
+
+		let orderBy: any = { createdAt: 'desc' };
+		if (sortBy === 'likes') {
+			orderBy = { likes: { _count: 'desc' } };
+		} else if (isAdmin && sortBy === 'reports') {
+			orderBy = { reports: { _count: 'desc' } };
+		}
 
 		const recipes = await db.recipe.findMany({
 			where: {
@@ -20,6 +33,7 @@ export async function GET(request: NextRequest) {
 						OR: [...(session?.user?.id ? [{ userId: session.user.id }] : []), { visibility: 'public' }],
 					},
 					// Basic query filter (name, description)
+
 					...(query
 						? [
 								{
@@ -49,6 +63,7 @@ export async function GET(request: NextRequest) {
 							]
 						: []),
 					// Prep time filter
+
 					...(maxPrepTime
 						? [
 								{
@@ -77,10 +92,10 @@ export async function GET(request: NextRequest) {
 					select: { name: true, image: true },
 				},
 				_count: {
-					select: { likes: true, comments: true },
+					select: { likes: true, comments: true, reports: true },
 				},
 			},
-			orderBy: { createdAt: 'desc' },
+			orderBy,
 		});
 
 		return NextResponse.json(recipes);

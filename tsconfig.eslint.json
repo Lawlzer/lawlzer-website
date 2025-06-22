@@ -1,6 +1,5 @@
 {
 	"extends": "./tsconfig.json",
-	"compilerOptions": {},
-	"include": ["./src", "./.config", "./test-utils", "./.config/tsup.config.ts", "build.ts", "./scripts", "./testUtils", "./pulumi", "next-env.d.ts", "playwright.config.ts", "vitest.config.ts", "./tests"],
-	"exclude": []
+	"include": ["src", "tests", "testUtils", "eslint.config.js", "next.config.mjs", "postcss.config.mjs", "playwright.config.ts"],
+	"exclude": ["node_modules", "dist", ".next"]
 }
