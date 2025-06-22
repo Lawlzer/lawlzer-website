@@ -35,7 +35,9 @@ todo
 todo.txt
 backup
 legacy
+
 .vercel
+plans
 
 # Package locks (intentionally ignored)
 package-lock.json
