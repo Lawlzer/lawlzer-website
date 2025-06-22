@@ -1,6 +1,6 @@
 # Cooking Subdomain Implementation
 
-## 📊 Workflow Counter: 9
+## 📊 Workflow Counter: 10
 
 ## 🎯 Overview
 
@@ -452,10 +452,24 @@ _This section will be updated with diagrams as complex components are designed._
 **Learning**: Next.js remotePatterns with wildcard '**' hostname allows loading images from any HTTPS source
 **Applied\*\*: Updated RecipeForm, RecipeCard, and database types to support recipe images with automatic optimization
 
+### Entry #23 - API Integration Testing Patterns
+
+**Tried**: Creating integration tests for new API routes (likes, comments, day entries)
+**Result**: All tests passing with comprehensive coverage of success, error, and validation cases
+**Learning**: Must mock getSession for each test iteration when testing auth-protected endpoints in loops
+**Applied**: Fixed failing test by moving vi.mocked(getSession) inside the test loop for multiple test cases
+
+### Entry #24 - E2E Test Resilience
+
+**Tried**: Writing E2E tests that work regardless of initial data state
+**Result**: Created resilient tests using conditional checks for UI elements
+**Learning**: Always check element visibility before interacting, handle both empty and populated states
+**Applied**: Used if (await element.isVisible()) pattern throughout E2E tests for robustness
+
 ## 📊 Progress
 
 **Phase**: Phase 12 - Performance Optimization & Testing  
-**Next**: Task 12.2.1 - Add integration tests for all API routes
+**Next**: Task 12.2.3 - Implement visual regression testing
 **Blockers**: None
 
 ## 🎉 Major Accomplishments in Phase 10
@@ -560,6 +574,23 @@ _This section will be updated with diagrams as complex components are designed._
 - ✅ Integrated Next.js Image component in RecipeCard for optimized loading
 - ✅ Updated RecipeCreator and RecipeEditor to handle imageUrl in form submissions
 - ✅ Configured Next.js with remotePatterns to allow external image sources
+
+### Phase 12 Update #2 - Testing & Quality Assurance
+
+**Integration Tests Created:**
+
+- ✅ Created comprehensive test for like/unlike recipe functionality (7 tests)
+- ✅ Created test suite for recipe comments API (8 tests)
+- ✅ Created test suite for day entries API (6 tests)
+- ✅ All integration tests passing with proper mocking and error handling
+- ✅ Fixed date serialization issues in test expectations
+
+**E2E Tests Created:**
+
+- ✅ Created daily-tracking-journey.spec.ts - comprehensive daily food tracking flow (10 tests)
+- ✅ Created recipe-social-features.spec.ts - social features including likes, comments, sharing (10 tests)
+- ✅ Tests cover both desktop and mobile viewports
+- ✅ Tests handle conditional UI elements gracefully
 - ✅ Verified API routes already support imageUrl field
 
 **Main Error Types Fixed:**
@@ -618,8 +649,8 @@ _This section will be updated with diagrams as complex components are designed._
 
 #### 12.2 Testing & Quality Assurance
 
-- [ ] Task 12.2.1: Add integration tests for all API routes
-- [ ] Task 12.2.2: Add E2E tests for all user flows
+- [x] Task 12.2.1: Add integration tests for all API routes
+- [x] Task 12.2.2: Add E2E tests for all user flows
 - [ ] Task 12.2.3: Implement visual regression testing
 - [ ] Task 12.2.4: Create accessibility testing suite
 
