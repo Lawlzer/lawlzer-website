@@ -6,14 +6,15 @@ import path from 'path';
 
 // Define the path to the global setup file
 const __dirname = path.resolve();
-const _globalSetupPath = path.resolve(__dirname, 'testUtils', 'playwright', 'globalSetup.ts');
+const rootDir = path.resolve(__dirname, '..'); // Go up one level since we're in .config
+const _globalSetupPath = path.resolve(rootDir, 'testUtils', 'playwright', 'globalSetup.ts');
 
 // Use process.env.PORT by default and fallback to 3000 if not specified.
 const PORT = process.env.PORT ?? 3000;
 const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
-	testDir: '.', // Look for tests in the entire project
+	testDir: rootDir, // Look for tests in the project root
 	testMatch: ['src/**/*.spec.ts'], // Match spec files in src directory
 	fullyParallel: true,
 	forbidOnly: Boolean(process.env.CI),
