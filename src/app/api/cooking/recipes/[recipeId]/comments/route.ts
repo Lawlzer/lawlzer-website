@@ -3,11 +3,12 @@ import { NextResponse } from 'next/server';
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
-export async function GET(request: Request, { params }: { params: { recipeId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ recipeId: string }> }) {
 	try {
+		const { recipeId } = await params;
 		const comments = await db.comment.findMany({
 			where: {
-				recipeId: params.recipeId,
+				recipeId,
 			},
 			include: {
 				author: {
@@ -24,12 +25,12 @@ export async function GET(request: Request, { params }: { params: { recipeId: st
 		});
 		return NextResponse.json(comments);
 	} catch (error) {
-		console.error(`Error fetching comments for recipe ${params.recipeId}:`, error);
+		console.error(`Error fetching comments for recipe:`, error);
 		return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });
 	}
 }
 
-export async function POST(request: Request, { params }: { params: { recipeId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ recipeId: string }> }) {
 	try {
 		const session = await getSession();
 		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -37,6 +38,7 @@ export async function POST(request: Request, { params }: { params: { recipeId: s
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
+		const { recipeId } = await params;
 		const { content } = await request.json();
 		if (content == null || typeof content !== 'string' || content.trim() === '') {
 			return NextResponse.json({ error: 'Comment content cannot be empty' }, { status: 400 });
@@ -45,7 +47,7 @@ export async function POST(request: Request, { params }: { params: { recipeId: s
 		const newComment = await db.comment.create({
 			data: {
 				content: content.trim(),
-				recipeId: params.recipeId,
+				recipeId,
 				authorId: session.user.id,
 			},
 			include: {
@@ -61,7 +63,7 @@ export async function POST(request: Request, { params }: { params: { recipeId: s
 
 		return NextResponse.json(newComment);
 	} catch (error) {
-		console.error(`Error creating comment for recipe ${params.recipeId}:`, error);
+		console.error(`Error creating comment for recipe:`, error);
 		return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 });
 	}
 }

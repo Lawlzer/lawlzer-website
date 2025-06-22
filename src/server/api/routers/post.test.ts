@@ -94,7 +94,7 @@ describe('postRouter', () => {
 
 			// Assert
 			expect(result).toEqual(mockPost);
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			const mockCreate = db.post.create as ReturnType<typeof vi.fn>;
 			expect(mockCreate).toHaveBeenCalledWith({
 				data: {
@@ -175,7 +175,7 @@ describe('postRouter', () => {
 			const result = await caller.getLatest();
 
 			expect(result).toEqual(mockPost);
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			const mockFindFirst = db.post.findFirst as ReturnType<typeof vi.fn>;
 			expect(mockFindFirst).toHaveBeenCalledWith({
 				orderBy: { createdAt: 'desc' },

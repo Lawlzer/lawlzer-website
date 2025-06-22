@@ -324,6 +324,19 @@ export default tseslint.config(
 			'@typescript-eslint/no-unsafe-call': ['off'],
 			'@typescript-eslint/no-confusing-void-expression': ['off'],
 			'react/jsx-no-bind': ['off'], // More flexibility in tests
+			'@typescript-eslint/unbound-method': ['off'], // Test files often pass methods as references
+			'@typescript-eslint/no-unsafe-return': ['off'], // Test files may return any for testing
+		},
+	},
+
+	{
+		files: ['**/*.spec.ts', '**/*.spec.tsx'],
+		rules: {
+			'@typescript-eslint/strict-boolean-expressions': ['off'], // Spec files often have looser checks
+			'@typescript-eslint/unbound-method': ['off'], // Spec files often pass methods as references
+			'@typescript-eslint/no-floating-promises': ['off'], // Spec files may have intentional floating promises
+			'@typescript-eslint/no-unsafe-return': ['off'], // Spec files may return any for testing
+			'@typescript-eslint/no-unsafe-call': ['off'], // Spec files often call mocked functions
 		},
 	},
 

@@ -3,14 +3,14 @@ import { NextResponse } from 'next/server';
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
-export async function DELETE(request: Request, { params }: { params: { entryId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ entryId: string }> }) {
 	try {
 		const session = await getSession();
-		if (!session?.user?.id) {
+		if (session?.user?.id === undefined || session.user.id === '') {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const { entryId } = params;
+		const { entryId } = await params;
 
 		if (!entryId) {
 			return NextResponse.json({ error: 'Entry ID is required' }, { status: 400 });

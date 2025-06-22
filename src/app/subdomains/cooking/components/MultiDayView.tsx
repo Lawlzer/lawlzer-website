@@ -58,7 +58,7 @@ export function MultiDayView() {
 			}
 			const { days } = (await response.json()) as { days: DayData[] };
 
-			if (!days || days.length === 0) {
+			if (days.length === 0) {
 				setError('No data found for the selected period.');
 				setIsLoading(false);
 				return;
@@ -83,7 +83,10 @@ export function MultiDayView() {
 					acc.totalCarbs += dayTotal.carbs;
 					acc.totalFat += dayTotal.fat;
 					acc.chartData.push({
-						date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+						date: new Date(day.date).toLocaleDateString('en-US', {
+							month: 'short',
+							day: 'numeric',
+						}),
 						calories: dayTotal.calories,
 					});
 
@@ -122,17 +125,31 @@ export function MultiDayView() {
 				<div className='grid grid-cols-1 md:grid-cols-3 gap-4 items-end'>
 					<div>
 						<label className='block text-sm font-medium mb-1'>Start Date</label>
-						<input type='date' value={startDate} onChange={(e) => setStartDate(e.target.value)} className='w-full px-4 py-2 border rounded-lg' />
+						<input
+							type='date'
+							value={startDate}
+							onChange={(e) => {
+								setStartDate(e.target.value);
+							}}
+							className='w-full px-4 py-2 border rounded-lg'
+						/>
 					</div>
 					<div>
 						<label className='block text-sm font-medium mb-1'>End Date</label>
-						<input type='date' value={endDate} onChange={(e) => setEndDate(e.target.value)} className='w-full px-4 py-2 border rounded-lg' />
+						<input
+							type='date'
+							value={endDate}
+							onChange={(e) => {
+								setEndDate(e.target.value);
+							}}
+							className='w-full px-4 py-2 border rounded-lg'
+						/>
 					</div>
 					<button onClick={() => void handleFetch()} className='px-6 py-2 bg-blue-500 text-white rounded-lg h-10' disabled={isLoading}>
 						{isLoading ? 'Fetching...' : 'Analyze Period'}
 					</button>
 				</div>
-				{error && <p className='text-red-500 text-sm'>{error}</p>}
+				{error !== null && <p className='text-red-500 text-sm'>{error}</p>}
 			</div>
 
 			{data && (

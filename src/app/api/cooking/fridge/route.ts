@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+
 import { db } from '~/server/db';
 import { getSession } from '~/server/db/session';
 
@@ -59,7 +60,7 @@ export async function DELETE(request: Request) {
 	const { searchParams } = new URL(request.url);
 	const id = searchParams.get('id');
 
-	if (!id) {
+	if (id === null || id === '') {
 		return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 	}
 

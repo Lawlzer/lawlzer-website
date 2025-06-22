@@ -61,7 +61,7 @@ const buildRecipeExport = async (recipeId: string, userId: string | undefined): 
 
 	const items: (ExportedItem | null)[] = await Promise.all(
 		recipe.currentVersion.items.map(async (item): Promise<ExportedItem | null> => {
-			if (item.recipeId) {
+			if (item.recipeId !== null && item.recipeId !== undefined) {
 				const nestedRecipeData = await buildRecipeExport(item.recipeId, userId);
 				return {
 					amount: item.amount,
@@ -102,10 +102,10 @@ const buildRecipeExport = async (recipeId: string, userId: string | undefined): 
 	};
 };
 
-export async function GET(request: Request, { params }: { params: { recipeId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ recipeId: string }> }) {
 	try {
 		const session = await getSession();
-		const { recipeId } = params;
+		const { recipeId } = await params;
 
 		const exportData = await buildRecipeExport(recipeId, session?.user?.id);
 
@@ -120,7 +120,7 @@ export async function GET(request: Request, { params }: { params: { recipeId: st
 			},
 		});
 	} catch (error) {
-		console.error(`Error exporting recipe ${params.recipeId}:`, error);
+		console.error(`Error exporting recipe:`, error);
 		return NextResponse.json({ error: 'Failed to export recipe' }, { status: 500 });
 	}
 }

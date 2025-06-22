@@ -98,7 +98,7 @@ describe('/api/cooking/recipes', () => {
 			vi.mocked(getSession).mockResolvedValueOnce(mockSession);
 
 			// Mock the transaction
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			vi.mocked(db.$transaction).mockImplementationOnce(async (callback: (tx: any) => Promise<any>) => {
 				const tx = {
 					recipe: {
@@ -199,7 +199,7 @@ describe('/api/cooking/recipes', () => {
 			vi.mocked(getSession).mockResolvedValueOnce(mockSession);
 
 			// Mock the transaction for update
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			vi.mocked(db.$transaction).mockImplementationOnce(async (callback: (tx: any) => Promise<any>) => {
 				const tx = {
 					recipe: {
@@ -341,7 +341,6 @@ describe('/api/cooking/recipes', () => {
 			} as any;
 			vi.mocked(getSession).mockResolvedValueOnce(mockSession);
 
-			// eslint-disable-next-line @typescript-eslint/unbound-method
 			vi.mocked(db.$transaction).mockImplementationOnce(async (callback: (tx: any) => Promise<any>) => {
 				const tx = {
 					recipe: {

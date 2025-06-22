@@ -52,21 +52,51 @@ export default function AdvancedSearchPage() {
 				<div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
 					<div>
 						<label className='block text-sm font-medium mb-1'>Search Term</label>
-						<input type='text' value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder='Name or description...' className='w-full px-4 py-2 border rounded-lg' />
+						<input
+							type='text'
+							value={searchTerm}
+							onChange={(e) => {
+								setSearchTerm(e.target.value);
+							}}
+							placeholder='Name or description...'
+							className='w-full px-4 py-2 border rounded-lg'
+						/>
 					</div>
 					<div>
 						<label className='block text-sm font-medium mb-1'>Ingredients (comma-separated)</label>
-						<input type='text' value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder='e.g., chicken, broccoli' className='w-full px-4 py-2 border rounded-lg' />
+						<input
+							type='text'
+							value={ingredients}
+							onChange={(e) => {
+								setIngredients(e.target.value);
+							}}
+							placeholder='e.g., chicken, broccoli'
+							className='w-full px-4 py-2 border rounded-lg'
+						/>
 					</div>
 					<div>
 						<label className='block text-sm font-medium mb-1'>Max Prep Time (minutes)</label>
-						<input type='number' value={maxPrepTime} onChange={(e) => setMaxPrepTime(e.target.value)} placeholder='e.g., 30' className='w-full px-4 py-2 border rounded-lg' />
+						<input
+							type='number'
+							value={maxPrepTime}
+							onChange={(e) => {
+								setMaxPrepTime(e.target.value);
+							}}
+							placeholder='e.g., 30'
+							className='w-full px-4 py-2 border rounded-lg'
+						/>
 					</div>
 				</div>
 				<div className='flex justify-between items-center'>
 					<div>
 						<label className='block text-sm font-medium mb-1'>Sort By</label>
-						<select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className='px-4 py-2 border rounded-lg'>
+						<select
+							value={sortBy}
+							onChange={(e) => {
+								setSortBy(e.target.value);
+							}}
+							className='px-4 py-2 border rounded-lg'
+						>
 							<option value='createdAt'>Newest</option>
 							<option value='likes'>Most Liked</option>
 							{isAdmin && <option value='reports'>Most Reported</option>}
@@ -103,14 +133,23 @@ export default function AdvancedSearchPage() {
 								onViewHistory={() => {
 									/* Placeholder for history action */
 								}}
-								onViewFullDay={() => setViewingFullDayRecipe(recipe)}
+								onViewFullDay={() => {
+									setViewingFullDayRecipe(recipe);
+								}}
 							/>
 						))}
 					</div>
 				)}
 			</div>
 
-			{viewingFullDayRecipe && <FullDayNutrition recipe={viewingFullDayRecipe} onClose={() => setViewingFullDayRecipe(null)} />}
+			{viewingFullDayRecipe && (
+				<FullDayNutrition
+					recipe={viewingFullDayRecipe}
+					onClose={() => {
+						setViewingFullDayRecipe(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

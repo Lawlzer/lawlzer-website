@@ -24,7 +24,7 @@ const dayEntrySchema = z.object({
 export async function POST(request: Request) {
 	try {
 		const session = await getSession();
-		if (!session?.user?.id) {
+		if (session?.user?.id === undefined || session.user.id === '') {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
 		// Find the recipe version ID if a recipeId is passed
 		let recipeVersionId: string | null = null;
-		if (entry.recipeId) {
+		if (entry.recipeId !== null && entry.recipeId !== undefined) {
 			const recipe = await db.recipe.findUnique({
 				where: { id: entry.recipeId },
 				select: { currentVersionId: true },
