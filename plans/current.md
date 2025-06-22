@@ -1,6 +1,6 @@
 # Cooking Subdomain Implementation
 
-## 📊 Workflow Counter: 8
+## 📊 Workflow Counter: 9
 
 ## 🎯 Overview
 
@@ -445,10 +445,17 @@ _This section will be updated with diagrams as complex components are designed._
 **Learning**: react-window's VariableSizeGrid is perfect for responsive grid layouts with varying column counts
 **Applied**: Created VirtualizedRecipeList with dynamic column calculation and integrated into RecipesTab and search page
 
+### Entry #22 - Image Optimization for Recipes
+
+**Tried**: Adding image support for recipes with Next.js Image component optimization
+**Result**: Successfully added imageUrl field throughout the stack and implemented optimized image display in RecipeCard
+**Learning**: Next.js remotePatterns with wildcard '**' hostname allows loading images from any HTTPS source
+**Applied\*\*: Updated RecipeForm, RecipeCard, and database types to support recipe images with automatic optimization
+
 ## 📊 Progress
 
-**Phase**: Phase 12 - Performance Optimization & Testing
-**Next**: Task 12.1.2 - Add proper image optimization with Next.js Image component
+**Phase**: Phase 12 - Performance Optimization & Testing  
+**Next**: Task 12.2.1 - Add integration tests for all API routes
 **Blockers**: None
 
 ## 🎉 Major Accomplishments in Phase 10
@@ -536,6 +543,25 @@ _This section will be updated with diagrams as complex components are designed._
 - ✅ Added proper type assertions for empty array returns
 - ✅ All ESLint checks continue to pass with `npm run lint:eslint:commit`
 
+### Phase 12 Update #1 - Performance Optimization
+
+**Virtual Scrolling Implementation:**
+
+- ✅ Installed react-window and @types/react-window
+- ✅ Created VirtualizedRecipeList component using VariableSizeGrid
+- ✅ Implemented dynamic column calculation based on viewport width
+- ✅ Integrated into RecipesTab and search page (switches to virtual scrolling for > 20 items)
+- ✅ Handled SSR compatibility with window object checks
+
+**Image Optimization Implementation:**
+
+- ✅ Added imageUrl field to RecipeFormData type and useRecipeForm hook
+- ✅ Updated RecipeForm component with image URL input field
+- ✅ Integrated Next.js Image component in RecipeCard for optimized loading
+- ✅ Updated RecipeCreator and RecipeEditor to handle imageUrl in form submissions
+- ✅ Configured Next.js with remotePatterns to allow external image sources
+- ✅ Verified API routes already support imageUrl field
+
 **Main Error Types Fixed:**
 
 1. `@typescript-eslint/strict-boolean-expressions` - Replaced implicit truthy checks with explicit null/undefined/empty string checks
@@ -588,7 +614,7 @@ _This section will be updated with diagrams as complex components are designed._
 #### 12.1 Performance Optimization
 
 - [x] Task 12.1.1: Implement virtual scrolling for long recipe lists
-- [ ] Task 12.1.2: Add proper image optimization with Next.js Image component
+- [x] Task 12.1.2: Add proper image optimization with Next.js Image component
 
 #### 12.2 Testing & Quality Assurance
 
