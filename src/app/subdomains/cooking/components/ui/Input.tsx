@@ -16,8 +16,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, h
 	const baseStyles = 'w-full rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0';
 
 	const variants = {
-		default: clsx('border bg-white dark:bg-gray-900', error !== undefined && error !== null && error !== '' ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500'),
-		filled: clsx('border-0 bg-gray-100 dark:bg-gray-800', error !== undefined && error !== null && error !== '' ? 'ring-2 ring-red-500 focus:ring-red-500' : 'focus:ring-blue-500'),
+		default: clsx('border bg-background', error !== undefined && error !== null && error !== '' ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring focus:border-ring'),
+		filled: clsx('border-0 bg-muted', error !== undefined && error !== null && error !== '' ? 'ring-2 ring-destructive focus:ring-destructive' : 'focus:ring-ring'),
 	};
 
 	const paddingStyles = clsx(leftIcon !== undefined ? 'pl-10' : 'pl-3', rightIcon !== undefined ? 'pr-10' : 'pr-3', 'py-2');
@@ -25,20 +25,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, h
 	return (
 		<div className='w-full'>
 			{label !== undefined && label !== null && label !== '' && (
-				<label htmlFor={inputId} className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+				<label htmlFor={inputId} className='block text-sm font-medium text-foreground mb-1'>
 					{label}
 				</label>
 			)}
 
 			<div className='relative'>
-				{leftIcon !== undefined && <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400'>{leftIcon}</div>}
+				{leftIcon !== undefined && <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground'>{leftIcon}</div>}
 
-				<input ref={ref} id={inputId} className={clsx(baseStyles, variants[variant], paddingStyles, 'text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400', 'disabled:opacity-50 disabled:cursor-not-allowed', className)} {...props} />
+				<input ref={ref} id={inputId} className={clsx(baseStyles, variants[variant], paddingStyles, 'text-foreground placeholder-muted-foreground', 'disabled:opacity-50 disabled:cursor-not-allowed', className)} {...props} />
 
-				{rightIcon !== undefined && <div className='absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400'>{rightIcon}</div>}
+				{rightIcon !== undefined && <div className='absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-muted-foreground'>{rightIcon}</div>}
 			</div>
 
-			{((error !== undefined && error !== null && error !== '') || (helperText !== undefined && helperText !== null && helperText !== '')) && <p className={clsx('mt-1 text-sm', error !== undefined && error !== null && error !== '' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400')}>{error !== undefined && error !== null && error !== '' ? error : helperText}</p>}
+			{((error !== undefined && error !== null && error !== '') || (helperText !== undefined && helperText !== null && helperText !== '')) && <p className={clsx('mt-1 text-sm', error !== undefined && error !== null && error !== '' ? 'text-destructive' : 'text-muted-foreground')}>{error !== undefined && error !== null && error !== '' ? error : helperText}</p>}
 		</div>
 	);
 });
@@ -59,21 +59,21 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({ label,
 	const baseStyles = 'w-full rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 resize-none';
 
 	const variants = {
-		default: clsx('border bg-white dark:bg-gray-900', error !== undefined && error !== null && error !== '' ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500'),
-		filled: clsx('border-0 bg-gray-100 dark:bg-gray-800', error !== undefined && error !== null && error !== '' ? 'ring-2 ring-red-500 focus:ring-red-500' : 'focus:ring-blue-500'),
+		default: clsx('border bg-background', error !== undefined && error !== null && error !== '' ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring focus:border-ring'),
+		filled: clsx('border-0 bg-muted', error !== undefined && error !== null && error !== '' ? 'ring-2 ring-destructive focus:ring-destructive' : 'focus:ring-ring'),
 	};
 
 	return (
 		<div className='w-full'>
 			{label !== undefined && label !== null && label !== '' && (
-				<label htmlFor={textareaId} className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+				<label htmlFor={textareaId} className='block text-sm font-medium text-foreground mb-1'>
 					{label}
 				</label>
 			)}
 
-			<textarea ref={ref} id={textareaId} className={clsx(baseStyles, variants[variant], 'px-3 py-2', 'text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400', 'disabled:opacity-50 disabled:cursor-not-allowed', className)} {...props} />
+			<textarea ref={ref} id={textareaId} className={clsx(baseStyles, variants[variant], 'px-3 py-2', 'text-foreground placeholder-muted-foreground', 'disabled:opacity-50 disabled:cursor-not-allowed', className)} {...props} />
 
-			{((error !== undefined && error !== null && error !== '') || (helperText !== undefined && helperText !== null && helperText !== '')) && <p className={clsx('mt-1 text-sm', error !== undefined && error !== null && error !== '' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400')}>{error !== undefined && error !== null && error !== '' ? error : helperText}</p>}
+			{((error !== undefined && error !== null && error !== '') || (helperText !== undefined && helperText !== null && helperText !== '')) && <p className={clsx('mt-1 text-sm', error !== undefined && error !== null && error !== '' ? 'text-destructive' : 'text-muted-foreground')}>{error !== undefined && error !== null && error !== '' ? error : helperText}</p>}
 		</div>
 	);
 });
@@ -95,20 +95,20 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(({ label, error
 	const baseStyles = 'w-full rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 appearance-none cursor-pointer';
 
 	const variants = {
-		default: clsx('border bg-white dark:bg-gray-900', error !== undefined && error !== null && error !== '' ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500'),
-		filled: clsx('border-0 bg-gray-100 dark:bg-gray-800', error !== undefined && error !== null && error !== '' ? 'ring-2 ring-red-500 focus:ring-red-500' : 'focus:ring-blue-500'),
+		default: clsx('border bg-background', error !== undefined && error !== null && error !== '' ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring focus:border-ring'),
+		filled: clsx('border-0 bg-muted', error !== undefined && error !== null && error !== '' ? 'ring-2 ring-destructive focus:ring-destructive' : 'focus:ring-ring'),
 	};
 
 	return (
 		<div className='w-full'>
 			{label !== undefined && label !== null && label !== '' && (
-				<label htmlFor={selectId} className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+				<label htmlFor={selectId} className='block text-sm font-medium text-foreground mb-1'>
 					{label}
 				</label>
 			)}
 
 			<div className='relative'>
-				<select ref={ref} id={selectId} className={clsx(baseStyles, variants[variant], 'px-3 py-2 pr-10', 'text-gray-900 dark:text-gray-100', 'disabled:opacity-50 disabled:cursor-not-allowed', className)} {...props}>
+				<select ref={ref} id={selectId} className={clsx(baseStyles, variants[variant], 'px-3 py-2 pr-10', 'text-foreground', 'disabled:opacity-50 disabled:cursor-not-allowed', className)} {...props}>
 					{options.map((option) => (
 						<option key={option.value} value={option.value}>
 							{option.label}
@@ -116,14 +116,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(({ label, error
 					))}
 				</select>
 
-				<div className='absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400'>
+				<div className='absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-muted-foreground'>
 					<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
 						<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
 					</svg>
 				</div>
 			</div>
 
-			{((error !== undefined && error !== null && error !== '') || (helperText !== undefined && helperText !== null && helperText !== '')) && <p className={clsx('mt-1 text-sm', error !== undefined && error !== null && error !== '' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400')}>{error !== undefined && error !== null && error !== '' ? error : helperText}</p>}
+			{((error !== undefined && error !== null && error !== '') || (helperText !== undefined && helperText !== null && helperText !== '')) && <p className={clsx('mt-1 text-sm', error !== undefined && error !== null && error !== '' ? 'text-destructive' : 'text-muted-foreground')}>{error !== undefined && error !== null && error !== '' ? error : helperText}</p>}
 		</div>
 	);
 });

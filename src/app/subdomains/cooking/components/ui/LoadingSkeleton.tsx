@@ -1,3 +1,6 @@
+import { clsx } from 'clsx';
+import React from 'react';
+
 interface SkeletonProps {
 	className?: string;
 	animate?: boolean;
@@ -7,7 +10,7 @@ export function Skeleton({ className = '', animate = true }: SkeletonProps) {
 	return (
 		<div
 			className={`
-        bg-gray-200 dark:bg-gray-700 rounded
+        bg-muted rounded
         ${animate ? 'animate-pulse' : ''}
         ${className}
       `}

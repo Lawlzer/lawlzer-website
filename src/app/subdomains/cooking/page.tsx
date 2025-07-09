@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import Head from 'next/head';
 import { useSession } from 'next-auth/react';
 import { Suspense } from 'react';
@@ -105,7 +106,7 @@ function CookingPageContent() {
 	const pageDescription = ui.editingRecipe !== null ? (ui.editingRecipe.description ?? 'Edit recipe details') : 'Track your nutrition, create recipes, and manage your diet';
 
 	return (
-		<div className='min-h-screen bg-gray-50'>
+		<div className='min-h-screen bg-background'>
 			{session === null && <GuestModeBanner isGuest={true} />}
 
 			<div className='container mx-auto p-4'>
@@ -114,7 +115,7 @@ function CookingPageContent() {
 					<meta name='description' content={pageDescription} />
 				</Head>
 
-				<h1 className='mb-6 text-3xl font-bold text-gray-900'>Cooking & Nutrition Tracker</h1>
+				<h1 className='mb-6 text-3xl font-bold text-foreground'>Cooking & Nutrition Tracker</h1>
 
 				<TabNavigation activeTab={ui.activeTab} onTabChange={ui.setActiveTab} />
 

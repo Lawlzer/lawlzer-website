@@ -66,8 +66,85 @@ vi.mock('next/head', () => ({
 }));
 
 // Mock the CookingProvider context
-vi.mock('./contexts/CookingProvider', () => ({
+vi.mock('./contexts/CookingContext', () => ({
 	CookingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock all component imports
+vi.mock('./components/AnimatedWrapper', () => ({
+	PageTransition: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('./components/CookingMode', () => ({
+	CookingMode: () => <div>Cooking Mode</div>,
+}));
+
+vi.mock('./components/DayTracker', () => ({
+	DayTracker: () => <div>Day Tracker</div>,
+}));
+
+vi.mock('./components/ErrorBoundary', () => ({
+	ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+	ApiErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('./components/FridgeManager', () => ({
+	FridgeManager: () => <div>Fridge Manager</div>,
+}));
+
+vi.mock('./components/FullDayNutrition', () => ({
+	FullDayNutrition: () => <div>Full Day Nutrition</div>,
+}));
+
+vi.mock('./components/GeneralUnitConverter', () => ({
+	GeneralUnitConverter: () => <div>General Unit Converter</div>,
+}));
+
+vi.mock('./components/GoalsManager', () => ({
+	GoalsManager: () => <div>Goals Manager</div>,
+}));
+
+vi.mock('./components/GuestModeBanner', () => ({
+	GuestModeBanner: () => <div>Guest Mode Banner</div>,
+}));
+
+vi.mock('./components/KeyboardShortcutsHelp', () => ({
+	KeyboardShortcutsHelp: () => <div>Keyboard Shortcuts</div>,
+}));
+
+vi.mock('./components/MealPlanner', () => ({
+	MealPlanner: () => <div>Meal Planner</div>,
+}));
+
+vi.mock('./components/MultiDayView', () => ({
+	MultiDayView: () => <div>Multi Day View</div>,
+}));
+
+vi.mock('./components/RecipeHistory', () => ({
+	RecipeHistory: () => <div>Recipe History</div>,
+}));
+
+vi.mock('./components/tabs', () => ({
+	OverviewTab: () => <div>Overview Tab</div>,
+	RecipesTab: () => <div>Recipes Tab</div>,
+	ScanTab: () => <div>Scan Tab</div>,
+	TabNavigation: ({ activeTab, onTabChange }: any) => (
+		<div>
+			{['Overview', 'Scan', 'Recipes', 'Days', 'Goals', 'Analysis', 'Planner', 'Fridge', 'Cook', 'Tools'].map((tab) => (
+				<button key={tab} onClick={() => onTabChange(tab.toLowerCase())}>
+					{tab}
+				</button>
+			))}
+		</div>
+	),
+}));
+
+vi.mock('./components/ToastContainer', () => ({
+	ToastContainer: () => <div>Toast Container</div>,
+}));
+
+vi.mock('./loading', () => ({
+	default: () => <div>Loading...</div>,
 }));
 
 // Mock hooks

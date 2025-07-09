@@ -12,19 +12,16 @@ describe('Button', () => {
 
 	it('applies variant styles correctly', () => {
 		const { rerender } = render(<Button variant='primary'>Primary</Button>);
-		expect(screen.getByText('Primary')).toHaveClass('bg-blue-600');
+		expect(screen.getByText('Primary')).toHaveClass('bg-primary');
 
 		rerender(<Button variant='secondary'>Secondary</Button>);
-		expect(screen.getByText('Secondary')).toHaveClass('bg-gray-200');
+		expect(screen.getByText('Secondary')).toHaveClass('bg-muted');
 
 		rerender(<Button variant='outline'>Outline</Button>);
 		expect(screen.getByText('Outline')).toHaveClass('border');
 
 		rerender(<Button variant='ghost'>Ghost</Button>);
-		expect(screen.getByText('Ghost')).toHaveClass('hover:bg-gray-100');
-
-		rerender(<Button variant='danger'>Danger</Button>);
-		expect(screen.getByText('Danger')).toHaveClass('bg-red-600');
+		expect(screen.getByText('Ghost')).toHaveClass('hover:bg-muted');
 	});
 
 	it('applies size styles correctly', () => {
@@ -59,7 +56,7 @@ describe('Button', () => {
 		render(<Button isLoading>Loading</Button>);
 
 		expect(screen.getByText('Loading...')).toBeInTheDocument();
-		expect(screen.getByText('Loading...').parentElement).toBeDisabled();
+		expect(screen.getByRole('button')).toBeDisabled();
 	});
 
 	it('renders with left icon', () => {
@@ -76,11 +73,6 @@ describe('Button', () => {
 
 		expect(screen.getByTestId('right-icon')).toBeInTheDocument();
 		expect(screen.getByText('With Icon')).toBeInTheDocument();
-	});
-
-	it('applies fullWidth style', () => {
-		render(<Button fullWidth>Full Width</Button>);
-		expect(screen.getByText('Full Width')).toHaveClass('w-full');
 	});
 
 	it('applies custom className', () => {

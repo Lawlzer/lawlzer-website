@@ -42,14 +42,14 @@ export const ToastContainer: React.FC = () => {
 	const getToastIcon = (type: ToastType) => {
 		switch (type) {
 			case 'success':
-				return <CheckIcon className='w-5 h-5 text-green-400' />;
+				return <CheckIcon className='w-5 h-5 text-green-500' />;
 			case 'error':
-				return <XIcon className='w-5 h-5 text-red-400' />;
+				return <XIcon className='w-5 h-5 text-destructive' />;
 			case 'warning':
-				return <ExclamationTriangleIcon className='w-5 h-5 text-yellow-400' />;
+				return <ExclamationTriangleIcon className='w-5 h-5 text-yellow-500' />;
 			case 'info':
 				return (
-					<svg className='w-5 h-5 text-blue-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+					<svg className='w-5 h-5 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
 						<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
 					</svg>
 				);
@@ -57,17 +57,17 @@ export const ToastContainer: React.FC = () => {
 	};
 
 	const getToastStyles = (type: ToastType) => {
-		const baseStyles = 'flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow-lg dark:text-gray-400 dark:bg-gray-800';
+		const baseStyles = 'flex items-center w-full max-w-xs p-4 mb-4 rounded-lg shadow-lg bg-card text-card-foreground';
 
 		switch (type) {
 			case 'success':
 				return `${baseStyles} border border-green-200 dark:border-green-800`;
 			case 'error':
-				return `${baseStyles} border border-red-200 dark:border-red-800`;
+				return `${baseStyles} border border-destructive/20`;
 			case 'warning':
 				return `${baseStyles} border border-yellow-200 dark:border-yellow-800`;
 			case 'info':
-				return `${baseStyles} border border-blue-200 dark:border-blue-800`;
+				return `${baseStyles} border border-primary/20`;
 		}
 	};
 
@@ -81,7 +81,7 @@ export const ToastContainer: React.FC = () => {
 					<div className='ml-3 text-sm font-normal flex-1'>{toast.message}</div>
 					<button
 						type='button'
-						className='ml-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700'
+						className='ml-auto -mx-1.5 -my-1.5 bg-card text-muted-foreground hover:text-foreground rounded-lg focus:ring-2 focus:ring-ring p-1.5 hover:bg-muted inline-flex h-8 w-8'
 						onClick={() => {
 							removeToast(toast.id);
 						}}

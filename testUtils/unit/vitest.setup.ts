@@ -6,6 +6,12 @@ import '@testing-library/jest-dom/vitest';
 // Import the full polyfill which patches fetch and provides AbortController
 import 'abortcontroller-polyfill/dist/polyfill-patch-fetch';
 
+// Set up test environment variables
+process.env.NEXT_PUBLIC_SCHEME = 'http';
+process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN = 'localhost';
+process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN = 'com';
+process.env.NEXT_PUBLIC_FRONTEND_PORT = '3000';
+
 // Mock NextRequest to bypass AbortSignal type checking issues in tests
 vi.mock('next/dist/server/web/spec-extension/request', () => ({
 	NextRequest: vi.fn().mockImplementation((input, init) => {

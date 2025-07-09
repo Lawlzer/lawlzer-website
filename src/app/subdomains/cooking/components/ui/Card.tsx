@@ -10,12 +10,12 @@ interface CardProps {
 
 export function Card({ children, className = '', variant = 'default', noPadding = false }: CardProps) {
 	const variants = {
-		default: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-		elevated: 'bg-white dark:bg-gray-800 shadow-lg',
-		interactive: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer',
+		default: 'bg-card border border-border',
+		elevated: 'bg-card shadow-lg',
+		interactive: 'bg-card border border-border hover:shadow-md transition-shadow cursor-pointer',
 	};
 
-	return <div className={clsx('rounded-lg', variants[variant], !noPadding && 'p-6', className)}>{children}</div>;
+	return <div className={clsx('rounded-lg p-4', variants[variant], !noPadding && 'p-6', className)}>{children}</div>;
 }
 
 interface CardHeaderProps {
@@ -29,8 +29,8 @@ export function CardHeader({ children, className = '', icon, action }: CardHeade
 	return (
 		<div className={clsx('flex items-center justify-between mb-4', className)}>
 			<div className='flex items-center gap-3'>
-				{icon !== undefined && <div className='text-gray-500 dark:text-gray-400'>{icon}</div>}
-				<h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>{children}</h3>
+				{icon !== undefined && <div className='text-muted-foreground'>{icon}</div>}
+				<h3 className='text-lg font-semibold text-card-foreground'>{children}</h3>
 			</div>
 			{action !== undefined && <div>{action}</div>}
 		</div>
@@ -43,7 +43,7 @@ interface CardContentProps {
 }
 
 export function CardContent({ children, className = '' }: CardContentProps) {
-	return <div className={clsx('text-gray-700 dark:text-gray-300', className)}>{children}</div>;
+	return <div className={clsx('text-card-foreground', className)}>{children}</div>;
 }
 
 interface CardFooterProps {
@@ -52,7 +52,7 @@ interface CardFooterProps {
 }
 
 export function CardFooter({ children, className = '' }: CardFooterProps) {
-	return <div className={clsx('mt-4 pt-4 border-t border-gray-200 dark:border-gray-700', className)}>{children}</div>;
+	return <div className={clsx('flex items-center justify-end gap-2 mt-4 pt-4 border-t border-border', className)}>{children}</div>;
 }
 
 // Stat Card Component
@@ -73,11 +73,11 @@ export function StatCard({ title, value, subtitle, icon, trend, className = '' }
 		<Card className={className}>
 			<div className='flex items-start justify-between'>
 				<div className='flex-1'>
-					<p className='text-sm font-medium text-gray-600 dark:text-gray-400'>{title}</p>
-					<p className='mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100'>{value}</p>
-					{subtitle !== undefined && subtitle !== null && subtitle !== '' && <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>{subtitle}</p>}
+					<p className='text-sm font-medium text-muted-foreground'>{title}</p>
+					<p className='mt-2 text-3xl font-semibold text-card-foreground'>{value}</p>
+					{subtitle !== undefined && subtitle !== null && subtitle !== '' && <p className='mt-1 text-sm text-muted-foreground'>{subtitle}</p>}
 					{trend !== undefined && (
-						<div className={clsx('mt-2 flex items-center text-sm font-medium', trend.isPositive ? 'text-green-600' : 'text-red-600')}>
+						<div className={clsx('mt-2 flex items-center text-sm font-medium', trend.isPositive ? 'text-green-600' : 'text-destructive')}>
 							<span>{trend.isPositive ? '↑' : '↓'}</span>
 							<span className='ml-1'>{Math.abs(trend.value)}%</span>
 						</div>
@@ -85,9 +85,33 @@ export function StatCard({ title, value, subtitle, icon, trend, className = '' }
 				</div>
 				{icon !== undefined && (
 					<div className='ml-4 flex-shrink-0'>
-						<div className='p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-400'>{icon}</div>
+						<div className='p-3 bg-muted rounded-lg text-muted-foreground'>{icon}</div>
 					</div>
 				)}
+			</div>
+		</Card>
+	);
+}
+
+// Pre-styled card variants for common use cases
+interface MetricCardProps {
+	title: string;
+	value: string | number;
+	subtitle?: string;
+	icon?: React.ReactNode;
+	className?: string;
+}
+
+export function MetricCard({ title, value, subtitle, icon, className = '' }: MetricCardProps) {
+	return (
+		<Card className={clsx('relative overflow-hidden', className)}>
+			<div className='flex items-start justify-between'>
+				<div>
+					<p className='text-sm font-medium text-muted-foreground'>{title}</p>
+					<p className='mt-2 text-3xl font-semibold text-card-foreground'>{value}</p>
+					{subtitle !== undefined && subtitle !== null && subtitle !== '' && <p className='mt-1 text-sm text-muted-foreground'>{subtitle}</p>}
+				</div>
+				{icon !== undefined && <div className='p-3 bg-muted rounded-lg text-muted-foreground'>{icon}</div>}
 			</div>
 		</Card>
 	);

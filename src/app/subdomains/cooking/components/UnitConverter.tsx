@@ -82,7 +82,7 @@ export function UnitConverter({ foodId }: UnitConverterProps) {
 	};
 
 	return (
-		<div className='mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+		<div className='mt-4 p-4 bg-muted rounded-lg'>
 			<h4 className='font-semibold mb-2'>User-Contributed Conversions</h4>
 			{isLoading ? (
 				<p>Loading...</p>

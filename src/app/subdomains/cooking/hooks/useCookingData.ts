@@ -1,5 +1,5 @@
 import type { Food } from '@prisma/client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { cookingApi } from '../services/api.service';
 import type { FoodProduct } from '../services/foodDatabase';
@@ -33,96 +33,204 @@ export function useCookingData(): UseCookingDataReturn {
 	const [availableFoods, setAvailableFoods] = useState<Food[]>([]);
 	const [recipes, setRecipes] = useState<RecipeWithDetails[]>([]);
 	const [filteredRecipes, setFilteredRecipes] = useState<RecipeWithDetails[]>([]);
+	const hasInitializedRef = useRef(false);
 
-	// Check authentication status
-	const checkAuth = useCallback(async () => {
+	// Search recipes
+	const searchRecipes = useCallback(
+		(term: string) => {
+			const search = term.toLowerCase();
+			const filtered = recipes.filter((r) => r.name.toLowerCase().includes(search) || (r.description?.toLowerCase().includes(search) ?? false));
+			setFilteredRecipes(filtered);
+		},
+		[recipes]
+	);
+
+	// Refresh all data - stable function that doesn't cause re-renders
+	const refreshData = useCallback(async () => {
+		const currentIsGuest = isGuest;
+		setIsLoading(true);
 		try {
-			const { user } = await cookingApi.session.getSession();
-			setIsGuest(!user);
-		} catch (error) {
-			setIsGuest(true);
-		}
-	}, []);
-
-	// Fetch foods
-	const fetchFoods = useCallback(async () => {
-		if (isGuest) {
-			const guestFoodsList = getGuestFoods();
-			const convertedFoods: Food[] = guestFoodsList.map((food) => ({
-				id: food.guestId ?? '',
-				userId: null,
-				barcode: food.barcode,
-				name: food.name,
-				brand: food.brand,
-				calories: food.calories,
-				protein: food.protein,
-				carbs: food.carbs,
-				fat: food.fat,
-				fiber: food.fiber,
-				sugar: food.sugar,
-				sodium: food.sodium,
-				saturatedFat: food.saturatedFat,
-				transFat: food.transFat,
-				cholesterol: food.cholesterol,
-				potassium: food.potassium,
-				vitaminA: food.vitaminA,
-				vitaminC: food.vitaminC,
-				calcium: food.calcium,
-				iron: food.iron,
-				imageUrl: food.imageUrl,
-				defaultServingSize: food.defaultServingSize,
-				defaultServingUnit: food.defaultServingUnit,
-				visibility: food.visibility,
-				createdAt: new Date(),
-				updatedAt: new Date(),
-			}));
-			setAvailableFoods(convertedFoods);
-		} else {
-			try {
-				const { foods } = await cookingApi.foods.getFoods();
-				setAvailableFoods(foods);
-			} catch (error) {
-				console.error('Error fetching foods:', error);
-				toast.error('Failed to load foods');
+			// Fetch foods
+			if (currentIsGuest) {
+				const guestFoodsList = getGuestFoods();
+				const convertedFoods: Food[] = guestFoodsList.map((food) => ({
+					id: food.guestId ?? '',
+					userId: null,
+					barcode: food.barcode,
+					name: food.name,
+					brand: food.brand,
+					calories: food.calories,
+					protein: food.protein,
+					carbs: food.carbs,
+					fat: food.fat,
+					fiber: food.fiber,
+					sugar: food.sugar,
+					sodium: food.sodium,
+					saturatedFat: food.saturatedFat,
+					transFat: food.transFat,
+					cholesterol: food.cholesterol,
+					potassium: food.potassium,
+					vitaminA: food.vitaminA,
+					vitaminC: food.vitaminC,
+					calcium: food.calcium,
+					iron: food.iron,
+					imageUrl: food.imageUrl,
+					defaultServingSize: food.defaultServingSize,
+					defaultServingUnit: food.defaultServingUnit,
+					visibility: food.visibility,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				}));
+				setAvailableFoods(convertedFoods);
+			} else {
+				try {
+					const { foods } = await cookingApi.foods.getFoods();
+					setAvailableFoods(foods);
+				} catch (error) {
+					console.error('Error fetching foods:', error);
+					toast.error('Failed to load foods');
+				}
 			}
+
+			// Fetch recipes
+			if (currentIsGuest) {
+				const guestRecipes = getGuestRecipes();
+				const convertedRecipes: RecipeWithDetails[] = guestRecipes.map((recipe) => ({
+					id: recipe.guestId,
+					userId: '',
+					name: recipe.name,
+					description: recipe.description ?? null,
+					notes: recipe.notes ?? null,
+					prepTime: recipe.prepTime ?? null,
+					cookTime: recipe.cookTime ?? null,
+					servings: recipe.servings,
+					visibility: 'private',
+					isComponent: false,
+					imageUrl: null,
+					createdAt: new Date(recipe.createdAt),
+					updatedAt: new Date(recipe.updatedAt),
+					currentVersionId: null,
+					currentVersion: null,
+					versions: [],
+				}));
+				setRecipes(convertedRecipes);
+				setFilteredRecipes(convertedRecipes);
+			} else {
+				try {
+					const data = await cookingApi.recipes.getRecipes();
+					setRecipes(data);
+					setFilteredRecipes(data);
+				} catch (error) {
+					console.error('Error fetching recipes:', error);
+					toast.error('Failed to load recipes');
+				}
+			}
+		} finally {
+			setIsLoading(false);
 		}
 	}, [isGuest, toast]);
 
-	// Fetch recipes
-	const fetchRecipes = useCallback(async () => {
-		if (isGuest) {
-			const guestRecipes = getGuestRecipes();
-			const convertedRecipes: RecipeWithDetails[] = guestRecipes.map((recipe) => ({
-				id: recipe.guestId,
-				userId: '',
-				name: recipe.name,
-				description: recipe.description ?? null,
-				notes: recipe.notes ?? null,
-				prepTime: recipe.prepTime ?? null,
-				cookTime: recipe.cookTime ?? null,
-				servings: recipe.servings,
-				visibility: 'private',
-				isComponent: false,
-				imageUrl: null,
-				createdAt: new Date(recipe.createdAt),
-				updatedAt: new Date(recipe.updatedAt),
-				currentVersionId: null,
-				currentVersion: null,
-				versions: [],
-			}));
-			setRecipes(convertedRecipes);
-			setFilteredRecipes(convertedRecipes);
-		} else {
-			try {
-				const data = await cookingApi.recipes.getRecipes();
-				setRecipes(data);
-				setFilteredRecipes(data);
-			} catch (error) {
-				console.error('Error fetching recipes:', error);
-				toast.error('Failed to load recipes');
-			}
+	// Initial setup - only runs once
+	useEffect(() => {
+		if (!hasInitializedRef.current) {
+			hasInitializedRef.current = true;
+
+			const initializeData = async () => {
+				// Check auth status
+				let userIsGuest = true;
+				try {
+					const { user } = await cookingApi.session.getSession();
+					userIsGuest = !user;
+					setIsGuest(userIsGuest);
+				} catch (error) {
+					setIsGuest(true);
+					userIsGuest = true;
+				}
+
+				// Load initial data
+				setIsLoading(true);
+				try {
+					// Fetch foods
+					if (userIsGuest) {
+						const guestFoodsList = getGuestFoods();
+						const convertedFoods: Food[] = guestFoodsList.map((food) => ({
+							id: food.guestId ?? '',
+							userId: null,
+							barcode: food.barcode,
+							name: food.name,
+							brand: food.brand,
+							calories: food.calories,
+							protein: food.protein,
+							carbs: food.carbs,
+							fat: food.fat,
+							fiber: food.fiber,
+							sugar: food.sugar,
+							sodium: food.sodium,
+							saturatedFat: food.saturatedFat,
+							transFat: food.transFat,
+							cholesterol: food.cholesterol,
+							potassium: food.potassium,
+							vitaminA: food.vitaminA,
+							vitaminC: food.vitaminC,
+							calcium: food.calcium,
+							iron: food.iron,
+							imageUrl: food.imageUrl,
+							defaultServingSize: food.defaultServingSize,
+							defaultServingUnit: food.defaultServingUnit,
+							visibility: food.visibility,
+							createdAt: new Date(),
+							updatedAt: new Date(),
+						}));
+						setAvailableFoods(convertedFoods);
+					} else {
+						try {
+							const { foods } = await cookingApi.foods.getFoods();
+							setAvailableFoods(foods);
+						} catch (error) {
+							console.error('Error fetching foods:', error);
+						}
+					}
+
+					// Fetch recipes
+					if (userIsGuest) {
+						const guestRecipes = getGuestRecipes();
+						const convertedRecipes: RecipeWithDetails[] = guestRecipes.map((recipe) => ({
+							id: recipe.guestId,
+							userId: '',
+							name: recipe.name,
+							description: recipe.description ?? null,
+							notes: recipe.notes ?? null,
+							prepTime: recipe.prepTime ?? null,
+							cookTime: recipe.cookTime ?? null,
+							servings: recipe.servings,
+							visibility: 'private',
+							isComponent: false,
+							imageUrl: null,
+							createdAt: new Date(recipe.createdAt),
+							updatedAt: new Date(recipe.updatedAt),
+							currentVersionId: null,
+							currentVersion: null,
+							versions: [],
+						}));
+						setRecipes(convertedRecipes);
+						setFilteredRecipes(convertedRecipes);
+					} else {
+						try {
+							const data = await cookingApi.recipes.getRecipes();
+							setRecipes(data);
+							setFilteredRecipes(data);
+						} catch (error) {
+							console.error('Error fetching recipes:', error);
+						}
+					}
+				} finally {
+					setIsLoading(false);
+				}
+			};
+
+			void initializeData();
 		}
-	}, [isGuest, toast]);
+	}, []); // Empty dependency array - only runs once
 
 	// Create food
 	const createFood = useCallback(
@@ -153,19 +261,19 @@ export function useCookingData(): UseCookingDataReturn {
 					visibility: 'private',
 				});
 				toast.success('Food saved locally! Sign in to sync across devices.');
-				await fetchFoods();
+				await refreshData();
 			} else {
 				try {
 					await cookingApi.foods.createFood(food);
 					toast.success('Food saved successfully!');
-					await fetchFoods();
+					await refreshData();
 				} catch (error) {
 					toast.error('Failed to save food');
 					throw error;
 				}
 			}
 		},
-		[isGuest, fetchFoods, toast]
+		[isGuest, refreshData, toast]
 	);
 
 	// Create recipe
@@ -266,37 +374,6 @@ export function useCookingData(): UseCookingDataReturn {
 		},
 		[recipes, filteredRecipes, toast]
 	);
-
-	// Search recipes
-	const searchRecipes = useCallback(
-		(term: string) => {
-			const search = term.toLowerCase();
-			const filtered = recipes.filter((r) => r.name.toLowerCase().includes(search) || (r.description?.toLowerCase().includes(search) ?? false));
-			setFilteredRecipes(filtered);
-		},
-		[recipes]
-	);
-
-	// Refresh all data
-	const refreshData = useCallback(async () => {
-		setIsLoading(true);
-		try {
-			await Promise.all([fetchFoods(), fetchRecipes()]);
-		} finally {
-			setIsLoading(false);
-		}
-	}, [fetchFoods, fetchRecipes]);
-
-	// Initial data load
-	useEffect(() => {
-		void checkAuth();
-	}, [checkAuth]);
-
-	useEffect(() => {
-		if (isGuest !== undefined) {
-			void refreshData();
-		}
-	}, [isGuest, refreshData]);
 
 	return {
 		isGuest,

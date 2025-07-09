@@ -39,10 +39,10 @@ export const Tooltip: React.FC<TooltipProps> = ({ children, content, position = 
 	};
 
 	const arrowClasses = {
-		top: 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-x-transparent border-b-transparent',
-		bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 border-x-transparent border-t-transparent',
-		left: 'left-full top-1/2 -translate-y-1/2 border-l-gray-900 border-y-transparent border-r-transparent',
-		right: 'right-full top-1/2 -translate-y-1/2 border-r-gray-900 border-y-transparent border-l-transparent',
+		top: 'top-full left-1/2 -translate-x-1/2 border-t-foreground border-x-transparent border-b-transparent',
+		bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-foreground border-x-transparent border-t-transparent',
+		left: 'left-full top-1/2 -translate-y-1/2 border-l-foreground border-y-transparent border-r-transparent',
+		right: 'right-full top-1/2 -translate-y-1/2 border-r-foreground border-y-transparent border-l-transparent',
 	};
 
 	return (
@@ -51,8 +51,8 @@ export const Tooltip: React.FC<TooltipProps> = ({ children, content, position = 
 			{isVisible && (
 				<div
 					className={`
-            absolute z-50 px-3 py-2 text-sm text-white
-            bg-gray-900 rounded-md whitespace-nowrap
+            absolute z-50 px-3 py-2 text-sm text-popover-foreground
+            bg-popover rounded-md whitespace-nowrap border border-border
             ${positionClasses[position]}
             ${animations.fadeIn}
           `}
