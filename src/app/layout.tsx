@@ -13,6 +13,7 @@ import '~/styles/globals.css'; // Assuming global styles are here
 // import { Auth0Provider } from '@auth0/nextjs-auth0'; // Remove Auth0Provider import
 // Removed import { headers } from 'next/headers';
 import Topbar from '~/components/Topbar'; // Import the Topbar component
+import Footer from '~/components/Footer'; // Import the Footer component
 import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl for dynamic URLs
 import { getSession } from '~/server/db/session'; // Import getSession function
 // import { ClientThemeInitializer } from '~/components/theme/ClientThemeInitializer'; // Import the new client wrapper - COMMENTED OUT
@@ -263,6 +264,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 					<main id='main-content' className='flex-1 pt-16'>
 						{children}
 					</main>
+					<Footer />
 				</Providers>
 			</body>
 		</html>
