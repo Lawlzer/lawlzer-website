@@ -14,6 +14,7 @@ import '~/styles/globals.css'; // Assuming global styles are here
 // Removed import { headers } from 'next/headers';
 import Topbar from '~/components/Topbar'; // Import the Topbar component
 import Footer from '~/components/Footer'; // Import the Footer component
+import BackToTop from '~/components/BackToTop'; // Import the BackToTop component
 import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl for dynamic URLs
 import { getSession } from '~/server/db/session'; // Import getSession function
 // import { ClientThemeInitializer } from '~/components/theme/ClientThemeInitializer'; // Import the new client wrapper - COMMENTED OUT
@@ -265,6 +266,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 						{children}
 					</main>
 					<Footer />
+					<BackToTop />
 				</Providers>
 			</body>
 		</html>
