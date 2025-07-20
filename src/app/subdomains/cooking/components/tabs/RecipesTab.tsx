@@ -184,7 +184,7 @@ export function RecipesTab({
           }}
         />
       ) : (
-        <NoRecipesEmptyState onCreate={onCreateRecipe} />
+        <NoRecipesEmptyState onCreateRecipe={onCreateRecipe} />
       )}
     </div>
   );

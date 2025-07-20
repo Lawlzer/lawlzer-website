@@ -75,6 +75,10 @@ vi.mock('./components/AnimatedWrapper', () => ({
 	PageTransition: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('./components/DashboardOverview', () => ({
+	DashboardOverview: () => <div>Dashboard Overview</div>,
+}));
+
 vi.mock('./components/CookingMode', () => ({
 	CookingMode: () => <div>Cooking Mode</div>,
 }));
@@ -128,9 +132,12 @@ vi.mock('./components/tabs', () => ({
 	OverviewTab: () => <div>Overview Tab</div>,
 	RecipesTab: () => <div>Recipes Tab</div>,
 	ScanTab: () => <div>Scan Tab</div>,
-	TabNavigation: ({ activeTab, onTabChange }: any) => (
+}));
+
+vi.mock('./components/tabs/ImprovedTabNavigation', () => ({
+	ImprovedTabNavigation: ({ activeTab, onTabChange }: any) => (
 		<div>
-			{['Overview', 'Scan', 'Recipes', 'Days', 'Goals', 'Analysis', 'Planner', 'Fridge', 'Cook', 'Tools'].map((tab) => (
+			{['Overview', 'Recipes', 'Scan', 'Tracker', 'Planner', 'Analysis', 'Cooking', 'Converter'].map((tab) => (
 				<button key={tab} onClick={() => onTabChange(tab.toLowerCase())}>
 					{tab}
 				</button>
@@ -233,7 +240,7 @@ describe('CookingPage Component', () => {
 
 		render(<Page />);
 
-		const expectedTabs = ['Overview', 'Scan', 'Recipes', 'Days', 'Goals', 'Analysis', 'Planner', 'Fridge', 'Cook', 'Tools'];
+		const expectedTabs = ['Overview', 'Recipes', 'Scan', 'Tracker', 'Planner', 'Analysis', 'Cooking', 'Converter'];
 
 		expectedTabs.forEach((tabName) => {
 			expect(screen.getByRole('button', { name: tabName })).toBeInTheDocument();

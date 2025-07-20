@@ -265,7 +265,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 			<div className='rounded-lg border border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 p-6'>
 				<h3 className='text-lg font-semibold mb-2'>Sign In to Use Cooking Mode</h3>
 				<p className='text-sm text-gray-600 dark:text-gray-400 mb-4'>Cooking mode requires an account to access your saved recipes and calculate proper scaling.</p>
-				<a href='/api/auth/login' className='inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'>
+				<a href='/api/auth/login' className='inline-block px-4 py-2 bg-cooking-primary text-white rounded-lg hover:bg-cooking-primary-hover transition-colors'>
 					Sign In
 				</a>
 			</div>
@@ -309,7 +309,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 								setSelectedRecipeId(recipe.id);
 								setTargetServings(recipe.servings);
 							}}
-							className={`p-4 rounded-lg border transition-all text-left ${selectedRecipeId === recipe.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' : 'hover:border-gray-400'}`}
+							className={`p-4 rounded-lg border transition-all text-left ${selectedRecipeId === recipe.id ? 'border-cooking-primary bg-cooking-primary-light dark:bg-cooking-primary/20' : 'hover:border-cooking-neutral-400'}`}
 						>
 							<h4 className='font-medium'>{recipe.name}</h4>
 							{recipe.description != null && recipe.description !== '' && <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>{recipe.description}</p>}
@@ -332,7 +332,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 							onClick={() => {
 								setMode('servings');
 							}}
-							className={`px-4 py-2 rounded-lg transition-colors ${mode === 'servings' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+							className={`px-4 py-2 rounded-lg transition-colors ${mode === 'servings' ? 'bg-cooking-primary text-white' : 'bg-cooking-neutral-200 dark:bg-cooking-neutral-700'}`}
 						>
 							Scale by Servings
 						</button>
@@ -340,7 +340,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 							onClick={() => {
 								setMode('weight');
 							}}
-							className={`px-4 py-2 rounded-lg transition-colors ${mode === 'weight' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+							className={`px-4 py-2 rounded-lg transition-colors ${mode === 'weight' ? 'bg-cooking-primary text-white' : 'bg-cooking-neutral-200 dark:bg-cooking-neutral-700'}`}
 						>
 							Scale by Total Weight
 						</button>
@@ -417,7 +417,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 							<div key={index} className='flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg'>
 								<div className='flex-1'>
 									<span className='font-medium'>{ing.name}</span>
-									{ing.isRecipe && <span className='ml-2 text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded'>Recipe</span>}
+									{ing.isRecipe && <span className='ml-2 text-xs bg-cooking-secondary-light dark:bg-cooking-secondary/20 text-cooking-secondary dark:text-cooking-secondary px-2 py-1 rounded'>Recipe</span>}
 								</div>
 								<div className='text-right'>
 									<p className='font-medium'>
@@ -432,7 +432,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 					</div>
 
 					{/* Nutrition Summary */}
-					<div className='mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg'>
+					<div className='mt-6 p-4 bg-cooking-primary-light dark:bg-cooking-primary/20 rounded-lg'>
 						<h4 className='font-medium mb-2'>Total Nutrition (Scaled Recipe)</h4>
 						<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
 							{(() => {
@@ -469,7 +469,7 @@ export function CookingMode({ recipes, isGuest }: CookingModeProps) {
 					<button onClick={prevStep} className='px-8 py-4 bg-gray-200 dark:bg-gray-800 rounded-lg text-lg'>
 						Previous
 					</button>
-					<button onClick={nextStep} className='px-8 py-4 bg-blue-500 text-white rounded-lg text-lg'>
+					<button onClick={nextStep} className='px-8 py-4 bg-cooking-primary text-white rounded-lg text-lg hover:bg-cooking-primary-hover transition-colors'>
 						Next
 					</button>
 				</div>

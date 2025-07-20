@@ -12,27 +12,27 @@ describe('Button', () => {
 
 	it('applies variant styles correctly', () => {
 		const { rerender } = render(<Button variant='primary'>Primary</Button>);
-		expect(screen.getByText('Primary')).toHaveClass('bg-primary');
+		expect(screen.getByRole('button')).toHaveClass('bg-cooking-primary');
 
 		rerender(<Button variant='secondary'>Secondary</Button>);
-		expect(screen.getByText('Secondary')).toHaveClass('bg-muted');
+		expect(screen.getByRole('button')).toHaveClass('bg-cooking-secondary');
 
 		rerender(<Button variant='outline'>Outline</Button>);
-		expect(screen.getByText('Outline')).toHaveClass('border');
+		expect(screen.getByRole('button')).toHaveClass('border-2');
 
 		rerender(<Button variant='ghost'>Ghost</Button>);
-		expect(screen.getByText('Ghost')).toHaveClass('hover:bg-muted');
+		expect(screen.getByRole('button')).toHaveClass('hover:bg-cooking-neutral-100');
 	});
 
 	it('applies size styles correctly', () => {
 		const { rerender } = render(<Button size='sm'>Small</Button>);
-		expect(screen.getByText('Small')).toHaveClass('text-sm');
+		expect(screen.getByRole('button')).toHaveClass('text-sm');
 
 		rerender(<Button size='md'>Medium</Button>);
-		expect(screen.getByText('Medium')).toHaveClass('text-base');
+		expect(screen.getByRole('button')).toHaveClass('text-base');
 
 		rerender(<Button size='lg'>Large</Button>);
-		expect(screen.getByText('Large')).toHaveClass('text-lg');
+		expect(screen.getByRole('button')).toHaveClass('text-lg');
 	});
 
 	it('handles click events', () => {
@@ -47,7 +47,7 @@ describe('Button', () => {
 	it('disables button when disabled prop is true', () => {
 		render(<Button disabled>Disabled</Button>);
 
-		const button = screen.getByText('Disabled');
+		const button = screen.getByRole('button');
 		expect(button).toBeDisabled();
 		expect(button).toHaveClass('disabled:opacity-50');
 	});
@@ -77,7 +77,7 @@ describe('Button', () => {
 
 	it('applies custom className', () => {
 		render(<Button className='custom-class'>Custom</Button>);
-		expect(screen.getByText('Custom')).toHaveClass('custom-class');
+		expect(screen.getByRole('button')).toHaveClass('custom-class');
 	});
 });
 
@@ -137,9 +137,10 @@ describe('ButtonGroup', () => {
 			</ButtonGroup>
 		);
 
-		expect(screen.getByText('First')).toHaveClass('rounded-r-none');
-		expect(screen.getByText('Second')).toHaveClass('rounded-none');
-		expect(screen.getByText('Third')).toHaveClass('rounded-l-none');
+		const buttons = screen.getAllByRole('button');
+		expect(buttons[0]).toHaveClass('rounded-r-none');
+		expect(buttons[1]).toHaveClass('rounded-none');
+		expect(buttons[2]).toHaveClass('rounded-l-none');
 	});
 
 	it('handles non-button children gracefully', () => {

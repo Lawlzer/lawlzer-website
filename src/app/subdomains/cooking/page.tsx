@@ -18,7 +18,9 @@ import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { MealPlanner } from './components/MealPlanner';
 import { MultiDayView } from './components/MultiDayView';
 import { RecipeHistory } from './components/RecipeHistory';
-import { OverviewTab, RecipesTab, ScanTab, type TabId, TabNavigation } from './components/tabs';
+import { RecipesTab, ScanTab } from './components/tabs';
+import { ImprovedTabNavigation, type TabId } from './components/tabs/ImprovedTabNavigation';
+import { DashboardOverview } from './components/DashboardOverview';
 import { ToastContainer } from './components/ToastContainer';
 import { CookingProvider } from './contexts/CookingContext';
 // Custom hooks
@@ -58,7 +60,7 @@ function CookingPageContent() {
 	};
 
 	// Tab navigation shortcuts
-	const tabs: TabId[] = ['overview', 'scan', 'recipes', 'days', 'goals', 'analysis', 'planner', 'fridge', 'cooking'];
+	const tabs: TabId[] = ['overview', 'recipes', 'scan', 'tracker', 'planner', 'analysis', 'cooking', 'converter'];
 
 	// Setup keyboard shortcuts
 	useKeyboardShortcuts([
@@ -106,24 +108,44 @@ function CookingPageContent() {
 	const pageDescription = ui.editingRecipe !== null ? (ui.editingRecipe.description ?? 'Edit recipe details') : 'Track your nutrition, create recipes, and manage your diet';
 
 	return (
-		<div className='min-h-screen bg-background'>
+		<div className='min-h-screen'>
 			{session === null && <GuestModeBanner isGuest={true} />}
 
-			<div className='container mx-auto p-4'>
+			<div className='container mx-auto px-4 py-6 pb-20 md:pb-6'>
 				<Head>
 					<title>{pageTitle}</title>
 					<meta name='description' content={pageDescription} />
 				</Head>
 
-				<h1 className='mb-6 text-3xl font-bold text-foreground'>Cooking & Nutrition Tracker</h1>
+				<header className='mb-8'>
+					<h1 className='text-4xl font-bold bg-gradient-to-r from-cooking-primary to-cooking-accent bg-clip-text text-transparent'>
+						Cooking & Nutrition
+					</h1>
+					<p className='text-cooking-neutral-600 mt-2'>Track, plan, and discover delicious recipes</p>
+				</header>
 
-				<TabNavigation activeTab={ui.activeTab} onTabChange={ui.setActiveTab} />
+				<ImprovedTabNavigation 
+					activeTab={ui.activeTab as TabId} 
+					onTabChange={(tab) => ui.setActiveTab(tab as any)}
+					recipesCount={recipes.length}
+				/>
 
 				<div className='mt-6'>
 					<ApiErrorBoundary>
 						{ui.activeTab === 'overview' && (
 							<PageTransition>
-								<OverviewTab dailyCalories={{ current: 0, goal: 2000 }} dailyProtein={{ current: 0, goal: 50 }} recipeCount={recipes.length} loggedDays={0} />
+								<DashboardOverview 
+									dailyCalories={{ current: 1650, goal: 2000 }} 
+									dailyProtein={{ current: 45, goal: 50 }} 
+									recipeCount={recipes.length} 
+									loggedDays={7}
+									recentRecipes={recipes.slice(0, 4).map(r => ({ 
+										id: r.id, 
+										name: r.name, 
+										imageUrl: r.imageUrl || undefined 
+									}))}
+									onNavigate={(tab) => ui.setActiveTab(tab as any)}
+								/>
 							</PageTransition>
 						)}
 
@@ -182,19 +204,27 @@ function CookingPageContent() {
 							/>
 						)}
 
-						{ui.activeTab === 'days' && <DayTracker isGuest={isGuest} availableFoods={availableFoods} availableRecipes={recipes} />}
+						{ui.activeTab === 'tracker' && <DayTracker isGuest={isGuest} availableFoods={availableFoods} availableRecipes={recipes} />}
 
-						{ui.activeTab === 'goals' && <GoalsManager isGuest={isGuest} />}
+						{ui.activeTab === 'analysis' && (
+							<div>
+								<MultiDayView />
+								<div className="mt-6">
+									<GoalsManager isGuest={isGuest} />
+								</div>
+							</div>
+						)}
 
-						{ui.activeTab === 'analysis' && <MultiDayView />}
-
-						{ui.activeTab === 'planner' && <MealPlanner isGuest={isGuest} availableFoods={availableFoods} availableRecipes={recipes} />}
-
-						{ui.activeTab === 'fridge' && <FridgeManager availableFoods={availableFoods} isGuest={isGuest} />}
+						{ui.activeTab === 'planner' && (
+							<div className="space-y-6">
+								<MealPlanner isGuest={isGuest} availableFoods={availableFoods} availableRecipes={recipes} />
+								<FridgeManager availableFoods={availableFoods} isGuest={isGuest} />
+							</div>
+						)}
 
 						{ui.activeTab === 'cooking' && <CookingMode recipes={recipes} isGuest={isGuest} />}
 
-						{ui.activeTab === 'tools' && <GeneralUnitConverter />}
+						{ui.activeTab === 'converter' && <GeneralUnitConverter />}
 					</ApiErrorBoundary>
 				</div>
 

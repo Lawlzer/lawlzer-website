@@ -374,7 +374,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 							>
 								Cancel
 							</button>
-							<button onClick={() => void handleDuplicateDay()} className='flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg'>
+							<button onClick={() => void handleDuplicateDay()} className='flex-1 px-4 py-2 bg-cooking-primary text-white rounded-lg hover:bg-cooking-primary-hover transition-colors'>
 								Duplicate
 							</button>
 						</div>
@@ -465,7 +465,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 							onClick={() => {
 								setShowAddEntry(true);
 							}}
-							className='w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
+							className='w-full px-4 py-2 bg-cooking-primary text-white rounded-lg hover:bg-cooking-primary-hover transition-colors'
 						>
 							Add Food/Recipe
 						</button>
@@ -496,7 +496,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 									onClick={() => {
 										setSelectedType('food');
 									}}
-									className={`px-3 py-1 rounded ${selectedType === 'food' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+									className={`px-3 py-1 rounded ${selectedType === 'food' ? 'bg-cooking-primary text-white' : 'bg-cooking-neutral-200 dark:bg-cooking-neutral-700'}`}
 								>
 									Food
 								</button>
@@ -504,7 +504,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 									onClick={() => {
 										setSelectedType('recipe');
 									}}
-									className={`px-3 py-1 rounded ${selectedType === 'recipe' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+									className={`px-3 py-1 rounded ${selectedType === 'recipe' ? 'bg-cooking-primary text-white' : 'bg-cooking-neutral-200 dark:bg-cooking-neutral-700'}`}
 									disabled={availableRecipes.length === 0}
 								>
 									Recipe
@@ -563,7 +563,7 @@ export const DayTracker: React.FC<DayTrackerProps> = ({ isGuest = false, availab
 
 							{/* Actions */}
 							<div className='flex gap-2'>
-								<button onClick={() => void handleAddEntry()} className='px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50' disabled={isSaving}>
+								<button onClick={() => void handleAddEntry()} className='px-4 py-2 bg-cooking-secondary text-white rounded-lg hover:bg-cooking-secondary-hover transition-colors disabled:opacity-50' disabled={isSaving}>
 									{isSaving ? 'Saving...' : 'Add'}
 								</button>
 								<button

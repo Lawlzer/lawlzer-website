@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import type { TabId } from '../components/tabs';
+export type TabId = 'overview' | 'recipes' | 'scan' | 'tracker' | 'planner' | 'analysis' | 'cooking' | 'converter' | 'days' | 'goals' | 'fridge' | 'tools';
 import type { RecipeWithDetails } from '../types/recipe.types';
 
 interface UseCookingUIReturn {

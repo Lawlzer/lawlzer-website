@@ -82,14 +82,14 @@ export function ScanTab({ isScanning, isLoading, scannedProduct, scanError, isSa
 						</div>
 
 						<div className='flex gap-2 mt-4'>
-							<button className='px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50' onClick={onSaveFood} disabled={isSaving}>
+							<button className='px-4 py-2 bg-cooking-secondary text-white rounded-lg hover:bg-cooking-secondary-hover transition-colors disabled:opacity-50' onClick={onSaveFood} disabled={isSaving}>
 								{isSaving ? 'Saving...' : 'Save to My Foods'}
 							</button>
 							<button onClick={onCancelScan} className='px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors'>
 								Scan Another
 							</button>
 						</div>
-						{saveStatus && <div className={`mt-4 p-3 rounded-lg ${saveStatus.type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>{saveStatus.message}</div>}
+						{saveStatus && <div className={`mt-4 p-3 rounded-lg ${saveStatus.type === 'success' ? 'bg-cooking-secondary-light text-cooking-secondary dark:bg-cooking-secondary/20 dark:text-cooking-secondary' : 'bg-cooking-accent-light text-cooking-accent dark:bg-cooking-accent/20 dark:text-cooking-accent'}`}>{saveStatus.message}</div>}
 					</div>
 				</div>
 			)}

@@ -25,16 +25,16 @@ describe('EmptyState', () => {
 			<EmptyState
 				title='Title'
 				description='Description'
-				action={{
+				actions={[{
 					label: 'Click me',
 					onClick: handleClick,
-				}}
+				}]}
 			/>
 		);
 
 		const button = screen.getByText('Click me');
 		expect(button).toBeInTheDocument();
-		expect(button).toHaveClass('bg-blue-500');
+		expect(button).toHaveClass('bg-primary');
 
 		fireEvent.click(button);
 		expect(handleClick).toHaveBeenCalledTimes(1);
@@ -46,17 +46,17 @@ describe('EmptyState', () => {
 			<EmptyState
 				title='Title'
 				description='Description'
-				action={{
+				actions={[{
 					label: 'Secondary',
 					onClick: handleClick,
 					variant: 'secondary',
-				}}
+				}]}
 			/>
 		);
 
 		const button = screen.getByText('Secondary');
 		expect(button).toHaveClass('border');
-		expect(button).not.toHaveClass('bg-blue-500');
+		expect(button).not.toHaveClass('bg-primary');
 	});
 
 	it('renders both primary and secondary actions', () => {
@@ -67,14 +67,17 @@ describe('EmptyState', () => {
 			<EmptyState
 				title='Title'
 				description='Description'
-				action={{
-					label: 'Primary',
-					onClick: handlePrimary,
-				}}
-				secondaryAction={{
-					label: 'Secondary',
-					onClick: handleSecondary,
-				}}
+				actions={[
+					{
+						label: 'Primary',
+						onClick: handlePrimary,
+					},
+					{
+						label: 'Secondary',
+						onClick: handleSecondary,
+						variant: 'secondary',
+					}
+				]}
 			/>
 		);
 
@@ -82,22 +85,22 @@ describe('EmptyState', () => {
 		expect(screen.getByText('Secondary')).toBeInTheDocument();
 	});
 
-	it('applies custom className', () => {
-		const { container } = render(<EmptyState title='Title' description='Description' className='custom-class' />);
+	it('renders compact variant', () => {
+		const { container } = render(<EmptyState title='Title' description='Description' compact />);
 
-		expect(container.firstChild).toHaveClass('custom-class');
+		expect(container.firstChild).toHaveClass('py-6');
 	});
 });
 
 describe('NoRecipesEmptyState', () => {
 	it('renders correct content for no recipes', () => {
 		const handleCreate = vi.fn();
-		render(<NoRecipesEmptyState onCreate={handleCreate} />);
+		render(<NoRecipesEmptyState onCreateRecipe={handleCreate} />);
 
 		expect(screen.getByText('No recipes yet')).toBeInTheDocument();
-		expect(screen.getByText('Create your first recipe to start building your cookbook')).toBeInTheDocument();
+		expect(screen.getByText('Create your first recipe to start tracking your nutrition')).toBeInTheDocument();
 
-		const button = screen.getByText('Create Your First Recipe');
+		const button = screen.getByText('Create Recipe');
 		fireEvent.click(button);
 		expect(handleCreate).toHaveBeenCalledTimes(1);
 	});
