@@ -1,43 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
+import { buildWhereClause, type InputFilters } from '~/server/dataPlatform/query';
 import { db } from '~/server/db';
 
-// --- Type Definitions ---
-
-// Structure for filters passed in the query string
-type InputFilters = Record<string, string[] | boolean | number | string>;
-
-// Structure for individual data points returned by the API
 export interface RawDataPoint {
-	timestamp: number; // unixDate in milliseconds
-	values: Record<string, number>; // { fieldName: value }
+	timestamp: number;
+	values: Record<string, number>;
 }
 
-// Max documents to process to avoid performance issues
 const MAX_DOCUMENTS_FOR_PROCESSING = 5000;
-
-// --- Helper Functions ---
-
-// Function to build Prisma where clause based on inputFilters
-function buildWhereClause(inputFilters: InputFilters): Record<string, any> {
-	const where: Record<string, any> = {};
-
-	// Add filters directly from inputFilters
-	for (const [key, value] of Object.entries(inputFilters)) {
-		// Handle array values for $in, otherwise direct match
-		if (Array.isArray(value) && value.length > 0) {
-			where[key] = { in: value };
-		} else if (!Array.isArray(value)) {
-			// Handle boolean, number, string directly
-			where[key] = value;
-		}
-		// Ignore empty arrays
-	}
-
-	console.info('Constructed Prisma Where Clause:', JSON.stringify(where));
-	return where;
-}
 
 // --- API Route Handler ---
 

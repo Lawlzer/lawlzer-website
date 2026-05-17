@@ -1,39 +1,18 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
+import { buildWhereClause, FILTERABLE_FIELDS, type InputFilters } from '~/server/dataPlatform/query';
 import { db } from '~/server/db';
 
-// Define the structure for a single filter value with its count
 interface FilterValueCount {
 	value: string;
 	count: number;
 }
 
-// Adjusted response structure to include counts for each filter value and common fields
 export interface FiltersResponse {
-	filters: Record<string, FilterValueCount[]>; // Key: Field name, Value: Array of {value, count} objects
+	filters: Record<string, FilterValueCount[]>;
 	totalDocuments: number;
-	commonFields?: Record<string, any>; // Optional: Fields common to all matching documents
-}
-
-// Define the structure for filters passed in the query string
-type InputFilters = Record<string, string[]>; // Assuming values are always arrays from FE
-
-// List of fields in CommodityData to be used as filters
-const FILTERABLE_FIELDS: string[] = ['type', 'category', 'country', 'state', 'cattleType', 'choiceGrade'];
-
-// Helper to build the where clause from input filters
-function buildWhereClause(inputFilters: InputFilters): Record<string, any> {
-	const where: Record<string, any> = {};
-
-	for (const [key, values] of Object.entries(inputFilters)) {
-		// Ensure field is considered filterable
-		if (FILTERABLE_FIELDS.includes(key) && values.length > 0) {
-			where[key] = { in: values };
-		}
-	}
-
-	return where;
+	commonFields?: Record<string, unknown>;
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
