@@ -1,7 +1,9 @@
 import type { MetadataRoute } from 'next';
 
+import { getBaseUrl } from '~/lib/utils';
+
 export default function sitemap(): MetadataRoute.Sitemap {
-	const baseUrl = 'https://todo.fixme.com';
+	const baseUrl = getBaseUrl();
 
 	return [
 		{
@@ -11,13 +13,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 			priority: 1,
 		},
 		{
-			url: 'https://valorant.todo.fixme.com',
+			url: getBaseUrl('valorant'),
 			lastModified: new Date(),
 			changeFrequency: 'monthly',
 			priority: 1,
 		},
 		{
-			url: 'https://colors.todo.fixme.com',
+			url: getBaseUrl('colors'),
 			lastModified: new Date(),
 			changeFrequency: 'monthly',
 			priority: 0.2,
