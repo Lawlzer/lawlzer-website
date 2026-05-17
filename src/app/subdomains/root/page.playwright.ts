@@ -1,8 +1,6 @@
 import { expect, test } from '@playwright/test';
 
 import { pathToURLTestsOnly } from '~/lib/utils';
-// Import accessibility checker if available, e.g.:
-// import AxeBuilder from '@axe-core/playwright';
 
 const pathToThisFile = import.meta.url;
 

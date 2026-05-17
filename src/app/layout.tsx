@@ -1,28 +1,13 @@
-import '~/styles/globals.css'; // Assuming global styles are here
+import '~/styles/globals.css';
 
 import type { Metadata } from 'next';
 import React from 'react';
 
-// import dynamic from 'next/dynamic'; // Remove dynamic import
-// import { cookies } from 'next/headers'; // REMOVED: No longer reading cookies server-side for styles
-// import { Auth0Provider } from '@auth0/nextjs-auth0'; // Remove Auth0Provider import
-// Removed import { headers } from 'next/headers';
-import Topbar from '~/components/Topbar'; // Import the Topbar component
-import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl for dynamic URLs
+import Topbar from '~/components/Topbar';
+import { getBaseUrl } from '~/lib/utils';
 import { getSession } from '~/server/db/session';
 
-import { Providers } from './providers'; // Import the new Providers component
-// import { ClientThemeInitializer } from '~/components/theme/ClientThemeInitializer'; // Import the new client wrapper - COMMENTED OUT
-// import Script from 'next/script'; // REMOVE next/script import
-
-// REMOVED: Dynamic import logic moved to ClientThemeInitializer
-// const ThemeInitializer = dynamic(async () => import('~/components/theme/ThemeInitializer').then((mod) => mod.ThemeInitializer), {
-// 	ssr: false,
-// });
-
-// REMOVED: Server-side cookie/default definitions
-// const COOKIE_KEYS = { ... };
-// const DEFAULT_COLORS = { ... };
+import { Providers } from './providers';
 
 // IMPORTANT: The script constants and functions below are duplicated from palette.ts
 // to avoid imports in this critical path script. They must be kept minimal
@@ -168,25 +153,11 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }): Promise<React.JSX.Element> {
-	// REMOVED: Server-side cookie reading and style object creation
-	// const cookieStore = cookies();
-	// const pageBg = ...;
-	// const primaryTextColor = ...;
-	// ...etc...
-	// const globalStyles = { ... };
-
-	// REMOVED: Inline script string definition
-	// const themeScript = `...`;
-
-	// Fetch session for the Topbar
 	const session = await getSession();
 
-	// Return statement simplified: No inline styles needed on html/body from server
 	return (
 		<html suppressHydrationWarning lang='en'>
 			<head>
-				{/* Add other head elements like meta tags, title (if not in page/layout), etc. */}
-				{}
 				<script dangerouslySetInnerHTML={{ __html: getThemeInitializationScript() }} />
 				{/* Resource Hints for Performance */}
 				<link rel='dns-prefetch' href='https://fonts.googleapis.com' />
@@ -221,7 +192,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				<a href='#navigation' className='sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-32 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none'>
 					Skip to navigation
 				</a>
-				{/* <ClientThemeInitializer /> // COMMENTED OUT: Initial theme now set by inline script */}
 				<Providers>
 					<Topbar session={session} />
 					<main id='main-content' className='flex-1 pt-16'>

@@ -5,11 +5,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
-// import { useUser } from '@auth0/nextjs-auth0'; // Remove Auth0 hook
 import { env } from '~/env.mjs';
 import { subdomains } from '~/lib/utils';
-// import { getSession } from '~/server/db/session'; // Import correct session fetching function - not used in component
-import type { SessionData } from '~/server/db/session'; // Import SessionData type
+import type { SessionData } from '~/server/db/session';
 
 import AuthButton from './AuthButton';
 import ProtectedLink from './ProtectedLink';

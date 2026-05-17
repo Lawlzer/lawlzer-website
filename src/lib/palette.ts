@@ -211,7 +211,3 @@ export function getCookie(name: string): string | null {
 		return null;
 	}
 }
-
-// REMOVED: LocalStorage functions
-// export function setLocalStorageItem(...) { ... }
-// export function getLocalStorageItem(...) { ... }
