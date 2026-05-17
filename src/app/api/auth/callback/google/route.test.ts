@@ -23,6 +23,7 @@ global.fetch = mockFetch;
 
 describe('Google OAuth Callback', () => {
 	const mockCode = 'test-google-auth-code';
+	const mockState = 'test-csrf-state-token';
 	const mockAccessToken = 'test-google-access-token';
 	const mockIdToken = 'test-google-id-token';
 	const mockRefreshToken = 'test-google-refresh-token';
@@ -108,9 +109,9 @@ describe('Google OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/google?code=${mockCode}`,
+			url: `/api/auth/callback/google?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				// Should redirect after successful auth
 				expect(response.status).toBe(302);
@@ -153,9 +154,9 @@ describe('Google OAuth Callback', () => {
 
 		await testApiHandler({
 			appHandler: handler,
-			url: '/api/auth/callback/google',
+			url: `/api/auth/callback/google?state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -180,9 +181,9 @@ describe('Google OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/google?code=${mockCode}`,
+			url: `/api/auth/callback/google?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -216,9 +217,9 @@ describe('Google OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/google?code=${mockCode}`,
+			url: `/api/auth/callback/google?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -254,9 +255,9 @@ describe('Google OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/google?code=${mockCode}`,
+			url: `/api/auth/callback/google?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -296,9 +297,9 @@ describe('Google OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/google?code=${mockCode}`,
+			url: `/api/auth/callback/google?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				await fetch({ method: 'GET' });
+				await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				// Verify emailVerified is null for unverified emails
 				expect(mockPrismaUser.upsert).toHaveBeenCalledWith(
@@ -338,9 +339,9 @@ describe('Google OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/google?code=${mockCode}`,
+			url: `/api/auth/callback/google?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				await fetch({ method: 'GET' });
+				await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				// Verify refresh token and id_token are stored
 				expect(mockPrismaUser.upsert).toHaveBeenCalledWith(
@@ -402,9 +403,9 @@ describe('Google OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/google?code=${mockCode}`,
+			url: `/api/auth/callback/google?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				await fetch({ method: 'GET' });
+				await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				const afterTime = Math.floor(Date.now() / 1000);
 

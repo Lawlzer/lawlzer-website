@@ -146,6 +146,13 @@ async function upsertUser(discordUser: DiscordUserInfo, tokens: DiscordTokenResp
 export async function GET(request: NextRequest): Promise<NextResponse> {
 	const { searchParams } = request.nextUrl;
 	const code = searchParams.get('code');
+	const state = searchParams.get('state');
+
+	const storedState = request.cookies.get('auth_state')?.value;
+	if (state === null || state === '' || storedState === undefined || storedState === '' || state !== storedState) {
+		console.error('Discord state mismatch:', { received: state, expected: storedState });
+		return NextResponse.redirect(new URL('/error/auth?error=invalid_state', request.url));
+	}
 
 	if (code === null || code === '') {
 		return NextResponse.redirect(new URL('/error/auth?error=no_code', request.url));

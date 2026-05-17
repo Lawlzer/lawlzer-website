@@ -23,6 +23,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 describe('Discord OAuth Callback', () => {
+	const mockState = 'test-csrf-state-token';
 	const mockUser = createMockUserWithProvider('discord');
 
 	beforeEach(() => {
@@ -74,9 +75,9 @@ describe('Discord OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockAuthData.discord.code },
-			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}`,
+			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				// Should redirect after successful auth
 				expect(response.status).toBe(302);
@@ -120,9 +121,9 @@ describe('Discord OAuth Callback', () => {
 
 		await testApiHandler({
 			appHandler: handler,
-			url: '/api/auth/callback/discord',
+			url: `/api/auth/callback/discord?state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307); // Temporary redirect
 				const location = response.headers.get('location');
@@ -147,9 +148,9 @@ describe('Discord OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockAuthData.discord.code },
-			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}`,
+			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -183,9 +184,9 @@ describe('Discord OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockAuthData.discord.code },
-			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}`,
+			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -221,9 +222,9 @@ describe('Discord OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockAuthData.discord.code },
-			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}`,
+			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -266,9 +267,9 @@ describe('Discord OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockAuthData.discord.code },
-			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}`,
+			url: `/api/auth/callback/discord?code=${mockAuthData.discord.code}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				await fetch({ method: 'GET' });
+				await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				// Verify avatar URL construction
 				expect(mockPrismaUser.upsert).toHaveBeenCalledWith(
