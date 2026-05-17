@@ -15,7 +15,7 @@ export async function handleAndGenerateSessionToken(userId: string, request: Nex
 	// Get the redirect path from the auth_redirect cookie, validate it's a relative path
 	const redirectCookie = request.cookies.get('auth_redirect');
 	const redirectPath = redirectCookie?.value ?? '/';
-	const safeRedirectPath = redirectPath.startsWith('/') ? redirectPath : '/';
+	const safeRedirectPath = redirectPath.startsWith('/') && !redirectPath.startsWith('//') ? redirectPath : '/';
 	const redirectUrl = new URL(safeRedirectPath, getBaseUrl()).toString();
 
 	const response = NextResponse.redirect(redirectUrl);

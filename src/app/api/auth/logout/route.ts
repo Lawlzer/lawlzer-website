@@ -14,7 +14,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 		if (refererHeader !== null && refererHeader !== '') {
 			try {
 				const refererUrl = new URL(refererHeader);
-				redirectPath = refererUrl.pathname + refererUrl.search;
+				const pathname = refererUrl.pathname.replace(/^\/\/+/, '/');
+				redirectPath = pathname + refererUrl.search;
 			} catch {
 				redirectPath = '/';
 			}
