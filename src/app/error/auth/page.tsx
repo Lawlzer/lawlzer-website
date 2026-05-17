@@ -104,9 +104,9 @@ const AuthErrorPage = (): React.JSX.Element => {
 				{/* Help Text */}
 				<motion.p animate={{ opacity: 1 }} className='mt-6 text-center text-sm text-muted-foreground' initial={{ opacity: 0 }} transition={{ delay: 0.8 }}>
 					Need help?{' '}
-					<Link className='text-primary underline-offset-4 hover:underline' href='/contact'>
+					<a className='text-primary underline-offset-4 hover:underline' href='https://github.com/Lawlzer' target='_blank' rel='noopener noreferrer'>
 						Contact Support
-					</Link>
+					</a>
 				</motion.p>
 			</motion.div>
 		</div>

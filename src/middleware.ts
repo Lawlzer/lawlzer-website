@@ -2,7 +2,6 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { env } from './env.mjs';
-// import type { SubdomainName } from './lib/utils'; // Unused import
 import { getBaseUrl, subdomains } from './lib/utils';
 
 // Function to determine if the hostname corresponds to the main domain
@@ -135,22 +134,6 @@ export function middleware(request: NextRequest): NextResponse {
 	return NextResponse.next();
 }
 
-// todo there's definitely some legacy stuff in here, like the below stuff I'm guessing
-
 export const config = {
-	// Matcher should allow /auth/ paths to run the middleware function.
-	// The function itself delegates /auth/ to auth0.middleware.
-	// Exclude /api, static assets, image optimization files, and metadata.
-	// Updated matcher to exclude /auth/ paths since they are no longer handled
-	// Also exclude paths with dots (likely static files in /public)
-	matcher: [
-		// Match all paths except for:
-		// - api routes
-		// - _next/static (static files)
-		// - _next/image (image optimization files)
-		// - favicon.ico (favicon file)
-		// - auth routes
-		// - paths containing a dot (likely static files in /public)
-		'/((?!api|_next/static|_next/image|favicon.ico|auth/|.*..*).*)',
-	],
+	matcher: ['/((?!api|_next/static|_next/image|favicon\\.ico|auth/).*)'],
 };

@@ -88,7 +88,7 @@ describe('AuthErrorPage Component', () => {
 		expect(homepageLink).toHaveAttribute('href', '/');
 
 		const contactLink = screen.getByRole('link', { name: /Contact Support/i });
-		expect(contactLink).toHaveAttribute('href', '/contact');
+		expect(contactLink).toHaveAttribute('href', 'https://github.com/Lawlzer');
 	});
 
 	it('should not show error code badge when error code is null', () => {

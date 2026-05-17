@@ -9,11 +9,8 @@ import React from 'react';
 // Removed import { headers } from 'next/headers';
 import Topbar from '~/components/Topbar'; // Import the Topbar component
 import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl for dynamic URLs
-import { getSession } from '~/server/db/session'; // Import getSession function
+import { getSession } from '~/server/db/session';
 
-// import AuthProvider from './authProvider'; // Remove custom AuthProvider import
-// import { SessionProvider } from 'next-auth/react'; // Remove SessionProvider import
-// import { TRPCReactProvider } from '~/trpc/react'; // Remove TRPCReactProvider import
 import { Providers } from './providers'; // Import the new Providers component
 // import { ClientThemeInitializer } from '~/components/theme/ClientThemeInitializer'; // Import the new client wrapper - COMMENTED OUT
 // import Script from 'next/script'; // REMOVE next/script import
