@@ -33,6 +33,7 @@
 		"paths": {
 			"~/*": ["src/*"],
 			"src/*": ["src/*"],
+			"testUtils/*": ["testUtils/*"],
 			"@testUtils/*": ["testUtils/*"],
 			"@/*": ["./src/*"]
 		},
@@ -45,7 +46,6 @@
 			}
 		]
 	},
-	"exports": ["./src/index.ts"],
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", ".next/types/**/*.ts"],
 	"exclude": ["node_modules", "pulumi", "scripts", "**/*.test.*", "**/*.spec.*", "testUtils/**", "**/vitest.config.*", "**/playwright.config.*"]
 }

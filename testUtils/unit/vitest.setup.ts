@@ -1,6 +1,6 @@
-import { vi } from 'vitest';
-
 import '@testing-library/jest-dom/vitest';
+
+import { vi } from 'vitest';
 
 // Mock framer-motion to avoid CSS parsing issues
 vi.mock('framer-motion', async () => {
@@ -8,34 +8,37 @@ vi.mock('framer-motion', async () => {
 	return mock.default;
 });
 
-// Mock window.matchMedia for tests
-Object.defineProperty(window, 'matchMedia', {
-	writable: true,
-	value: vi.fn().mockImplementation((query: string) => ({
-		matches: false,
-		media: query,
-		onchange: null,
-		addEventListener: vi.fn(),
-		removeEventListener: vi.fn(),
-		dispatchEvent: vi.fn(),
-		addListener: vi.fn(), // deprecated
-		removeListener: vi.fn(), // deprecated
-	})),
-});
+if (typeof window !== 'undefined') {
+	Object.defineProperty(window, 'matchMedia', {
+		writable: true,
+		value: vi.fn().mockImplementation((query: string) => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+			dispatchEvent: vi.fn(),
+			addListener: vi.fn(),
+			removeListener: vi.fn(),
+		})),
+	});
+}
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-	observe: vi.fn(),
-	unobserve: vi.fn(),
-	disconnect: vi.fn(),
-})) as unknown as typeof ResizeObserver;
+if (typeof ResizeObserver === 'undefined') {
+	global.ResizeObserver = vi.fn().mockImplementation(() => ({
+		observe: vi.fn(),
+		unobserve: vi.fn(),
+		disconnect: vi.fn(),
+	}));
+}
 
-// Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-	observe: vi.fn(),
-	unobserve: vi.fn(),
-	disconnect: vi.fn(),
-	root: null,
-	rootMargin: '',
-	thresholds: [],
-})) as unknown as typeof IntersectionObserver;
+if (typeof IntersectionObserver === 'undefined') {
+	global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+		observe: vi.fn(),
+		unobserve: vi.fn(),
+		disconnect: vi.fn(),
+		root: null,
+		rootMargin: '',
+		thresholds: [],
+	}));
+}

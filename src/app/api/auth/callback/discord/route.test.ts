@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { testApiHandler } from 'next-test-api-route-handler';
 import { createMockUserWithProvider, mockAuthData, setupAuthEnv } from 'testUtils/unit/auth.helpers';
 import { createMockPrismaUser } from 'testUtils/unit/prisma.helpers';
@@ -45,11 +46,11 @@ describe('Discord OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockAuthData.discord.tokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockAuthData.discord.user,
-			} as Response);
+			});
 
 		// Import modules dynamically after mocks are set
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');
@@ -139,7 +140,7 @@ describe('Discord OAuth Callback', () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: false,
 			json: async () => ({ error: 'invalid_grant' }),
-		} as Response);
+		});
 
 		const handler = await import('./route');
 
@@ -170,12 +171,12 @@ describe('Discord OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockAuthData.discord.tokenResponse,
-			} as Response)
+			})
 			// Mock failed user fetch
 			.mockResolvedValueOnce({
 				ok: false,
 				json: async () => ({ error: 'unauthorized' }),
-			} as Response);
+			});
 
 		const handler = await import('./route');
 
@@ -206,11 +207,11 @@ describe('Discord OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockAuthData.discord.tokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockAuthData.discord.user,
-			} as Response);
+			});
 
 		// Mock prisma to throw error
 		mockPrismaUser.upsert.mockRejectedValue(new Error('Database connection failed'));
@@ -245,11 +246,11 @@ describe('Discord OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockAuthData.discord.tokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockDiscordUserWithAvatar,
-			} as Response);
+			});
 
 		// Import modules dynamically
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');

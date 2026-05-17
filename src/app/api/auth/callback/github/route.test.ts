@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { testApiHandler } from 'next-test-api-route-handler';
 import { createMockPrismaUser } from 'testUtils/unit/prisma.helpers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -87,11 +88,11 @@ describe('GitHub OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGitHubUser,
-			} as Response);
+			});
 
 		// Import modules dynamically after mocks are set
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');
@@ -166,15 +167,15 @@ describe('GitHub OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGitHubUserNoEmail,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGitHubEmails,
-			} as Response);
+			});
 
 		// Import modules dynamically
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');
@@ -246,7 +247,7 @@ describe('GitHub OAuth Callback', () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: false,
 			json: async () => ({ error: 'bad_verification_code', error_description: 'The code passed is incorrect' }),
-		} as Response);
+		});
 
 		const handler = await import('./route');
 
@@ -277,12 +278,12 @@ describe('GitHub OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			// Mock failed user fetch
 			.mockResolvedValueOnce({
 				ok: false,
 				json: async () => ({ message: 'Bad credentials' }),
-			} as Response);
+			});
 
 		const handler = await import('./route');
 
@@ -312,7 +313,7 @@ describe('GitHub OAuth Callback', () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({ error: 'invalid_request' }),
-		} as Response);
+		});
 
 		const handler = await import('./route');
 
@@ -353,15 +354,15 @@ describe('GitHub OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGitHubUserNoEmail,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockUnverifiedEmails,
-			} as Response);
+			});
 
 		const handler = await import('./route');
 
@@ -392,11 +393,11 @@ describe('GitHub OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGitHubUser,
-			} as Response);
+			});
 
 		// Mock prisma to throw error
 		mockPrismaUser.upsert.mockRejectedValue(new Error('Database connection failed'));
@@ -426,11 +427,11 @@ describe('GitHub OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGitHubUser,
-			} as Response);
+			});
 
 		// Import modules dynamically
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');

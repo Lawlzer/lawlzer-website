@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { testApiHandler } from 'next-test-api-route-handler';
 import { createMockPrismaUser } from 'testUtils/unit/prisma.helpers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -79,11 +80,11 @@ describe('Google OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGoogleUser,
-			} as Response);
+			});
 
 		// Import modules dynamically after mocks are set
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');
@@ -172,7 +173,7 @@ describe('Google OAuth Callback', () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: false,
 			json: async () => ({ error: 'invalid_grant' }),
-		} as Response);
+		});
 
 		const handler = await import('./route');
 
@@ -203,12 +204,12 @@ describe('Google OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			// Mock failed user fetch
 			.mockResolvedValueOnce({
 				ok: false,
 				json: async () => ({ error: 'invalid_token' }),
-			} as Response);
+			});
 
 		const handler = await import('./route');
 
@@ -239,11 +240,11 @@ describe('Google OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGoogleUser,
-			} as Response);
+			});
 
 		// Mock prisma to throw error
 		mockPrismaUser.upsert.mockRejectedValue(new Error('Database connection failed'));
@@ -275,11 +276,11 @@ describe('Google OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockUnverifiedUser,
-			} as Response);
+			});
 
 		// Import modules dynamically
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');
@@ -317,11 +318,11 @@ describe('Google OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGoogleUser,
-			} as Response);
+			});
 
 		// Import modules dynamically
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');
@@ -378,11 +379,11 @@ describe('Google OAuth Callback', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockTokenResponse,
-			} as Response)
+			})
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => mockGoogleUser,
-			} as Response);
+			});
 
 		// Import modules dynamically
 		const { handleAndGenerateSessionToken } = await import('~/lib/auth');

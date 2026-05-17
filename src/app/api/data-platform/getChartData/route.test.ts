@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { testApiHandler } from 'next-test-api-route-handler';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,9 +15,9 @@ vi.mock('~/server/db', () => ({
 // Set DATABASE_URL before importing route
 process.env.DATABASE_URL = 'mongodb://localhost:27017/test';
 
-import * as route from './route';
-
 import { db } from '~/server/db';
+
+import * as route from './route';
 
 describe('/api/data-platform/getChartData', () => {
 	beforeEach(() => {
