@@ -8,17 +8,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	try {
 		const sessionToken = request.cookies.get('session_token')?.value;
 
-		// Get the referer URL to redirect back after logout
-		const referer = request.headers.get('referer') ?? '/';
+		// Extract only the pathname from referer to prevent open redirect attacks
+		let redirectPath = '/';
+		const refererHeader = request.headers.get('referer');
+		if (refererHeader !== null && refererHeader !== '') {
+			try {
+				const refererUrl = new URL(refererHeader);
+				redirectPath = refererUrl.pathname + refererUrl.search;
+			} catch {
+				redirectPath = '/';
+			}
+		}
 
 		if (sessionToken === undefined || sessionToken === null || sessionToken === '') {
-			return NextResponse.redirect(new URL(referer, request.url));
+			return NextResponse.redirect(new URL(redirectPath, request.url));
 		}
 
 		await destroySession(sessionToken);
 
-		// Redirect to the referer URL instead of just the root
-		const response = NextResponse.redirect(new URL(referer, request.url));
+		const response = NextResponse.redirect(new URL(redirectPath, request.url));
 
 		response.cookies.set({
 			name: 'session_token',

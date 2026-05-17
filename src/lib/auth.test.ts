@@ -145,12 +145,12 @@ describe('Auth Library Functions', () => {
 
 			const result = await handleAndGenerateSessionToken(mockUserId, mockRequest);
 
-			// Construct the expected URL string based on the mocked env
-			const expectedUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}:${process.env.NEXT_PUBLIC_FRONTEND_PORT}`;
+			// Construct the expected URL string based on the mocked env (new URL('/', baseUrl) adds trailing slash)
+			const expectedUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}:${process.env.NEXT_PUBLIC_FRONTEND_PORT}/`;
 
 			// eslint-disable-next-line @typescript-eslint/unbound-method
 			const mockedRedirect = vi.mocked(NextResponse.redirect); // Use vi.mocked for proper typing
-			expect(mockedRedirect).toHaveBeenCalledWith(expectedUrl); // Expect the string URL
+			expect(mockedRedirect).toHaveBeenCalledWith(expectedUrl); // Expect the full URL string
 
 			// Check the URL is correct (this check might be redundant now, but keep for clarity)
 
@@ -171,7 +171,8 @@ describe('Auth Library Functions', () => {
 
 			// eslint-disable-next-line @typescript-eslint/unbound-method
 			const mockedRedirect = vi.mocked(NextResponse.redirect); // Use vi.mocked for proper typing
-			expect(mockedRedirect).toHaveBeenCalledWith(mockRedirectUrl);
+			const expectedRedirectUrl = `${process.env.NEXT_PUBLIC_SCHEME}://${process.env.NEXT_PUBLIC_SECOND_LEVEL_DOMAIN}.${process.env.NEXT_PUBLIC_TOP_LEVEL_DOMAIN}:${process.env.NEXT_PUBLIC_FRONTEND_PORT}${mockRedirectUrl}`;
+			expect(mockedRedirect).toHaveBeenCalledWith(expectedRedirectUrl);
 		});
 
 		it('should clear the redirect cookie when it exists', async () => {

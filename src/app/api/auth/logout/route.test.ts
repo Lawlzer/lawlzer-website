@@ -42,7 +42,8 @@ describe('/api/auth/logout', () => {
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
-				expect(location).toBe('http://localhost:3000/dashboard');
+				expect(location).toBeTruthy();
+				expect(new URL(location!).pathname).toBe('/dashboard');
 
 				// Verify destroySession was called
 				expect(destroySession).toHaveBeenCalledWith('valid-token');
@@ -104,7 +105,8 @@ describe('/api/auth/logout', () => {
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
-				expect(location).toBe('http://localhost:3000/profile');
+				expect(location).toBeTruthy();
+				expect(new URL(location!).pathname).toBe('/profile');
 
 				// Verify destroySession was NOT called
 				expect(destroySession).not.toHaveBeenCalled();
@@ -132,7 +134,8 @@ describe('/api/auth/logout', () => {
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
-				expect(location).toBe('http://localhost:3000/home');
+				expect(location).toBeTruthy();
+				expect(new URL(location!).pathname).toBe('/home');
 
 				// Verify destroySession was NOT called for empty token
 				expect(destroySession).not.toHaveBeenCalled();

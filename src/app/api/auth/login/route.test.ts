@@ -154,12 +154,12 @@ describe('/api/auth/login', () => {
 				});
 
 				const cookies = response.headers.getSetCookie();
-				expect(cookies).toHaveLength(3);
+				expect(cookies).toHaveLength(2);
 
-				// Check auth_redirect cookie
+				// Check auth_redirect cookie (stores only the pathname, not full URL)
 				const authRedirectCookie = cookies.find((c) => c.startsWith('auth_redirect='));
 				expect(authRedirectCookie).toBeTruthy();
-				expect(authRedirectCookie).toContain('auth_redirect=http%3A%2F%2Flocalhost%3A3000%2Fdashboard');
+				expect(authRedirectCookie).toContain('auth_redirect=%2Fdashboard');
 				expect(authRedirectCookie).toContain('HttpOnly');
 				expect(authRedirectCookie).toContain('SameSite=lax');
 				expect(authRedirectCookie).toContain('Max-Age=600');
@@ -168,18 +168,12 @@ describe('/api/auth/login', () => {
 				// Check auth_state cookie
 				const authStateCookie = cookies.find((c) => c.startsWith('auth_state='));
 				expect(authStateCookie).toBeTruthy();
-				// Extract the state value from the cookie
 				const stateValue = authStateCookie!.split(';')[0].split('=')[1];
 				expect(stateValue).toMatch(uuidRegex);
 				expect(authStateCookie).toContain('HttpOnly');
 				expect(authStateCookie).toContain('SameSite=lax');
 				expect(authStateCookie).toContain('Max-Age=600');
 				expect(authStateCookie).toContain('Domain=.example.com');
-
-				// Check test cookie
-				const testCookie = cookies.find((c) => c.startsWith('aaa222='));
-				expect(testCookie).toBeTruthy();
-				expect(testCookie).toContain('aaa222=test222');
 			},
 		});
 	});
@@ -288,9 +282,7 @@ describe('/api/auth/login', () => {
 
 				const cookies = response.headers.getSetCookie();
 				cookies.forEach((cookie) => {
-					if (cookie.startsWith('auth_') || cookie.startsWith('aaa222=')) {
-						// Note: In test environment with testApiHandler, secure flag might not be set
-						// even when NODE_ENV is production. This is a limitation of the test setup.
+					if (cookie.startsWith('auth_')) {
 						expect(cookie).toContain('HttpOnly');
 						expect(cookie).toContain('SameSite=lax');
 					}

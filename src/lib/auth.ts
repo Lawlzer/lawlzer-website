@@ -12,10 +12,11 @@ export function getCookieDomain(): string {
 export async function handleAndGenerateSessionToken(userId: string, request: NextRequest): Promise<NextResponse> {
 	const session = await createSession(userId);
 
-	// Get the redirect URL from the auth_redirect cookie if available
+	// Get the redirect path from the auth_redirect cookie, validate it's a relative path
 	const redirectCookie = request.cookies.get('auth_redirect');
-	// Default to the base URL if no redirect cookie is found
-	const redirectUrl = redirectCookie?.value ?? getBaseUrl();
+	const redirectPath = redirectCookie?.value ?? '/';
+	const safeRedirectPath = redirectPath.startsWith('/') ? redirectPath : '/';
+	const redirectUrl = new URL(safeRedirectPath, getBaseUrl()).toString();
 
 	const response = NextResponse.redirect(redirectUrl);
 

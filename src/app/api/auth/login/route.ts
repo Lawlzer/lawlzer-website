@@ -89,8 +89,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	// Create a CSRF token for security
 	const state = crypto.randomUUID();
 
-	// Get the referer URL to redirect back after login
-	const referer = request.headers.get('referer') ?? '/';
+	// Extract only the pathname from referer to prevent open redirect attacks
+	let redirectPath = '/';
+	const refererHeader = request.headers.get('referer');
+	if (refererHeader !== null && refererHeader !== '') {
+		try {
+			const refererUrl = new URL(refererHeader);
+			redirectPath = refererUrl.pathname + refererUrl.search;
+		} catch {
+			redirectPath = '/';
+		}
+	}
 
 	// Set a cookie to verify the state when the user is redirected back
 	const redirectUrl = getAuthorizationUrl(provider, state, callbackUrl);
@@ -99,7 +108,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	// Store the referrer URL in a cookie to redirect back after successful login
 	response.cookies.set({
 		name: 'auth_redirect',
-		value: referer,
+		value: redirectPath,
 		httpOnly: true,
 		secure: env.NODE_ENV === 'production',
 		sameSite: 'lax',
@@ -111,17 +120,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 	response.cookies.set({
 		name: 'auth_state',
 		value: state,
-		httpOnly: true,
-		secure: env.NODE_ENV === 'production',
-		sameSite: 'lax',
-		maxAge: 60 * 10, // 10 minutes
-		path: '/',
-		domain: getCookieDomain(),
-	});
-
-	response.cookies.set({
-		name: 'aaa222',
-		value: 'test222',
 		httpOnly: true,
 		secure: env.NODE_ENV === 'production',
 		sameSite: 'lax',
