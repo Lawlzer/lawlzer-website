@@ -1,8 +1,8 @@
 import * as React from 'react';
 
-const SvgComponent = ({ className, newBuildFrom, newBuildTo }: { className?: string; newBuildFrom: () => React.ReactNode; newBuildTo: () => React.ReactNode }): React.JSX.Element => (
-	<svg className={className} fill='none' height={864} viewBox='0 0 803 864' width={803} xmlns='http://www.w3.org/2000/svg'>
-		<g id='breeze'>
+function BreezeBaseAndSites(): React.JSX.Element {
+	return (
+		<>
 			<path
 				clipRule='evenodd'
 				d='M430.323 2L409.453 43.7391H366.72V53.677H356.783V43.7391H210.696L196.783 63.6149L207.714 71.5652L188.832 96.4099L183.863 93.4286L154.05 109.329L123.242 128.211H24.8571L2 151.068V308.087L44.7329 322H77.528V365.727H49.7019V493.925H62.6211V500.882V549.578H162.994V591.317C162.994 613.578 182.201 631.068 191.814 637.031H201.696C206.666 637.031 210.696 641.058 210.696 646.029V688.708C210.696 698.646 217.319 728.128 220.634 741.379L322.994 780.137L385.602 785.106H399.516L413.429 778.149V725.478C407.959 719.019 403.491 709.578 403.491 700.634C403.491 693.478 406.306 683.573 407.466 679.764H455.168V669.826H461.13V677.776C483.803 677.776 498.395 681.089 502.87 682.745L540.634 716.534H577.404L598.273 699.64V602.248L593.304 593.304L609.205 584.36L630.075 571.441L642 562.497H740.385V556.534H738.398V534.671H740.385V526.721V501.876H719.516V465.106H742.373L757.28 445.23L784.112 379.64H802V319.019L664.857 228.584H619.143V129.205L597.28 89.4534L568.46 53.677H524.733V2H430.323ZM245.478 103.366L216.658 139.143V203.739H294.174V199.764H319.019V192.807H307.093V182.87H294.174V152.062L304.112 139.143H363.739V144.112H372.683V139.143H436.286V131.192H366.721V106.348H355.789V113.304H289.205V108.335H284.236V113.304H257.404L245.478 103.366ZM557.528 131.192H485.975V139.143H551.565V166.969H588.335V162H578.398L557.528 145.106V131.192ZM363.739 162V221.627H429.329V347.838H482.994V359.764H557.528V322H551.565V326.969H501.876V318.025H491.938V283.242H501.876V277.279H511.814V268.335H501.876V192.807H435.292L372.683 168.956V162H363.739ZM111.317 365.727V322H154.05L170.944 302.124L161.006 292.186L177.901 278.273L214.671 255.416V244.484H294.174V300.137H242.497H211.913C192.031 300.137 175.913 316.254 175.913 336.137V365.727H138.149V368.708H133.18V365.727H111.317ZM203.739 342.87V430.323L304.112 521.751H353.801V466.099H345.851V389.578H318.025V342.87H203.739ZM501.876 411.441H460.137V449.205H501.876V441.255H551.565V518.77H557.528V538.646L575.416 565.478L598.19 550.296C600.806 548.551 602.702 545.917 603.525 542.882L618.149 488.956H684.733V477.031H641.006V430.323H579.391L557.528 408.46V399.515H501.876V411.441ZM501.876 459.143H461.13V466.099H413.429V521.751H461.13V622.124H448.211V628.087H455.168V638.025H461.13V635.043H501.876V459.143ZM411.441 597.279H355.789V622.124H347.839V628.087H418.398V622.124H411.441V597.279ZM305.106 622.124H317.031V628.087H304.112V680.758H311.068V687.714H282.248V668.242C282.248 632.344 253.147 603.242 217.248 603.242H214.776C205.388 603.242 197.776 595.631 197.776 586.242V494.919H212.683V503.863L305.106 585.354V622.124ZM108.335 225.106C108.335 231.417 103.219 236.534 96.9068 236.534C90.595 236.534 85.4783 231.417 85.4783 225.106C85.4783 218.794 90.595 213.677 96.9068 213.677C103.219 213.677 108.335 218.794 108.335 225.106ZM133.18 393.553H163.988V514.795H114.298V495.913L133.18 479.019V393.553ZM398.522 405.975C398.522 414.482 391.625 421.379 383.118 421.379C374.611 421.379 367.714 414.482 367.714 405.975C367.714 397.468 374.611 390.571 383.118 390.571C391.625 390.571 398.522 397.468 398.522 405.975ZM366.72 72.5589H355.789V83.4906H366.72V72.5589ZM588.335 192.807V187.838H551.565V268.335H543.615V274.298H546.596V290.199H551.565V293.18H557.528V209.702L583.366 192.807H588.335ZM345.851 679.764H339.888V686.72H345.851V679.764ZM373.677 679.764H379.64V686.72H373.677V679.764ZM228.585 89.742L222.621 84.4845L202.905 106.848L208.869 112.106L228.585 89.742Z'
@@ -14,100 +14,118 @@ const SvgComponent = ({ className, newBuildFrom, newBuildTo }: { className?: str
 				<path clipRule='evenodd' d='M145.105 177.9H56.6582V268.335H145.105V177.9ZM96.9068 236.534C103.219 236.534 108.335 231.417 108.335 225.106C108.335 218.794 103.219 213.677 96.9068 213.677C90.595 213.677 85.4783 218.794 85.4783 225.106C85.4783 231.417 90.595 236.534 96.9068 236.534Z' fill='#A5A389' fillRule='evenodd' id='site b' />
 				<path clipRule='evenodd' d='M622.124 339.888L644.981 317.031H799.019L802 319.018V379.639H785.106L769.205 418.397H644.981L622.124 395.54V339.888ZM681.752 343.863H635.043V390.571H681.752L681.752 374.67H699.64V390.571H746.348V343.863H699.64V359.764H681.752L681.752 343.863Z' fill='#A5A389' fillRule='evenodd' id='site a' />
 			</g>
-			<g id='boxes and stuff'>
-				<g id='Group 10'>
-					<g id='Group 9'>
-						<g id='Group 8'>
-							<g id='Group 7'>
-								<g id='Group 5'>
-									<path d='M62.6187 493.925H116.283' id='Vector 436' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M501.873 516.782C502.668 516.782 516.118 516.782 522.743 516.782' id='Vector 428' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M345.848 389.577H415.414V401.502H397.525' id='Vector 414' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M337.898 348.832H318.022V343.863H331.935V299.142H337.898V348.832Z' id='Vector 409' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M318.022 342.869L331.935 326.968' id='Vector 410' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M589.327 161.999C589.724 161.999 608.706 161.999 618.147 161.999' id='Vector 405' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M589.327 187.838C589.724 187.838 608.706 187.838 618.147 187.838' id='Vector 407' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M589.327 166.968H619.14' id='Vector 406' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M589.327 192.807H619.14' id='Vector 408' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={5.96273} id='Rectangle 100' stroke='#A3A8A3' strokeWidth={3} width={17.8882} x={516.78} y={486.968} />
-									<rect height={6.95652} id='Rectangle 116' stroke='#A3A8A3' strokeWidth={3} width={6.95652} x={336.904} y={192.807} />
-									<path d='M355.786 106.347C352.634 106.347 348.305 106.882 348.83 113.304' id='Vector 386' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M349.254 42.7578C349.062 45.904 349.332 50.2578 355.773 50.126' id='Vector 387' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={7.95031} id='Rectangle 104' stroke='#A3A8A3' strokeWidth={3} width={4.96894} x={350.817} y={74.5459} />
-									<path d='M284.234 43.7394H291.19V49.7021H284.234V43.7394Z' id='Rectangle 105' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={53.6646} id='Rectangle 106' stroke='#A3A8A3' strokeWidth={3} width={5.96273} x={175.911} y={149.081} />
-									<rect height={11.9255} id='Rectangle 107' stroke='#A3A8A3' strokeWidth={3} width={10.9317} x={164.979} y={149.081} />
-									<rect height={12.9193} id='Rectangle 108' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-45 105.352 243.491)' width={12.9193} x={105.352} y={243.491} />
-									<path d='M124.5 244.485L108 228M106.345 244.485L99 237' id='Vector 388' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={23.8509} id='Rectangle 110' stroke='#A3A8A3' strokeWidth={3} width={24.8447} x={31.8112} y={155.044} />
-									<rect height={23.8509} id='Rectangle 111' stroke='#A3A8A3' strokeWidth={3} width={14.9068} x={31.8112} y={214.671} />
-									<rect height={25.8385} id='Rectangle 112' stroke='#A3A8A3' strokeWidth={3} width={24.8447} x={31.8112} y={268.336} />
-									<path d='M31.8112 233.553H23.8609V240.51H19.8857V275.292H26.8423V281.255H32.805' id='Vector 389' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M23.8609 240.51H32.805' id='Vector 390' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M25.8485 275.292H31.8112' id='Vector 391' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M33.7988 178.895V214.671' id='Vector 392' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M33.7988 238.522V268.336' id='Vector 394' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M31.8112 178.895V214.671' id='Vector 393' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M31.8112 238.522V268.336' id='Vector 395' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={11.9255} id='Rectangle 113' stroke='#A3A8A3' strokeWidth={3} width={30.8075} x={226.594} y={203.739} />
-									<rect height={11.9255} id='Rectangle 114' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-90 413.426 155.044)' width={15.9006} x={413.426} y={155.044} />
-									<rect height={9.93789} id='Rectangle 115' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-90 353.799 210.696)' width={10.9317} x={353.799} y={210.696} />
-									<path d='M251.439 202.746V214.671' id='Vector 396' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M413.426 149.081L425.352 149.081' id='Vector 397' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M353.799 204.733L363.737 204.733' id='Vector 401' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M528.706 52.6835V58.6462H521.749V52.6835H523.737' id='Vector 398' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M544.606 52.6835V58.6462H553.55V52.6835' id='Vector 399' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M563.488 52.6835V62.6214H576.407' id='Vector 400' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M356.78 210.696V214.671H364.73' id='Vector 402' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={10.9317} id='Rectangle 117' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-11.5092 324.979 254.423)' width={22.8571} x={324.979} y={254.423} />
-									<rect height={7.95031} id='Rectangle 119' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-66.5227 384.606 274.298)' width={12.9193} x={384.606} y={274.298} />
-									<rect height={9.91925} id='Rectangle 118' stroke='#A3A8A3' strokeWidth={3} width={8.92547} x={366.23} y={254.929} />
-									<path d='M511.811 268.336L519.762 257.404' id='Vector 404' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={9.91925} id='Rectangle 120' stroke='#A3A8A3' strokeWidth={3} width={6.93789} x={419.895} y={281.761} />
-									<rect height={4.47205} id='Rectangle 121' stroke='#A3A8A3' strokeWidth={2.48447} width={2.48447} x={414.668} y={281.503} />
-									<rect height={11.9255} id='Rectangle 122' stroke='#A3A8A3' strokeWidth={3} width={11.9255} x={282.246} y={300.137} />
-									<rect height={11.9255} id='Rectangle 123' stroke='#A3A8A3' strokeWidth={3} width={15.9006} x={557.526} y={322} />
-									<path d='M569.451 322V333.926' id='Vector 412' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M573.426 322H577.401V234.547' id='Vector 413' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M367.712 400.51H346.842' id='Vector 415' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M359.762 400.51V405.479H367.712' id='Vector 416' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M368.706 411.441H345.848' id='Vector 417' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M349.824 411.441V418.398H346.842' id='Vector 418' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M442.246 346.845V356.783H429.327V346.845M628.085 270L601.252 275.292L604.234 293.18L650.942 284.236L647.5 266L635.041 268.5M628.085 270V263.367H635.041V268.5M628.085 270L635.041 268.5' id='Vector 419' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M635.041 263.367V256.41H646L651 285.5' id='Vector 420' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M502.867 399.516H461.128V411.441' id='Vector 421' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M502.867 399.516V378.646' id='Vector 422' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M598.5 420.5H607.425V430.263H598.5L598.5 420.5Z' id='Rectangle 124' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M608 425H616V430' id='Vector 423' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M641.004 430.323H657.898V443.242H641.004' id='Vector 424' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={11.9255} id='Rectangle 125' stroke='#A3A8A3' strokeWidth={3} width={12.9193} x={671.811} y={488.957} />
-									<rect height={25.8385} id='Rectangle 126' stroke='#A3A8A3' strokeWidth={3} width={10.9317} x={654.917} y={536.659} />
-									<rect height={3.97516} id='Rectangle 127' stroke='#A3A8A3' strokeWidth={2.98137} width={2.98137} x={667.339} y={557.031} />
-									<path d='M495.911 449.205V459.143' id='Vector 426' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M475.041 449.205V459.143' id='Vector 427' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M532.681 515.789H552.557' id='Vector 429' stroke='#A3A8A3' strokeWidth={3} />
-									<rect height={9.93789} id='Rectangle 128' stroke='#A3A8A3' strokeWidth={3} width={22.8571} x={49.6994} y={436.286} />
-									<path d='M60.6311 436.286V445.23' id='Vector 430' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M557.526 524.733H544.606V517.777' id='Vector 431' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M536.656 517.777V524.733L558.519 533.677' id='Vector 432' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M549.575 523.739V529.702' id='Vector 433' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M551.563 517.777H532.681' id='Vector 434' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M522.743 517.777H501.873' id='Vector 435' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M62.6187 500.882H114.296' id='Vector 437' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M538.643 614.174V622.125C537.472 623.46 535.067 626.517 535.662 630.075C536.667 636.086 548.52 638.55 554.544 635.044C557.453 633.351 555.487 629.622 560.507 624.112C563.692 620.615 563.078 610.724 554.544 607.218C547.717 604.413 541.153 611.336 538.643 614.174Z' id='Vector 438' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M544.606 671.814H562.494C566.897 669.279 569.466 669.806 570.445 670.82C571.423 671.834 570.383 675.689 566.47 680.758C562.556 685.827 556.943 688.708 551.563 688.708C546.182 688.708 542.619 686.334 542.619 680.758C542.619 676.297 543.791 672.828 544.606 671.814Z' id='Vector 439' stroke='#A3A8A3' strokeWidth={3} />
-									<path d='M544.606 272.311H527.712' id='Vector 441' stroke='#A3A8A3' strokeWidth={3} />
-								</g>
-								<rect height={46.7081} id='Rectangle 129' stroke='#A3A8A3' strokeWidth={3} width={46.7081} x={635.042} y={343.864} />
-								<rect height={46.7081} id='Rectangle 130' stroke='#A3A8A3' strokeWidth={3} width={46.7081} x={699.638} y={343.864} />
-								<rect height={14.9068} id='Rectangle 131' stroke='#A3A8A3' strokeWidth={3} width={17.8882} x={681.75} y={359.764} />
-							</g>
-						</g>
-					</g>
-				</g>
-				<path d='M554.547 293.18V322.994' id='Vector 411' stroke='#A3A8A3' strokeWidth={3} />
-				<path d='M319.019 199.764H353.801' id='Vector 403' stroke='#A3A8A3' strokeWidth={3} />
-			</g>
+		</>
+	);
+}
+
+function BreezeBoxesPart1(): React.JSX.Element {
+	return (
+		<>
+			<path d='M62.6187 493.925H116.283' id='Vector 436' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M501.873 516.782C502.668 516.782 516.118 516.782 522.743 516.782' id='Vector 428' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M345.848 389.577H415.414V401.502H397.525' id='Vector 414' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M337.898 348.832H318.022V343.863H331.935V299.142H337.898V348.832Z' id='Vector 409' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M318.022 342.869L331.935 326.968' id='Vector 410' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M589.327 161.999C589.724 161.999 608.706 161.999 618.147 161.999' id='Vector 405' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M589.327 187.838C589.724 187.838 608.706 187.838 618.147 187.838' id='Vector 407' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M589.327 166.968H619.14' id='Vector 406' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M589.327 192.807H619.14' id='Vector 408' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={5.96273} id='Rectangle 100' stroke='#A3A8A3' strokeWidth={3} width={17.8882} x={516.78} y={486.968} />
+			<rect height={6.95652} id='Rectangle 116' stroke='#A3A8A3' strokeWidth={3} width={6.95652} x={336.904} y={192.807} />
+			<path d='M355.786 106.347C352.634 106.347 348.305 106.882 348.83 113.304' id='Vector 386' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M349.254 42.7578C349.062 45.904 349.332 50.2578 355.773 50.126' id='Vector 387' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={7.95031} id='Rectangle 104' stroke='#A3A8A3' strokeWidth={3} width={4.96894} x={350.817} y={74.5459} />
+			<path d='M284.234 43.7394H291.19V49.7021H284.234V43.7394Z' id='Rectangle 105' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={53.6646} id='Rectangle 106' stroke='#A3A8A3' strokeWidth={3} width={5.96273} x={175.911} y={149.081} />
+			<rect height={11.9255} id='Rectangle 107' stroke='#A3A8A3' strokeWidth={3} width={10.9317} x={164.979} y={149.081} />
+			<rect height={12.9193} id='Rectangle 108' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-45 105.352 243.491)' width={12.9193} x={105.352} y={243.491} />
+			<path d='M124.5 244.485L108 228M106.345 244.485L99 237' id='Vector 388' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={23.8509} id='Rectangle 110' stroke='#A3A8A3' strokeWidth={3} width={24.8447} x={31.8112} y={155.044} />
+			<rect height={23.8509} id='Rectangle 111' stroke='#A3A8A3' strokeWidth={3} width={14.9068} x={31.8112} y={214.671} />
+			<rect height={25.8385} id='Rectangle 112' stroke='#A3A8A3' strokeWidth={3} width={24.8447} x={31.8112} y={268.336} />
+			<path d='M31.8112 233.553H23.8609V240.51H19.8857V275.292H26.8423V281.255H32.805' id='Vector 389' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M23.8609 240.51H32.805' id='Vector 390' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M25.8485 275.292H31.8112' id='Vector 391' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M33.7988 178.895V214.671' id='Vector 392' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M33.7988 238.522V268.336' id='Vector 394' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M31.8112 178.895V214.671' id='Vector 393' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M31.8112 238.522V268.336' id='Vector 395' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={11.9255} id='Rectangle 113' stroke='#A3A8A3' strokeWidth={3} width={30.8075} x={226.594} y={203.739} />
+			<rect height={11.9255} id='Rectangle 114' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-90 413.426 155.044)' width={15.9006} x={413.426} y={155.044} />
+			<rect height={9.93789} id='Rectangle 115' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-90 353.799 210.696)' width={10.9317} x={353.799} y={210.696} />
+			<path d='M251.439 202.746V214.671' id='Vector 396' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M413.426 149.081L425.352 149.081' id='Vector 397' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M353.799 204.733L363.737 204.733' id='Vector 401' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M528.706 52.6835V58.6462H521.749V52.6835H523.737' id='Vector 398' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M544.606 52.6835V58.6462H553.55V52.6835' id='Vector 399' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M563.488 52.6835V62.6214H576.407' id='Vector 400' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M356.78 210.696V214.671H364.73' id='Vector 402' stroke='#A3A8A3' strokeWidth={3} />
+		</>
+	);
+}
+
+function BreezeBoxesPart2(): React.JSX.Element {
+	return (
+		<>
+			<rect height={10.9317} id='Rectangle 117' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-11.5092 324.979 254.423)' width={22.8571} x={324.979} y={254.423} />
+			<rect height={7.95031} id='Rectangle 119' stroke='#A3A8A3' strokeWidth={3} transform='rotate(-66.5227 384.606 274.298)' width={12.9193} x={384.606} y={274.298} />
+			<rect height={9.91925} id='Rectangle 118' stroke='#A3A8A3' strokeWidth={3} width={8.92547} x={366.23} y={254.929} />
+			<path d='M511.811 268.336L519.762 257.404' id='Vector 404' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={9.91925} id='Rectangle 120' stroke='#A3A8A3' strokeWidth={3} width={6.93789} x={419.895} y={281.761} />
+			<rect height={4.47205} id='Rectangle 121' stroke='#A3A8A3' strokeWidth={2.48447} width={2.48447} x={414.668} y={281.503} />
+			<rect height={11.9255} id='Rectangle 122' stroke='#A3A8A3' strokeWidth={3} width={11.9255} x={282.246} y={300.137} />
+			<rect height={11.9255} id='Rectangle 123' stroke='#A3A8A3' strokeWidth={3} width={15.9006} x={557.526} y={322} />
+			<path d='M569.451 322V333.926' id='Vector 412' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M573.426 322H577.401V234.547' id='Vector 413' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M367.712 400.51H346.842' id='Vector 415' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M359.762 400.51V405.479H367.712' id='Vector 416' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M368.706 411.441H345.848' id='Vector 417' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M349.824 411.441V418.398H346.842' id='Vector 418' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M442.246 346.845V356.783H429.327V346.845M628.085 270L601.252 275.292L604.234 293.18L650.942 284.236L647.5 266L635.041 268.5M628.085 270V263.367H635.041V268.5M628.085 270L635.041 268.5' id='Vector 419' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M635.041 263.367V256.41H646L651 285.5' id='Vector 420' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M502.867 399.516H461.128V411.441' id='Vector 421' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M502.867 399.516V378.646' id='Vector 422' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M598.5 420.5H607.425V430.263H598.5L598.5 420.5Z' id='Rectangle 124' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M608 425H616V430' id='Vector 423' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M641.004 430.323H657.898V443.242H641.004' id='Vector 424' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={11.9255} id='Rectangle 125' stroke='#A3A8A3' strokeWidth={3} width={12.9193} x={671.811} y={488.957} />
+			<rect height={25.8385} id='Rectangle 126' stroke='#A3A8A3' strokeWidth={3} width={10.9317} x={654.917} y={536.659} />
+			<rect height={3.97516} id='Rectangle 127' stroke='#A3A8A3' strokeWidth={2.98137} width={2.98137} x={667.339} y={557.031} />
+			<path d='M495.911 449.205V459.143' id='Vector 426' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M475.041 449.205V459.143' id='Vector 427' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M532.681 515.789H552.557' id='Vector 429' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={9.93789} id='Rectangle 128' stroke='#A3A8A3' strokeWidth={3} width={22.8571} x={49.6994} y={436.286} />
+			<path d='M60.6311 436.286V445.23' id='Vector 430' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M557.526 524.733H544.606V517.777' id='Vector 431' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M536.656 517.777V524.733L558.519 533.677' id='Vector 432' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M549.575 523.739V529.702' id='Vector 433' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M551.563 517.777H532.681' id='Vector 434' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M522.743 517.777H501.873' id='Vector 435' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M62.6187 500.882H114.296' id='Vector 437' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M538.643 614.174V622.125C537.472 623.46 535.067 626.517 535.662 630.075C536.667 636.086 548.52 638.55 554.544 635.044C557.453 633.351 555.487 629.622 560.507 624.112C563.692 620.615 563.078 610.724 554.544 607.218C547.717 604.413 541.153 611.336 538.643 614.174Z' id='Vector 438' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M544.606 671.814H562.494C566.897 669.279 569.466 669.806 570.445 670.82C571.423 671.834 570.383 675.689 566.47 680.758C562.556 685.827 556.943 688.708 551.563 688.708C546.182 688.708 542.619 686.334 542.619 680.758C542.619 676.297 543.791 672.828 544.606 671.814Z' id='Vector 439' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M544.606 272.311H527.712' id='Vector 441' stroke='#A3A8A3' strokeWidth={3} />
+			<rect height={46.7081} id='Rectangle 129' stroke='#A3A8A3' strokeWidth={3} width={46.7081} x={635.042} y={343.864} />
+			<rect height={46.7081} id='Rectangle 130' stroke='#A3A8A3' strokeWidth={3} width={46.7081} x={699.638} y={343.864} />
+			<rect height={14.9068} id='Rectangle 131' stroke='#A3A8A3' strokeWidth={3} width={17.8882} x={681.75} y={359.764} />
+			<path d='M554.547 293.18V322.994' id='Vector 411' stroke='#A3A8A3' strokeWidth={3} />
+			<path d='M319.019 199.764H353.801' id='Vector 403' stroke='#A3A8A3' strokeWidth={3} />
+		</>
+	);
+}
+
+function BreezeBoxes(): React.JSX.Element {
+	return (
+		<g id='boxes'>
+			<BreezeBoxesPart1 />
+			<BreezeBoxesPart2 />
+		</g>
+	);
+}
+
+function BreezeLabelsAndOutlines(): React.JSX.Element {
+	return (
+		<>
 			<g id='A/B text'>
 				<g id='Vector'>
 					<path d='M113.305 224.609V189.826H126.224C128.687 189.826 130.571 190.006 132.187 190.82C133.803 191.622 135.36 193.417 136.162 194.795C136.964 196.162 137.156 197.053 137.156 198.77C137.156 200.217 136.693 201.751 136.162 202.745C135.631 203.728 135.067 204.134 134.174 204.733C133.293 205.321 132.255 206.449 131.193 206.721V206.721C132.346 206.777 133.078 207.025 134.174 207.714C135.282 208.392 136.432 209.442 137.156 210.696C137.879 211.95 138.149 213.868 138.149 215.665C138.149 217.439 137.992 218.228 137.156 219.64C136.331 221.041 134.909 222.79 133.18 223.615C131.452 224.428 128.913 224.609 126.224 224.609H113.305ZM118.274 219.64H126.224C128.733 219.64 130.108 219.618 131.193 218.646C132.278 217.674 133.18 216.128 133.18 214.671C133.18 213.575 132.74 212.605 132.187 211.69C131.633 210.774 131.227 210.244 130.199 209.702C129.182 209.16 127.625 208.708 126.224 208.708H118.274V219.64ZM118.274 204.733H125.23C126.405 204.733 128.267 204.191 129.205 203.739C130.155 203.287 130.639 203.559 131.193 202.745C131.758 201.921 132.187 200.883 132.187 199.764C132.187 198.329 131.205 196.761 130.199 195.789C129.193 194.817 127.309 193.801 125.23 193.801H118.274V204.733Z' fill='#605F50' />
@@ -141,6 +159,16 @@ const SvgComponent = ({ className, newBuildFrom, newBuildTo }: { className?: str
 				<rect height={10.9317} id='Rectangle 135' stroke='#E3E7ED' strokeWidth={3} width={10.9317} x={355.789} y={72.559} />
 				<circle cx={96.5} cy={225.5} id='Ellipse 28' r={12} stroke='white' strokeWidth={3} />
 			</g>
+		</>
+	);
+}
+
+const SvgComponent = ({ className, newBuildFrom, newBuildTo }: { className?: string; newBuildFrom: () => React.ReactNode; newBuildTo: () => React.ReactNode }): React.JSX.Element => (
+	<svg className={className} fill='none' height={864} viewBox='0 0 803 864' width={803} xmlns='http://www.w3.org/2000/svg'>
+		<g id='breeze'>
+			<BreezeBaseAndSites />
+			<BreezeBoxes />
+			<BreezeLabelsAndOutlines />
 			{newBuildFrom()}
 			{newBuildTo()}
 		</g>

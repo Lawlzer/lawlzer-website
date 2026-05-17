@@ -2,9 +2,9 @@ import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import { testPageBasics } from '@testUtils/playwright/utils';
 
-import { metadata } from './layout';
-
 import { pathToURLTestsOnly } from '~/lib/utils';
+
+import { metadata } from './layout';
 const pathToThisFile = import.meta.url;
 
 const valorantUrl = pathToURLTestsOnly(pathToThisFile);
@@ -25,7 +25,7 @@ test('images load correctly and multiple maps work', async ({ page }) => {
 	await page.goto(valorantUrl);
 
 	// Wait for initial map to load with extended timeout
-	const mapSvg = await page.locator('svg.max-h-full').first();
+	const mapSvg = page.locator('svg.max-h-full').first();
 	await expect(mapSvg).toBeVisible({ timeout: 20000 });
 
 	// Click through different maps

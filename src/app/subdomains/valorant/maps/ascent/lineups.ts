@@ -1,5 +1,4 @@
 import type { Lineup, MapArea, Writeable } from '../../types';
-
 import image2 from './images/2.png';
 import image3 from './images/3.png';
 import image4 from './images/4.png';
