@@ -23,6 +23,7 @@ global.fetch = mockFetch;
 
 describe('GitHub OAuth Callback', () => {
 	const mockCode = 'test-github-auth-code';
+	const mockState = 'test-csrf-state-token';
 	const mockAccessToken = 'test-github-access-token';
 	const mockTokenResponse = {
 		access_token: mockAccessToken,
@@ -116,9 +117,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				// Should redirect after successful auth
 				expect(response.status).toBe(302);
@@ -191,9 +192,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(302);
 
@@ -224,9 +225,9 @@ describe('GitHub OAuth Callback', () => {
 
 		await testApiHandler({
 			appHandler: handler,
-			url: '/api/auth/callback/github',
+			url: `/api/auth/callback/github?state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -254,9 +255,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -290,9 +291,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -320,9 +321,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -369,9 +370,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -407,9 +408,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				const response = await fetch({ method: 'GET' });
+				const response = await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				expect(response.status).toBe(307);
 				const location = response.headers.get('location');
@@ -447,9 +448,9 @@ describe('GitHub OAuth Callback', () => {
 		await testApiHandler({
 			appHandler: handler,
 			params: { code: mockCode },
-			url: `/api/auth/callback/github?code=${mockCode}`,
+			url: `/api/auth/callback/github?code=${mockCode}&state=${mockState}`,
 			test: async ({ fetch }) => {
-				await fetch({ method: 'GET' });
+				await fetch({ method: 'GET', headers: { cookie: `auth_state=${mockState}` } });
 
 				// Verify numeric ID was converted to string
 				expect(mockPrismaUser.upsert).toHaveBeenCalledWith(

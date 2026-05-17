@@ -190,17 +190,13 @@ async function upsertUser(githubUser: GitHubUserInfo, tokens: GitHubTokenRespons
 export async function GET(request: NextRequest): Promise<NextResponse> {
 	const { searchParams } = request.nextUrl;
 	const code = searchParams.get('code');
-	const _state = searchParams.get('state'); // Optional: verify state if you implemented it
+	const state = searchParams.get('state');
 
-	// Basic state verification example (replace with your actual state handling if needed)
-	// const storedState = request.cookies.get('github_oauth_state')?.value;
-	// if (!state || !storedState || state !== storedState) {
-	//  console.error('GitHub state mismatch:', { received: state, expected: storedState });
-	//  return NextResponse.redirect(new URL('/error/auth?error=state_mismatch', request.url));
-	// }
-	// Clear the state cookie after verification
-	// const response = NextResponse.next();
-	// response.cookies.delete('github_oauth_state');
+	const storedState = request.cookies.get('auth_state')?.value;
+	if (state === null || state === '' || storedState === undefined || storedState === '' || state !== storedState) {
+		console.error('GitHub state mismatch:', { received: state, expected: storedState });
+		return NextResponse.redirect(new URL('/error/auth?error=invalid_state', request.url));
+	}
 
 	if (code === null || code === undefined || code === '') {
 		console.error('GitHub Callback Error: No code received.');
@@ -220,12 +216,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 		// Handle session creation and redirect
 		return await handleAndGenerateSessionToken(user.id, request); // Pass request for potential cookie setting in handle function
 	} catch (error: unknown) {
-		const errorMessage = error instanceof Error ? error.message : 'Unknown GitHub auth error';
 		console.error('Error handling GitHub callback:', error);
-		// Encode error message for URL safety, though a generic error is often better for the user
-		const encodedError = encodeURIComponent(errorMessage);
-		// Consider redirecting to a more generic error page unless debugging
-		return NextResponse.redirect(new URL(`/error/auth?error=${encodedError}`, request.url));
-		// return NextResponse.redirect(new URL('/error/auth?error=server_error', request.url));
+		return NextResponse.redirect(new URL('/error/auth?error=server_error', request.url));
 	}
 }
