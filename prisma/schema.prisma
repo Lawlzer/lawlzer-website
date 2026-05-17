@@ -23,6 +23,7 @@ model Post {
     createdById String @db.ObjectId
 
     @@index([name])
+    @@index([createdById])
 }
 
 // Necessary for Next auth
@@ -43,6 +44,7 @@ model Account {
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([provider, providerAccountId])
+    @@index([userId])
 }
 
 model Session {
@@ -51,6 +53,8 @@ model Session {
     userId       String   @db.ObjectId
     expires      DateTime
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
 }
 
 model User {
