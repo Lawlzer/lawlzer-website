@@ -277,12 +277,12 @@ export function setupAuthEnv() {
  * @param options Optional overrides for token and user responses
  *
  * @example
- * ```typescript
+ *
  * const mockFetch = vi.fn();
  * global.fetch = mockFetch;
  *
  * setupOAuthFetchMocks('google', mockFetch);
- * ```
+ *
  */
 export function setupOAuthFetchMocks(
 	provider: 'discord' | 'github' | 'google',
@@ -300,20 +300,20 @@ export function setupOAuthFetchMocks(
 	mockFetch.mockResolvedValueOnce({
 		ok: true,
 		json: async () => tokenResponse as unknown,
-	} as Response);
+	});
 
 	// User info response
 	mockFetch.mockResolvedValueOnce({
 		ok: true,
 		json: async () => userResponse as unknown,
-	} as Response);
+	});
 
 	// GitHub emails endpoint (if needed)
 	if (provider === 'github' && options?.emailsResponse) {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => options.emailsResponse as unknown,
-		} as Response);
+		});
 	}
 }
 
@@ -327,7 +327,7 @@ export function setupOAuthTokenErrorMock(mockFetch: Mock, errorResponse = { erro
 	mockFetch.mockResolvedValueOnce({
 		ok: false,
 		json: async () => errorResponse,
-	} as Response);
+	});
 }
 
 /**
@@ -342,11 +342,11 @@ export function setupOAuthUserErrorMock(provider: 'discord' | 'github' | 'google
 	mockFetch.mockResolvedValueOnce({
 		ok: true,
 		json: async () => mockAuthData[provider].tokenResponse,
-	} as Response);
+	});
 
 	// Then mock failed user fetch
 	mockFetch.mockResolvedValueOnce({
 		ok: false,
 		json: async () => errorResponse,
-	} as Response);
+	});
 }

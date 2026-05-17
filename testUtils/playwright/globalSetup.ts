@@ -13,7 +13,7 @@ async function checkServerRunning(url: string, maxAttempts = 1): Promise<boolean
 		try {
 			const response = await fetch(url);
 			if (response.ok || response.status === 404) return true; // 404 is fine, server is running
-		} catch (error) {
+		} catch (_error) {
 			// Server not ready yet
 		}
 		if (i < maxAttempts - 1) {
@@ -196,7 +196,7 @@ async function globalSetup(_config: FullConfig): Promise<() => Promise<void>> {
 					// Kill process group on Unix
 					process.kill(-devServerProcess.pid, 'SIGKILL');
 				}
-			} catch (error) {
+			} catch (_error) {
 				// Ignore errors during emergency cleanup
 			}
 		}

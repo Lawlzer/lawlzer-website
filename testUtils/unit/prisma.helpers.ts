@@ -72,12 +72,12 @@ export function createMockPrismaClient() {
  * Must be called before importing code that uses Prisma.
  *
  * @example
- * ```typescript
+ *
  * const mockPrisma = setupPrismaMock();
  *
  * // In your test
  * mockPrisma.user.findUnique.mockResolvedValue(mockUser);
- * ```
+ *
  */
 export function setupPrismaMock() {
 	const mockPrismaClient = createMockPrismaClient();
@@ -113,7 +113,7 @@ export function resetPrismaMocks(mockPrisma: ReturnType<typeof createMockPrismaC
  * Creates a mock implementation for Prisma that can be used with vi.mock
  *
  * @example
- * ```typescript
+ *
  * // At the top of your test file
  * const mockPrismaUser = createMockPrismaUser();
  *
@@ -122,7 +122,7 @@ export function resetPrismaMocks(mockPrisma: ReturnType<typeof createMockPrismaC
  *     user: mockPrismaUser,
  *   })),
  * }));
- * ```
+ *
  */
 export function createPrismaMockImplementation(
 	models: {

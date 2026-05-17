@@ -115,7 +115,7 @@ export function getBaseUrl(subdomain?: SubdomainName | null): string {
 
 	// Special case for localhost development
 	if (topLevel === 'localhost') {
-		if (!subdomain && secondLevel === 'localhost') {
+		if (subdomain == null && secondLevel === 'localhost') {
 			return `${protocol}://localhost${port ? `:${port}` : ''}`;
 		}
 		return `${protocol}://${subdomainText}${secondLevel}.${topLevel}${port ? `:${port}` : ''}`;

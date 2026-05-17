@@ -2,10 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { createMockTRPCSession } from 'testUtils/unit/data.factories';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { postRouter } from './post';
-
 import { createTRPCContext } from '~/server/api/trpc';
 import { db } from '~/server/db';
+
+import { postRouter } from './post';
 
 // Mock Prisma client
 vi.mock('~/server/db', () => ({

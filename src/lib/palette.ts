@@ -84,8 +84,7 @@ export const DARK_MODE_COLORS = PREDEFINED_PALETTES['Dark Mode'];
 
 // Function to get default colors based on system preference
 export function getDefaultColors(): typeof LIGHT_MODE_COLORS {
-	// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-	if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+	if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)')?.matches) {
 		return DARK_MODE_COLORS;
 	}
 	// Default to light mode if preference cannot be determined or is light

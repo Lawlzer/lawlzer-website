@@ -1,12 +1,7 @@
+import '~/styles/globals.css'; // Assuming global styles are here
+
 import type { Metadata } from 'next';
 import React from 'react';
-
-// import AuthProvider from './authProvider'; // Remove custom AuthProvider import
-// import { SessionProvider } from 'next-auth/react'; // Remove SessionProvider import
-// import { TRPCReactProvider } from '~/trpc/react'; // Remove TRPCReactProvider import
-import { Providers } from './providers'; // Import the new Providers component
-
-import '~/styles/globals.css'; // Assuming global styles are here
 
 // import dynamic from 'next/dynamic'; // Remove dynamic import
 // import { cookies } from 'next/headers'; // REMOVED: No longer reading cookies server-side for styles
@@ -15,6 +10,11 @@ import '~/styles/globals.css'; // Assuming global styles are here
 import Topbar from '~/components/Topbar'; // Import the Topbar component
 import { getBaseUrl } from '~/lib/utils'; // Import getBaseUrl for dynamic URLs
 import { getSession } from '~/server/db/session'; // Import getSession function
+
+// import AuthProvider from './authProvider'; // Remove custom AuthProvider import
+// import { SessionProvider } from 'next-auth/react'; // Remove SessionProvider import
+// import { TRPCReactProvider } from '~/trpc/react'; // Remove TRPCReactProvider import
+import { Providers } from './providers'; // Import the new Providers component
 // import { ClientThemeInitializer } from '~/components/theme/ClientThemeInitializer'; // Import the new client wrapper - COMMENTED OUT
 // import Script from 'next/script'; // REMOVE next/script import
 
@@ -27,16 +27,13 @@ import { getSession } from '~/server/db/session'; // Import getSession function
 // const COOKIE_KEYS = { ... };
 // const DEFAULT_COLORS = { ... };
 
-// Function to generate the theme initialization script string
-function getThemeInitializationScript(): string {
-	// IMPORTANT: The functions and constants here are duplicated from palette.ts
-	// to avoid imports in this critical path script. They must be kept minimal
-	// and in sync with palette.ts logic if necessary.
+// IMPORTANT: The script constants and functions below are duplicated from palette.ts
+// to avoid imports in this critical path script. They must be kept minimal
+// and in sync with palette.ts logic if necessary.
 
+function getThemeConstantsScript(): string {
 	return `
-(function() {
-  // Minimal subset of COOKIE_KEYS from palette.ts
-  const COOKIE_KEYS = {
+  var COOKIE_KEYS = {
     PAGE_BG: 'theme_page_bg',
     PRIMARY_TEXT_COLOR: 'theme_primary_text_color',
     PRIMARY_COLOR: 'theme_primary_color',
@@ -44,112 +41,82 @@ function getThemeInitializationScript(): string {
     SECONDARY_TEXT_COLOR: 'theme_secondary_text_color',
     BORDER_COLOR: 'theme_border_color',
   };
-
-  // Minimal subset of PREDEFINED_PALETTES (Light/Dark) from palette.ts
-  const LIGHT_MODE_COLORS = {
-    PAGE_BG: '#ffffff',
-    PRIMARY_TEXT_COLOR: '#111827',
-    PRIMARY_COLOR: '#3c33e6',
-    SECONDARY_COLOR: '#f2f2f2',
-    SECONDARY_TEXT_COLOR: '#6b7280',
-    BORDER_COLOR: '#e5e7eb',
+  var LIGHT_MODE_COLORS = {
+    PAGE_BG: '#ffffff', PRIMARY_TEXT_COLOR: '#111827', PRIMARY_COLOR: '#3c33e6',
+    SECONDARY_COLOR: '#f2f2f2', SECONDARY_TEXT_COLOR: '#6b7280', BORDER_COLOR: '#e5e7eb',
   };
-  const DARK_MODE_COLORS = {
-    PAGE_BG: '#1f2937',
-    PRIMARY_TEXT_COLOR: '#f9fafb',
-    PRIMARY_COLOR: '#818cf8',
-    SECONDARY_COLOR: '#374151',
-    SECONDARY_TEXT_COLOR: '#9ca3af',
-    BORDER_COLOR: '#4b5563',
+  var DARK_MODE_COLORS = {
+    PAGE_BG: '#1f2937', PRIMARY_TEXT_COLOR: '#f9fafb', PRIMARY_COLOR: '#818cf8',
+    SECONDARY_COLOR: '#374151', SECONDARY_TEXT_COLOR: '#9ca3af', BORDER_COLOR: '#4b5563',
   };
+  var CSS_VAR_MAP = {
+    PAGE_BG: '--page-background', PRIMARY_TEXT_COLOR: '--primary-text-color',
+    PRIMARY_COLOR: '--primary-color', SECONDARY_COLOR: '--secondary-colour',
+    SECONDARY_TEXT_COLOR: '--secondary-text-color', BORDER_COLOR: '--custom-border-color',
+  };`;
+}
 
-  // Map internal keys to actual CSS variable names used in globals.css
-  const CSS_VAR_MAP = {
-    PAGE_BG: '--page-background', // Matches globals.css
-    PRIMARY_TEXT_COLOR: '--primary-text-color',
-    PRIMARY_COLOR: '--primary-color',
-    SECONDARY_COLOR: '--secondary-colour', // Ensure this matches globals.css
-    SECONDARY_TEXT_COLOR: '--secondary-text-color',
-    BORDER_COLOR: '--custom-border-color', // Ensure this matches globals.css
-  };
-
-  // Minimal cookie getter (copied from palette.ts)
+function getThemeHelperFunctionsScript(): string {
+	return `
   function getCookie(name) {
-    // Simplified version for inline script
     if (typeof document === 'undefined') return null;
-    const nameEQ = name + '=';
-    const ca = document.cookie.split(';');
-    for(let i = 0; i < ca.length; i++) {
-      let c = ca[i];
+    var nameEQ = name + '=';
+    var ca = document.cookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+      var c = ca[i];
       while (c.charAt(0) === ' ') c = c.substring(1, c.length);
       if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
     }
     return null;
   }
-
-  // Determine default colors based on system preference
-  let defaultColors = LIGHT_MODE_COLORS;
-  try {
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      defaultColors = DARK_MODE_COLORS;
-    }
-  } catch (e) {
-    // Fallback to light mode if matchMedia fails
-    console.warn("Could not detect system color scheme preference.", e);
-  }
-
-  const root = document.documentElement;
-  // Apply colors from Cookies or the determined defaults
-  try {
-    for (const key in COOKIE_KEYS) {
-      const cookieName = COOKIE_KEYS[key];
-      const cssVarName = CSS_VAR_MAP[key];
-      const defaultValue = defaultColors[key]; // Use determined default
-      const cookieValue = getCookie(cookieName);
-
-      const color = cookieValue ?? defaultValue;
-      if (cssVarName && color) { // Ensure the map entry and color value exist
-        root.style.setProperty(cssVarName, color);
-      }
-    }
-    // Apply derived CSS variables needed by shadcn/ui based on the primary ones
+  function applyDerivedVars(root) {
     root.style.setProperty('--background', root.style.getPropertyValue('--page-background'));
     root.style.setProperty('--foreground', root.style.getPropertyValue('--primary-text-color'));
     root.style.setProperty('--primary', root.style.getPropertyValue('--primary-color'));
-    root.style.setProperty('--primary-foreground', root.style.getPropertyValue('--primary-text-color')); // Usually same as foreground
+    root.style.setProperty('--primary-foreground', root.style.getPropertyValue('--primary-text-color'));
     root.style.setProperty('--secondary', root.style.getPropertyValue('--secondary-colour'));
     root.style.setProperty('--secondary-foreground', root.style.getPropertyValue('--secondary-text-color'));
     root.style.setProperty('--muted', root.style.getPropertyValue('--secondary-colour'));
     root.style.setProperty('--muted-foreground', root.style.getPropertyValue('--secondary-text-color'));
-    root.style.setProperty('--accent', root.style.getPropertyValue('--secondary-colour')); // Often mapped to secondary
+    root.style.setProperty('--accent', root.style.getPropertyValue('--secondary-colour'));
     root.style.setProperty('--accent-foreground', root.style.getPropertyValue('--secondary-text-color'));
-    root.style.setProperty('--destructive', '#ef4444'); // Example destructive color
+    root.style.setProperty('--destructive', '#ef4444');
     root.style.setProperty('--destructive-foreground', '#ffffff');
     root.style.setProperty('--border', root.style.getPropertyValue('--custom-border-color'));
-    root.style.setProperty('--input', root.style.getPropertyValue('--secondary-colour')); // Input often uses secondary
-    root.style.setProperty('--ring', root.style.getPropertyValue('--primary-color')); // Ring often uses primary
+    root.style.setProperty('--input', root.style.getPropertyValue('--secondary-colour'));
+    root.style.setProperty('--ring', root.style.getPropertyValue('--primary-color'));
+  }`;
+}
 
+function getThemeInitializationScript(): string {
+	return `(function() {
+${getThemeConstantsScript()}
+${getThemeHelperFunctionsScript()}
+  var defaultColors = LIGHT_MODE_COLORS;
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      defaultColors = DARK_MODE_COLORS;
+    }
+  } catch (e) { console.warn("Could not detect system color scheme preference.", e); }
+  var root = document.documentElement;
+  try {
+    for (var key in COOKIE_KEYS) {
+      var cssVarName = CSS_VAR_MAP[key];
+      var color = getCookie(COOKIE_KEYS[key]) ?? defaultColors[key];
+      if (cssVarName && color) root.style.setProperty(cssVarName, color);
+    }
+    applyDerivedVars(root);
   } catch (e) {
     console.error("Error applying theme from cookies/defaults", e);
-    // Minimal fallback: Apply hardcoded light mode defaults in case of any error
     try {
-      for (const key in CSS_VAR_MAP) {
-        const cssVarName = CSS_VAR_MAP[key];
-        const fallbackValue = LIGHT_MODE_COLORS[key];
-        if (cssVarName && fallbackValue) {
-          root.style.setProperty(cssVarName, fallbackValue);
-        }
+      for (var k in CSS_VAR_MAP) {
+        if (CSS_VAR_MAP[k] && LIGHT_MODE_COLORS[k]) root.style.setProperty(CSS_VAR_MAP[k], LIGHT_MODE_COLORS[k]);
       }
-      // Apply derived variables with fallback values too
       root.style.setProperty('--background', LIGHT_MODE_COLORS.PAGE_BG);
       root.style.setProperty('--foreground', LIGHT_MODE_COLORS.PRIMARY_TEXT_COLOR);
-      // ... (add fallbacks for other derived vars if necessary)
-    } catch (fallbackError) {
-      console.error("Error applying fallback theme", fallbackError);
-    }
+    } catch (fallbackError) { console.error("Error applying fallback theme", fallbackError); }
   }
-})();
-  `;
+})();`;
 }
 
 // SEO Metadata

@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client';
 
-import { COUNTRIES, DATA_PLATFORM_CONFIG, DATA_TYPE_CONFIGS, type NumericalRange, type Trend, US_STATES } from './config';
-
 import { db } from '~/server/db';
+
+import { COUNTRIES, DATA_PLATFORM_CONFIG, DATA_TYPE_CONFIGS, type NumericalRange, type Trend, US_STATES } from './config';
 
 // --- Helper Functions ---
 const getRandomNumber = (min: number, max: number, decimals = 2): number => {
@@ -67,18 +67,66 @@ const getValueWithTrend = (lastStepValue: number | undefined, lastYearValue: num
 };
 
 // --- Data Generation Logic ---
+interface GenerationCaches {
+	lastValuesCache: Map<string, Record<string, number>>;
+	previousYearValuesCache: Map<string, number>;
+	annualTrendsCache: Map<string, Trend>;
+}
+
+function getOrCreateAnnualTrend(caches: GenerationCaches, trendCacheKey: string): Trend {
+	if (caches.annualTrendsCache.has(trendCacheKey)) {
+		return caches.annualTrendsCache.get(trendCacheKey)!;
+	}
+	const rand = Math.random();
+	const { TREND_UP_PROBABILITY, TREND_DOWN_PROBABILITY } = DATA_PLATFORM_CONFIG;
+	const annualTrend: Trend = rand < TREND_UP_PROBABILITY ? 1 : rand < TREND_UP_PROBABILITY + TREND_DOWN_PROBABILITY ? -1 : 0;
+	caches.annualTrendsCache.set(trendCacheKey, annualTrend);
+	return annualTrend;
+}
+
+function processTimestampForSeries(config: (typeof DATA_TYPE_CONFIGS)[string], caches: GenerationCaches, seriesKey: string, unixDate: number, baseDataInput: Prisma.CommodityDataCreateInput): Prisma.CommodityDataCreateInput {
+	const currentDate = new Date(unixDate);
+	const currentYear = currentDate.getUTCFullYear();
+	const dayOfYearKey = getDayOfYearKey(unixDate);
+	const currentSeriesLastValues = caches.lastValuesCache.get(seriesKey)!;
+	const annualTrend = getOrCreateAnnualTrend(caches, `${seriesKey}-${currentYear}`);
+
+	const dataInput: Prisma.CommodityDataCreateInput = { ...baseDataInput, unixDate };
+
+	for (const key in config.numericalFields) {
+		const fieldConfig = config.numericalFields[key];
+		const fieldName = fieldConfig.schemaFieldName as string;
+		const lastStepValue = currentSeriesLastValues[fieldName];
+		const prevYearCacheKey = `${seriesKey}-${dayOfYearKey}-${fieldName}`;
+		const lastYearValue = caches.previousYearValuesCache.get(prevYearCacheKey);
+
+		let newValue: number;
+		if (fieldName === 'price' || fieldName === 'exports' || fieldName === 'head') {
+			newValue = getValueWithTrend(lastStepValue, lastYearValue, annualTrend, fieldConfig, DATA_PLATFORM_CONFIG.STEP_VARIATION_PERCENTAGE, DATA_PLATFORM_CONFIG.YEARLY_TREND_FACTOR, DATA_PLATFORM_CONFIG.STEP_VS_YOY_WEIGHT);
+		} else {
+			newValue = getRandomNumber(fieldConfig.min, fieldConfig.max, fieldConfig.decimals);
+		}
+
+		(dataInput as any)[fieldName] = newValue;
+		currentSeriesLastValues[fieldName] = newValue;
+		caches.previousYearValuesCache.set(`${seriesKey}-${dayOfYearKey}-${fieldName}`, newValue);
+	}
+	caches.lastValuesCache.set(seriesKey, currentSeriesLastValues);
+	return dataInput;
+}
+
 function generateAllData(): Prisma.CommodityDataCreateInput[] {
 	const allDataInput: Prisma.CommodityDataCreateInput[] = [];
-	const lastValuesCache = new Map<string, Record<string, number>>();
-	const previousYearValuesCache = new Map<string, number>();
-	const annualTrendsCache = new Map<string, Trend>();
+	const caches: GenerationCaches = {
+		lastValuesCache: new Map<string, Record<string, number>>(),
+		previousYearValuesCache: new Map<string, number>(),
+		annualTrendsCache: new Map<string, Trend>(),
+	};
 
 	const numDailyPoints = DATA_PLATFORM_CONFIG.GENERATE_YEARS_BACK * 365;
 	const dailyTimestamps = createDailyTimestampSequence(numDailyPoints);
 
 	for (const [type, config] of Object.entries(DATA_TYPE_CONFIGS)) {
-		const timestamps = dailyTimestamps;
-
 		for (const country of COUNTRIES) {
 			const isUSA = country === 'USA';
 			const statesToIterate = isUSA && config.includeState ? US_STATES : [undefined];
@@ -91,58 +139,19 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 						.sort()
 						.join('&');
 					const seriesKey = combinationKeyPart ? `${baseSeriesKey}-${combinationKeyPart}` : baseSeriesKey;
+					if (!caches.lastValuesCache.has(seriesKey)) caches.lastValuesCache.set(seriesKey, {});
 
-					if (!lastValuesCache.has(seriesKey)) {
-						lastValuesCache.set(seriesKey, {});
-					}
+					const baseDataInput: Prisma.CommodityDataCreateInput = {
+						unixDate: 0,
+						type,
+						category: config.category,
+						country,
+						...(state !== undefined && { state }),
+						...categoricalCombination,
+					};
 
-					for (const unixDate of timestamps) {
-						const currentDate = new Date(unixDate);
-						const currentYear = currentDate.getUTCFullYear();
-						const dayOfYearKey = getDayOfYearKey(unixDate);
-						const currentSeriesLastValues = lastValuesCache.get(seriesKey)!;
-
-						const trendCacheKey = `${seriesKey}-${currentYear}`;
-						let annualTrend: Trend;
-						if (annualTrendsCache.has(trendCacheKey)) {
-							annualTrend = annualTrendsCache.get(trendCacheKey)!;
-						} else {
-							const rand = Math.random();
-							const { TREND_UP_PROBABILITY, TREND_DOWN_PROBABILITY } = DATA_PLATFORM_CONFIG;
-							annualTrend = rand < TREND_UP_PROBABILITY ? 1 : rand < TREND_UP_PROBABILITY + TREND_DOWN_PROBABILITY ? -1 : 0;
-							annualTrendsCache.set(trendCacheKey, annualTrend);
-						}
-
-						const dataInput: Prisma.CommodityDataCreateInput = {
-							unixDate,
-							type,
-							category: config.category,
-							country,
-							...(state !== undefined && { state }),
-							...categoricalCombination,
-						};
-
-						for (const key in config.numericalFields) {
-							const fieldConfig = config.numericalFields[key];
-							const fieldName = fieldConfig.schemaFieldName as string;
-							const lastStepValue = currentSeriesLastValues[fieldName];
-							const prevYearCacheKey = `${seriesKey}-${dayOfYearKey}-${fieldName}`;
-							const lastYearValue = previousYearValuesCache.get(prevYearCacheKey);
-
-							let newValue: number;
-							if (fieldName === 'price' || fieldName === 'exports' || fieldName === 'head') {
-								newValue = getValueWithTrend(lastStepValue, lastYearValue, annualTrend, fieldConfig, DATA_PLATFORM_CONFIG.STEP_VARIATION_PERCENTAGE, DATA_PLATFORM_CONFIG.YEARLY_TREND_FACTOR, DATA_PLATFORM_CONFIG.STEP_VS_YOY_WEIGHT);
-							} else {
-								newValue = getRandomNumber(fieldConfig.min, fieldConfig.max, fieldConfig.decimals);
-							}
-
-							(dataInput as any)[fieldName] = newValue;
-							currentSeriesLastValues[fieldName] = newValue;
-							const currentYearCacheKey = `${seriesKey}-${dayOfYearKey}-${fieldName}`;
-							previousYearValuesCache.set(currentYearCacheKey, newValue);
-						}
-						lastValuesCache.set(seriesKey, currentSeriesLastValues);
-						allDataInput.push(dataInput);
+					for (const unixDate of dailyTimestamps) {
+						allDataInput.push(processTimestampForSeries(config, caches, seriesKey, unixDate, baseDataInput));
 					}
 				};
 
@@ -157,8 +166,7 @@ function generateAllData(): Prisma.CommodityDataCreateInput[] {
 						const catConfig = config.categoricalFields![configKey];
 						const fieldName = catConfig.schemaFieldName;
 						for (const value of catConfig.values) {
-							const nextCombination = { ...currentCombination, [fieldName]: value };
-							generateCombinationsAndProcess(keyIndex + 1, nextCombination);
+							generateCombinationsAndProcess(keyIndex + 1, { ...currentCombination, [fieldName]: value });
 						}
 					};
 					generateCombinationsAndProcess(0, {});

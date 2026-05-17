@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockUser } from '../../testUtils/unit/auth.helpers';
 import { createMockSessionWithUser } from '../../testUtils/unit/data.factories';
 import { renderWithProviders } from '../../testUtils/unit/render.helpers';
-
 import AuthButton from './AuthButton';
 import AuthButtonMock from './AuthButton.mock';
 
@@ -16,7 +15,7 @@ global.ResizeObserver = class ResizeObserverMock {
 	public observe(): void {}
 	public unobserve(): void {}
 	public disconnect(): void {}
-} as unknown as typeof ResizeObserver;
+};
 
 // Mock window.location
 Object.defineProperty(window, 'location', {
@@ -63,7 +62,7 @@ const expectRedirect = (expectedUrl: string) => {
 
 // --- Test Suite ---
 
-describe('AuthButton', () => {
+describe('AuthButton - Mock Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		window.location.href = '';
@@ -76,7 +75,6 @@ describe('AuthButton', () => {
 	describe('Loading State', () => {
 		it('should show loading animation initially', () => {
 			renderAuthButton({ initialState: 'loading' });
-
 			const loadingElement = screen.getByTestId('auth-loading');
 			expect(loadingElement).toBeInTheDocument();
 			expect(loadingElement).toHaveClass('animate-pulse');
@@ -94,7 +92,6 @@ describe('AuthButton', () => {
 
 		it('should display all login options when menu is opened', () => {
 			openAuthMenu();
-
 			expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
 			expect(screen.getByText('Sign in with Discord')).toBeInTheDocument();
 			expect(screen.getByText('Sign in with GitHub')).toBeInTheDocument();
@@ -121,38 +118,23 @@ describe('AuthButton', () => {
 		it('should show user name and logout option when authenticated', () => {
 			const userData = { name: 'Test User', email: 'test@example.com' };
 			renderAuthButton({ initialState: 'authenticated', userData });
-
-			// Check for user name
 			const userButton = screen.getByText('Test User');
 			expect(userButton).toBeInTheDocument();
-
-			// Open menu and check logout option
 			fireEvent.click(userButton);
 			const menuItems = screen.getByTestId('menuitems');
 			menuItems.style.display = 'block';
-
 			fireEvent.click(screen.getByText('Logout'));
 			expectRedirect('/api/auth/logout');
 		});
 
-		describe('Fallback Display Names', () => {
-			it('should use email when name is null', () => {
-				renderAuthButton({
-					initialState: 'authenticated',
-					userData: { name: null, email: 'test@example.com' },
-				});
+		it('should use email when name is null', () => {
+			renderAuthButton({ initialState: 'authenticated', userData: { name: null, email: 'test@example.com' } });
+			expect(screen.getByText('test@example.com')).toBeInTheDocument();
+		});
 
-				expect(screen.getByText('test@example.com')).toBeInTheDocument();
-			});
-
-			it('should use "Account" when both name and email are null', () => {
-				renderAuthButton({
-					initialState: 'authenticated',
-					userData: { name: null, email: null },
-				});
-
-				expect(screen.getByText('Account')).toBeInTheDocument();
-			});
+		it('should use "Account" when both name and email are null', () => {
+			renderAuthButton({ initialState: 'authenticated', userData: { name: null, email: null } });
+			expect(screen.getByText('Account')).toBeInTheDocument();
 		});
 	});
 
@@ -166,6 +148,17 @@ describe('AuthButton', () => {
 			renderAuthButton({ initialState: 'unauthenticated' });
 			expect(screen.getByText('Login / Register')).toBeInTheDocument();
 		});
+	});
+});
+
+describe('AuthButton - Real Component', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		window.location.href = '';
+	});
+
+	afterEach(() => {
+		cleanup();
 	});
 
 	describe('Logged Out State', () => {
@@ -189,16 +182,7 @@ describe('AuthButton', () => {
 			image: 'https://example.com/avatar.jpg',
 		});
 
-		// Use the factory to create session with user
-		const { user, expires } = createMockSessionWithUser(
-			{}, // no session overrides needed
-			{
-				id: 'user-123',
-				email: 'test@example.com',
-				name: 'Test User',
-				image: 'https://example.com/avatar.jpg',
-			}
-		);
+		const { user, expires } = createMockSessionWithUser({}, { id: 'user-123', email: 'test@example.com', name: 'Test User', image: 'https://example.com/avatar.jpg' });
 
 		const mockSession = { user, expires };
 
@@ -208,26 +192,13 @@ describe('AuthButton', () => {
 		});
 
 		it('should show email if name is not available', () => {
-			const sessionWithoutName = {
-				...mockSession,
-				user: createMockUser({
-					...mockUser,
-					name: null,
-				}),
-			};
+			const sessionWithoutName = { ...mockSession, user: createMockUser({ ...mockUser, name: null }) };
 			const { getByText } = renderWithProviders(<AuthButton initialSession={sessionWithoutName} />);
 			expect(getByText('test@example.com')).toBeInTheDocument();
 		});
 
 		it('should show Account if neither name nor email is available', () => {
-			const minimalSession = {
-				...mockSession,
-				user: createMockUser({
-					...mockUser,
-					name: null,
-					email: null,
-				}),
-			};
+			const minimalSession = { ...mockSession, user: createMockUser({ ...mockUser, name: null, email: null }) };
 			const { getByText } = renderWithProviders(<AuthButton initialSession={minimalSession} />);
 			expect(getByText('Account')).toBeInTheDocument();
 		});
@@ -240,16 +211,10 @@ describe('AuthButton', () => {
 
 		it('should update user state when initialSession changes', () => {
 			const { rerender, getByText, queryByText } = renderWithProviders(<AuthButton initialSession={mockSession} />);
-
 			expect(getByText('Test User')).toBeInTheDocument();
-
-			// Change to logged out state
 			rerender(<AuthButton initialSession={null} />);
-
 			expect(queryByText('Test User')).not.toBeInTheDocument();
 			expect(getByText('Sign In')).toBeInTheDocument();
 		});
 	});
-
-	// Loading state is tested via other tests when clicking OAuth provider or logout links
 });

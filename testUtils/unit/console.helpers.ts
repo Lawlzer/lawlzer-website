@@ -13,11 +13,11 @@ export interface ConsoleMock {
  * @returns ConsoleMock object with spy and restore function
  *
  * @example
- * ```typescript
+ *
  * const consoleMock = mockConsoleError();
  * // ... test code that logs errors ...
  * consoleMock.restore();
- * ```
+ *
  */
 export function mockConsoleError(): ConsoleMock {
 	const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -81,11 +81,11 @@ export function mockConsoleWarn(): ConsoleMock {
  * @returns Object with restore function to restore all mocks
  *
  * @example
- * ```typescript
+ *
  * const consoleMocks = mockConsole(['error', 'debug', 'log']);
  * // ... test code ...
  * consoleMocks.restore();
- * ```
+ *
  */
 export function mockConsole(methods: ('debug' | 'error' | 'log' | 'warn')[]): {
 	mocks: Record<string, ConsoleMock>;
@@ -128,13 +128,13 @@ export function mockConsole(methods: ('debug' | 'error' | 'log' | 'warn')[]): {
  * @param testFn Test function to run
  *
  * @example
- * ```typescript
+ *
  * it('should handle errors', () => {
  *   return withMockedConsole(['error'], async () => {
  *     // test code that logs errors
  *   });
  * });
- * ```
+ *
  */
 export async function withMockedConsole<T>(methods: ('debug' | 'error' | 'log' | 'warn')[], testFn: () => Promise<T> | T): Promise<T> {
 	const consoleMocks = mockConsole(methods);

@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 import { mockEnv, restoreEnv } from 'testUtils/unit/utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getCookieDomain, handleAndGenerateSessionToken } from './auth';
-
 import { createSession } from '~/server/db/session';
+
+import { getCookieDomain, handleAndGenerateSessionToken } from './auth';
 
 // --- Static Mocks (Run BEFORE imports are fully resolved) ---
 

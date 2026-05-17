@@ -12,7 +12,7 @@ export async function register() {
 			// Initialize Data Platform with sample data if empty
 			const { initializeDataPlatform } = await import('~/server/dataPlatform/init');
 			await initializeDataPlatform();
-		} catch (error) {
+		} catch (_error) {
 			console.warn('⚠️  MongoDB is not accessible. Please ensure MongoDB is running.');
 			console.warn('    Some features may not work properly without database connection.');
 			if (process.env.NODE_ENV === 'development') {

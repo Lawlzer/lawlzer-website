@@ -32,7 +32,7 @@ const mockRouter = {
 vi.mock('next/navigation', () => ({
 	useRouter: () => mockRouter,
 	usePathname: () => mockRouter.pathname,
-	useSearchParams: () => new URLSearchParams(mockRouter.query as Record<string, string>),
+	useSearchParams: () => new URLSearchParams(mockRouter.query),
 }));
 
 interface TestProvidersProps {
