@@ -13,7 +13,7 @@ export default [
 
 	// Repo-specific ignores not covered by @lawlzer/config
 	{
-		ignores: ['routeTypes', 'data', 'debug'],
+		ignores: ['routeTypes', 'data', 'debug', 'next-env.d.ts'],
 	},
 
 	// React + React Hooks (framework-specific)

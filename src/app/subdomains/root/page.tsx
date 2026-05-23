@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRightIcon, ChartBarIcon, CodeBracketIcon, CommandLineIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { BeakerIcon, BriefcaseIcon, CheckCircleIcon, CubeIcon, GlobeAltIcon, LinkIcon, RocketLaunchIcon } from '@heroicons/react/24/solid';
+import { BeakerIcon, BriefcaseIcon, CheckCircleIcon, CubeIcon, GlobeAltIcon, LinkIcon, RocketLaunchIcon, ServerIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
@@ -113,10 +113,10 @@ interface ProjectItem {
 const stats = [
 	{ label: 'Years of Experience', value: '7+', icon: BriefcaseIcon },
 	{ label: 'Projects Completed', value: '50+', icon: CheckCircleIcon },
-	{ label: 'Production Deployments', value: '100+', icon: CodeBracketIcon },
-	{ label: 'Websites Autonomously Scraped', value: '200+', icon: CodeBracketIcon },
-	{ label: 'APIs integrated', value: '250+', icon: CodeBracketIcon },
-	{ label: 'Peer Reviews Completed', value: '800+', icon: CodeBracketIcon },
+	{ label: 'Production Deployments', value: '100+', icon: RocketLaunchIcon },
+	{ label: 'Websites Scraped', value: '200+', icon: GlobeAltIcon },
+	{ label: 'APIs Integrated', value: '250+', icon: ServerIcon },
+	{ label: 'Peer Reviews', value: '800+', icon: WrenchScrewdriverIcon },
 ];
 
 function HeroSection(): JSX.Element {
@@ -126,7 +126,7 @@ function HeroSection(): JSX.Element {
 			<motion.div initial='hidden' animate='visible' variants={containerVariants} className='relative mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20'>
 				<div className='text-center'>
 					<motion.div variants={itemVariants} className='mb-6'>
-						<h1 className='text-5xl font-extrabold tracking-tight sm:text-6xl md:text-7xl'>
+						<h1 className='text-5xl font-extrabold tracking-tight sm:text-6xl md:text-7xl' aria-label="Hi, I'm Kevin Porter">
 							<span className='block text-foreground'>Hi, I&apos;m</span>
 							<span className='mt-2 block text-primary'>Kevin Porter</span>
 						</h1>
@@ -224,7 +224,7 @@ function ProjectCard({ project, setSelectedId }: { project: ProjectItem; setSele
 			<p className='mb-6 text-secondary-text'>{project.description}</p>
 			<ul className='space-y-2'>
 				{project.features.map((feature, index) => (
-					<motion.li key={index} className='flex items-start gap-3 text-sm' initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
+					<motion.li key={index} className='flex items-start gap-3 text-sm' initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
 						<CheckCircleIcon className={`mt-0.5 h-4 w-4 flex-shrink-0 text-primary`} />
 						{'link' in feature && feature.link !== undefined ? (
 							<a
@@ -246,10 +246,10 @@ function ProjectCard({ project, setSelectedId }: { project: ProjectItem; setSele
 				))}
 			</ul>
 			{project.isClickable && (
-				<motion.div className='mt-6 flex items-center gap-2 text-sm font-medium text-primary' animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-					<span>{project.id === 'website' ? 'Click to view the GitHub repository' : 'Click to explore'}</span>
-					<ArrowRightIcon className='h-4 w-4' />
-				</motion.div>
+				<div className='mt-6 flex items-center gap-2 text-sm font-medium text-primary group-hover:gap-3 transition-all'>
+					<span>{project.id === 'website' ? 'View on GitHub' : 'Explore'}</span>
+					<ArrowRightIcon className='h-4 w-4 transition-transform group-hover:translate-x-1' />
+				</div>
 			)}
 		</motion.div>
 	);
@@ -266,10 +266,10 @@ export default function MainPage(): JSX.Element {
 			<HeroSection />
 			<section className='bg-background py-16 sm:py-20'>
 				<div className='mx-auto max-w-7xl px-6 sm:px-8'>
-					<motion.div initial='hidden' whileInView='visible' viewport={{ once: true, amount: 0.1 }} variants={containerVariants}>
+					<motion.div initial='hidden' animate='visible' variants={containerVariants}>
 						<motion.div variants={itemVariants} className='text-center'>
 							<h2 className='text-4xl font-bold tracking-tight text-foreground sm:text-5xl'>Featured Projects</h2>
-							<p className='mt-4 text-lg text-secondary-text'>Sample complex projects I&apos;ve built for clients, showcasing scalable solutions and modern technologies</p>
+							<p className='mt-4 text-lg text-secondary-text'>A selection of projects showcasing scalable solutions and modern technologies</p>
 						</motion.div>
 						<motion.div variants={itemVariants} className='mt-12 grid grid-cols-1 gap-8 md:grid-cols-2'>
 							{projects.map((project) => (

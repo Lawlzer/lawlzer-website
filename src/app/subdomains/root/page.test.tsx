@@ -50,11 +50,11 @@ describe('MainPage', () => {
 		expect(screen.getByText('100+')).toBeInTheDocument();
 		expect(screen.getByText('Production Deployments')).toBeInTheDocument();
 		expect(screen.getByText('200+')).toBeInTheDocument();
-		expect(screen.getByText('Websites Autonomously Scraped')).toBeInTheDocument();
+		expect(screen.getByText('Websites Scraped')).toBeInTheDocument();
 		expect(screen.getByText('250+')).toBeInTheDocument();
-		expect(screen.getByText('APIs integrated')).toBeInTheDocument();
+		expect(screen.getByText('APIs Integrated')).toBeInTheDocument();
 		expect(screen.getByText('800+')).toBeInTheDocument();
-		expect(screen.getByText('Peer Reviews Completed')).toBeInTheDocument();
+		expect(screen.getByText('Peer Reviews')).toBeInTheDocument();
 	});
 
 	it('should render featured projects', () => {
